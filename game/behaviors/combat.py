@@ -2,6 +2,7 @@
 from typing import Dict, Any, Optional, Tuple
 from game.components.base import Behavior
 from game.entities.knight import KnightClass
+from game.combat_config import CombatConfig
 
 class AttackBehavior(Behavior):
     """Basic attack behavior"""
@@ -64,6 +65,12 @@ class AttackBehavior(Behavior):
         ap_cost = self.get_ap_cost(unit, target)
         unit.action_points -= ap_cost
         unit.has_acted = True
+        
+        # Mark units as engaged in combat
+        unit.is_engaged_in_combat = True
+        unit.engaged_with = target
+        target.is_engaged_in_combat = True
+        target.engaged_with = unit
         
         return {
             'success': True,
@@ -168,7 +175,8 @@ class ArcherAttackBehavior(AttackBehavior):
     
     def __init__(self):
         super().__init__(attack_range=3)
-        self.name = "archer_attack"
+        # Keep name as "attack" so can_attack() works correctly
+        self.name = "attack"
         
     def get_ap_cost(self, unit=None, target=None) -> int:
         """Ranged attacks cost less AP than melee"""

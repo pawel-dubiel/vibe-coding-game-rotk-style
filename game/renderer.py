@@ -218,17 +218,17 @@ class Renderer:
                                 pygame.draw.polygon(self.screen, (255, 200, 200), corners, 1)
     
     def _draw_knights(self, game_state):
-        from game.animation import MoveAnimation
+        from game.animation import MoveAnimation, PathMoveAnimation
         
         for knight in game_state.knights:
             # Use hex layout for positioning
             pixel_x, pixel_y = self.hex_layout.hex_to_pixel(knight.x, knight.y)
             
-            # Check for move animation
+            # Check for move animations (both types)
             for anim in game_state.animation_manager.get_current_animations():
-                if isinstance(anim, MoveAnimation) and anim.knight == knight:
+                if (isinstance(anim, (MoveAnimation, PathMoveAnimation)) and anim.knight == knight):
                     anim_x, anim_y = anim.get_current_position()
-                    pixel_x, pixel_y = self.hex_layout.hex_to_pixel(int(anim_x), int(anim_y))
+                    pixel_x, pixel_y = self.hex_layout.hex_to_pixel(anim_x, anim_y)
                     break
             
             # Convert to screen coordinates

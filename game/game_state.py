@@ -1,13 +1,15 @@
 import pygame
-from game.entities.knight import Knight, KnightClass
+from game.entities.knight import KnightClass
+from game.entities.unit_factory import UnitFactory
 from game.entities.castle import Castle
 from game.ai.ai_player import AIPlayer
 from game.ui.context_menu import ContextMenu
-from game.animation import AnimationManager, MoveAnimation, AttackAnimation, ArrowAnimation
+from game.animation import AnimationManager, MoveAnimation, AttackAnimation, ArrowAnimation, PathMoveAnimation
 from game.terrain import TerrainMap
 from game.hex_utils import HexGrid, HexCoord
+from game.interfaces.game_state import IGameState
 
-class GameState:
+class GameState(IGameState):
     def __init__(self, battle_config=None, vs_ai=True):
         if battle_config:
             self.board_width = battle_config['board_size'][0]
@@ -92,7 +94,7 @@ class GameState:
             y_pos = knight_spacing * (i + 1)
             x_pos = 4 if i % 2 == 0 else 5
             knight_class = knight_classes[i % len(knight_classes)]
-            knight = Knight(knight_names_p1[i % len(knight_names_p1)], knight_class, x_pos, y_pos)
+            knight = UnitFactory.create_unit(knight_names_p1[i % len(knight_names_p1)], knight_class, x_pos, y_pos)
             knight.player_id = 1
             self.knights.append(knight)
         
@@ -101,7 +103,7 @@ class GameState:
             y_pos = knight_spacing * (i + 1)
             x_pos = self.board_width - 5 if i % 2 == 0 else self.board_width - 6
             knight_class = knight_classes[i % len(knight_classes)]
-            knight = Knight(knight_names_p2[i % len(knight_names_p2)], knight_class, x_pos, y_pos)
+            knight = UnitFactory.create_unit(knight_names_p2[i % len(knight_names_p2)], knight_class, x_pos, y_pos)
             knight.player_id = 2
             self.knights.append(knight)
     
@@ -256,19 +258,42 @@ class GameState:
         tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
         
         if (tile_x, tile_y) in self.possible_moves:
-            # Consume AP without moving yet
-            self.selected_knight.consume_move_ap()
-            
-            # Track pending position
-            self.pending_positions[id(self.selected_knight)] = (tile_x, tile_y)
-            
-            # Create move animation - animation will update position when complete
-            start_x, start_y = self.selected_knight.x, self.selected_knight.y
-            anim = MoveAnimation(self.selected_knight, start_x, start_y, tile_x, tile_y, game_state=self)
-            self.animation_manager.add_animation(anim)
-            
-            self.possible_moves = []
-            return True
+            # Use the movement behavior to get the optimal path
+            move_behavior = self.selected_knight.behaviors.get('move')
+            if move_behavior:
+                path = move_behavior.get_path_to(self.selected_knight, self, tile_x, tile_y)
+                
+                if path:
+                    # Calculate total AP cost for the path
+                    total_ap_cost = 0
+                    current_pos = (self.selected_knight.x, self.selected_knight.y)
+                    for next_pos in path:
+                        step_cost = move_behavior.get_ap_cost(current_pos, next_pos, self.selected_knight, self)
+                        total_ap_cost += step_cost
+                        current_pos = next_pos
+                    
+                    # Consume AP and mark as moved
+                    self.selected_knight.action_points -= total_ap_cost
+                    self.selected_knight.has_moved = True
+                    
+                    # Track pending position
+                    self.pending_positions[id(self.selected_knight)] = (tile_x, tile_y)
+                    
+                    # Create path animation - shows the optimal route
+                    anim = PathMoveAnimation(self.selected_knight, path, step_duration=0.25, game_state=self)
+                    self.animation_manager.add_animation(anim)
+                    
+                    self.possible_moves = []
+                    return True
+            else:
+                # Fallback to direct movement if no movement behavior
+                self.selected_knight.consume_move_ap()
+                self.pending_positions[id(self.selected_knight)] = (tile_x, tile_y)
+                start_x, start_y = self.selected_knight.x, self.selected_knight.y
+                anim = MoveAnimation(self.selected_knight, start_x, start_y, tile_x, tile_y, game_state=self)
+                self.animation_manager.add_animation(anim)
+                self.possible_moves = []
+                return True
         return False
     
     def get_knight_at(self, tile_x, tile_y):

@@ -1,6 +1,7 @@
 """Movement behaviors for units"""
 from typing import List, Tuple, Optional, Set
 from collections import deque
+import math
 from game.components.base import Behavior
 
 class MovementBehavior(Behavior):
@@ -28,9 +29,9 @@ class MovementBehavior(Behavior):
     def get_ap_cost(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], unit, game_state) -> int:
         """Calculate AP cost for movement based on terrain and conditions"""
         # Base movement cost
-        terrain_cost = 1
+        terrain_cost = 1.0
         if game_state.terrain_map:
-            terrain_cost = game_state.terrain_map.get_movement_cost(to_pos[0], to_pos[1], unit.unit_class)
+            terrain_cost = float(game_state.terrain_map.get_movement_cost(to_pos[0], to_pos[1], unit.unit_class))
         
         # Diagonal movement costs more
         dx = abs(to_pos[0] - from_pos[0])
@@ -38,7 +39,7 @@ class MovementBehavior(Behavior):
         is_diagonal = dx > 0 and dy > 0
         
         if is_diagonal:
-            terrain_cost = int(terrain_cost * 1.4)  # 40% more for diagonal
+            terrain_cost = math.ceil(terrain_cost * 1.4)  # 40% more for diagonal, always round up
             
         # Penalty for moving in enemy ZOC
         if unit.in_enemy_zoc:
@@ -48,7 +49,7 @@ class MovementBehavior(Behavior):
         if self._would_break_formation(from_pos, to_pos, unit, game_state):
             terrain_cost += 1  # Formation breaking penalty
             
-        return max(1, terrain_cost)  # Minimum 1 AP
+        return max(1, math.ceil(terrain_cost))  # Minimum 1 AP, always round up
         
     def execute(self, unit, game_state, target_x: int, target_y: int):
         """Execute movement to target position"""
@@ -67,8 +68,9 @@ class MovementBehavior(Behavior):
         if unit.action_points < ap_cost:
             return {'success': False, 'reason': 'Not enough action points'}
             
-        # Consume AP
+        # Consume AP and mark as moved
         unit.action_points -= ap_cost
+        unit.has_moved = True
         
         return {
             'success': True,
@@ -77,6 +79,72 @@ class MovementBehavior(Behavior):
             'animation': 'move'
         }
         
+    def get_path_to(self, unit, game_state, target_x: int, target_y: int) -> List[Tuple[int, int]]:
+        """Get the optimal path to a specific destination"""
+        if not self.can_execute(unit, game_state):
+            return []
+            
+        # Check if target is reachable
+        possible_moves = self.get_possible_moves(unit, game_state)
+        if (target_x, target_y) not in possible_moves:
+            return []
+            
+        # Use Dijkstra with path reconstruction
+        terrain_map = game_state.terrain_map
+        board_width = game_state.board_width
+        board_height = game_state.board_height
+        
+        # Track costs and parents for path reconstruction
+        costs = {(unit.x, unit.y): 0}
+        parents = {(unit.x, unit.y): None}
+        queue = [(0, unit.x, unit.y)]
+        
+        while queue:
+            current_cost, x, y = queue.pop(0)
+            
+            # Found target
+            if x == target_x and y == target_y:
+                # Reconstruct path
+                path = []
+                current = (x, y)
+                while current is not None:
+                    path.append(current)
+                    current = parents[current]
+                path.reverse()
+                return path[1:]  # Exclude starting position
+                
+            # Explore neighbors
+            for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]:
+                new_x, new_y = x + dx, y + dy
+                
+                if not (0 <= new_x < board_width and 0 <= new_y < board_height):
+                    continue
+                    
+                if not terrain_map.is_passable(new_x, new_y, unit.unit_class):
+                    continue
+                    
+                if self._is_enemy_at(new_x, new_y, unit, game_state):
+                    continue
+                    
+                step_cost = self.get_ap_cost((x, y), (new_x, new_y), unit, game_state)
+                new_cost = current_cost + step_cost
+                
+                if new_cost <= unit.action_points and ((new_x, new_y) not in costs or new_cost < costs[(new_x, new_y)]):
+                    costs[(new_x, new_y)] = new_cost
+                    parents[(new_x, new_y)] = (x, y)
+                    
+                    # Insert in sorted order (simple priority queue)
+                    inserted = False
+                    for i, (cost, _, _) in enumerate(queue):
+                        if new_cost < cost:
+                            queue.insert(i, (new_cost, new_x, new_y))
+                            inserted = True
+                            break
+                    if not inserted:
+                        queue.append((new_cost, new_x, new_y))
+                        
+        return []  # No path found
+    
     def get_possible_moves(self, unit, game_state) -> List[Tuple[int, int]]:
         """Calculate possible movement positions using Dijkstra's algorithm"""
         if not self.can_execute(unit, game_state):
@@ -167,7 +235,7 @@ class MovementBehavior(Behavior):
     def _can_disengage_from_zoc(self, unit) -> bool:
         """Check if unit can disengage from Zone of Control"""
         # High morale units can disengage
-        return unit.stats.morale >= 75
+        return unit.morale >= 75
         
     def _is_enemy_at(self, x: int, y: int, unit, game_state) -> bool:
         """Check if enemy unit is at position"""

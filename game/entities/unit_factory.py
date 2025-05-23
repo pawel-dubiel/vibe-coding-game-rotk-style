@@ -4,6 +4,7 @@ from game.entities.knight import KnightClass
 from game.behaviors.movement import MovementBehavior
 from game.behaviors.combat import AttackBehavior, ArcherAttackBehavior
 from game.behaviors.special_abilities import CavalryChargeBehavior
+from game.behaviors.breakaway import BreakawayBehavior
 from game.components.general_factory import GeneralFactory
 
 class UnitFactory:
@@ -18,19 +19,23 @@ class UnitFactory:
         if unit_class == KnightClass.WARRIOR:
             unit.add_behavior(MovementBehavior(movement_range=3))
             unit.add_behavior(AttackBehavior(attack_range=1))
+            unit.add_behavior(BreakawayBehavior())
             
         elif unit_class == KnightClass.ARCHER:
             unit.add_behavior(MovementBehavior(movement_range=3))
             unit.add_behavior(ArcherAttackBehavior())
+            unit.add_behavior(BreakawayBehavior())
             
         elif unit_class == KnightClass.CAVALRY:
             unit.add_behavior(MovementBehavior(movement_range=4))
             unit.add_behavior(AttackBehavior(attack_range=1))
             unit.add_behavior(CavalryChargeBehavior())
+            unit.add_behavior(BreakawayBehavior())
             
         elif unit_class == KnightClass.MAGE:
             unit.add_behavior(MovementBehavior(movement_range=2))
             unit.add_behavior(AttackBehavior(attack_range=2))
+            unit.add_behavior(BreakawayBehavior())
             
         # Add starting generals if requested
         if add_generals:
