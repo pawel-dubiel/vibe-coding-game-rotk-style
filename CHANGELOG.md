@@ -1,0 +1,81 @@
+# Changelog
+
+All notable changes to Castle Knights will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- Nothing yet
+
+### Changed
+- Nothing yet
+
+### Fixed
+- Nothing yet
+
+## [0.3.0] - 2025-05-23
+
+### Added
+- Complete menu system with main menu and pause functionality
+  - Main menu displayed on game start with options: New Game, Load Game, Options, Quit
+  - In-game pause menu accessible via ESC key with Resume, Save Game options
+  - Visual hover effects and button states
+  - Semi-transparent overlay for pause menu
+- Menu navigation flow improvements
+  - Game now starts at main menu instead of directly in battle
+  - ESC in battle setup returns to main menu
+  - ESC during gameplay toggles pause menu
+- Placeholder implementations for future features (Load/Save/Options)
+- Comprehensive test suite for menu system
+
+## [0.2.0] - 2025-05-23
+
+### Added
+- Battle setup screen for choosing battle size
+  - Small battles: 15x15 board, 3 knights, 1 castle
+  - Medium battles: 20x20 board, 5 knights, 2 castles
+  - Large battles: 25x25 board, 8 knights, 3 castles
+- Camera/viewport system for battlefield scrolling
+  - Right-click drag to pan the camera
+  - Keyboard scrolling with arrow keys and WASD
+  - Automatic camera centering on player 1's starting units
+  - Camera bounds checking to prevent scrolling beyond battlefield
+- Optimized rendering system that only draws visible tiles
+- Screen-to-world coordinate conversion system
+- Comprehensive test suite for camera functionality
+
+### Changed
+- Game flow now includes battle setup before starting
+- Board size is now configurable based on battle type
+- Unit placement scales with battle size
+
+## [0.1.0] - 2025-05-23
+
+### Added
+- Initial game implementation
+- Turn-based tactical combat system
+- Multiple unit types: Warriors, Archers, Cavalry, Mages
+- Castle-based gameplay with garrison mechanics
+- AI opponent with basic strategy
+- Combat system with morale and special abilities
+- Terrain system affecting movement and combat
+- Animation system for unit actions
+- Context menu for unit commands
+- Victory conditions based on castle control and unit elimination
+
+### Technical Features
+- Pygame-based rendering engine
+- Entity-component system architecture
+- Modular codebase with clear separation of concerns
+- Comprehensive unit test coverage
+
+---
+
+## Version History
+
+- **0.3.0** - Menu System Update
+- **0.2.0** - Battle Setup & Scrolling Update  
+- **0.1.0** - Initial Release
