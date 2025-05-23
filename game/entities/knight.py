@@ -2,6 +2,7 @@ import pygame
 from enum import Enum
 from game.hex_utils import HexCoord, HexGrid
 from collections import deque
+from game.combat_config import CombatConfig
 
 class KnightClass(Enum):
     WARRIOR = "Warrior"
@@ -44,6 +45,7 @@ class Knight:
         self.in_enemy_zoc = False
         self.is_routing = False  # Unit is fleeing
         self.engaged_with = None  # Enemy unit we're engaged with
+        self.is_engaged_in_combat = False  # In active combat
         
     def _get_max_ap(self):
         ap_by_class = {
@@ -649,3 +651,66 @@ class Knight:
             message = f"Charge! Pushed {target.name} back!"
             
         return True, message
+        
+    def is_heavy_unit(self) -> bool:
+        """Check if this unit is considered heavy"""
+        return CombatConfig.is_heavy_unit(self.knight_class.value)
+        
+    def is_light_unit(self) -> bool:
+        """Check if this unit is considered light"""
+        return CombatConfig.is_light_unit(self.knight_class.value)
+        
+    def can_break_away_from(self, enemy_unit) -> bool:
+        """Check if this unit can break away from combat with enemy"""
+        if not self.is_engaged_in_combat:
+            return False
+            
+        if self.action_points < CombatConfig.MIN_AP_FOR_BREAKAWAY:
+            return False
+            
+        breakaway_chance = CombatConfig.get_breakaway_chance(
+            enemy_unit.knight_class.value, 
+            self.knight_class.value
+        )
+        
+        return breakaway_chance > 0
+        
+    def attempt_breakaway(self, enemy_unit, game_state) -> dict:
+        """Attempt to break away from combat"""
+        if not self.can_break_away_from(enemy_unit):
+            return {'success': False, 'reason': 'Cannot break away'}
+            
+        # Calculate breakaway chance
+        breakaway_chance = CombatConfig.get_breakaway_chance(
+            enemy_unit.knight_class.value, 
+            self.knight_class.value
+        )
+        
+        # Roll for success
+        import random
+        roll = random.randint(1, 100)
+        success = roll <= breakaway_chance
+        
+        # Consume AP
+        self.action_points -= CombatConfig.BREAKAWAY_AP_COST
+        
+        if success:
+            # Successful breakaway
+            self.is_engaged_in_combat = False
+            self.engaged_with = None
+            enemy_unit.is_engaged_in_combat = False
+            enemy_unit.engaged_with = None
+            
+            return {
+                'success': True,
+                'message': f'{self.name} successfully broke away from combat!',
+                'opportunity_attack': True  # Enemy gets opportunity attack
+            }
+        else:
+            # Failed breakaway
+            self.morale = max(0, self.morale - CombatConfig.FAILED_BREAKAWAY_MORALE_LOSS)
+            return {
+                'success': False,
+                'message': f'{self.name} failed to break away and lost morale!',
+                'morale_loss': CombatConfig.FAILED_BREAKAWAY_MORALE_LOSS
+            }

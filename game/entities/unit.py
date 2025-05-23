@@ -5,6 +5,8 @@ from game.components.stats import StatsComponent, UnitStats
 from game.components.base import Behavior
 from game.components.generals import GeneralRoster
 from game.entities.knight import KnightClass
+from game.combat_config import CombatConfig
+from game.hex_utils import HexGrid
 
 @dataclass
 class UnitPosition:
@@ -46,6 +48,7 @@ class Unit:
         self.in_enemy_zoc = False
         self.is_routing = False
         self.engaged_with = None
+        self.is_engaged_in_combat = False
         
         # Combat modifiers from abilities
         self.temp_damage_multiplier = 1.0
@@ -134,6 +137,19 @@ class Unit:
             if behavior.can_execute(self, game_state):
                 available.append(name)
         return available
+    
+    def has_component(self, component_name: str) -> bool:
+        """Check if unit has a component"""
+        # Currently we only have 'stats' and 'generals' components
+        return component_name in ['stats', 'generals']
+    
+    def get_component(self, component_name: str):
+        """Get a component by name"""
+        if component_name == 'stats':
+            return self.stats
+        elif component_name == 'generals':
+            return self.generals
+        return None
         
     def take_casualties(self, amount: int) -> bool:
         """Apply casualties to unit"""
@@ -275,6 +291,69 @@ class Unit:
             
         return min(0.5, base_reduction)  # Cap at 50% reduction
         
+    def is_heavy_unit(self) -> bool:
+        """Check if this unit is considered heavy"""
+        return CombatConfig.is_heavy_unit(self.unit_class.value)
+        
+    def is_light_unit(self) -> bool:
+        """Check if this unit is considered light"""
+        return CombatConfig.is_light_unit(self.unit_class.value)
+        
+    def can_break_away_from(self, enemy_unit) -> bool:
+        """Check if this unit can break away from combat with enemy"""
+        if not self.is_engaged_in_combat:
+            return False
+            
+        if self.action_points < CombatConfig.MIN_AP_FOR_BREAKAWAY:
+            return False
+            
+        breakaway_chance = CombatConfig.get_breakaway_chance(
+            enemy_unit.unit_class.value, 
+            self.unit_class.value
+        )
+        
+        return breakaway_chance > 0
+        
+    def attempt_breakaway(self, enemy_unit, game_state) -> Dict[str, Any]:
+        """Attempt to break away from combat"""
+        if not self.can_break_away_from(enemy_unit):
+            return {'success': False, 'reason': 'Cannot break away'}
+            
+        # Calculate breakaway chance
+        breakaway_chance = CombatConfig.get_breakaway_chance(
+            enemy_unit.unit_class.value, 
+            self.unit_class.value
+        )
+        
+        # Roll for success
+        import random
+        roll = random.randint(1, 100)
+        success = roll <= breakaway_chance
+        
+        # Consume AP
+        self.action_points -= CombatConfig.BREAKAWAY_AP_COST
+        
+        if success:
+            # Successful breakaway
+            self.is_engaged_in_combat = False
+            self.engaged_with = None
+            enemy_unit.is_engaged_in_combat = False
+            enemy_unit.engaged_with = None
+            
+            return {
+                'success': True,
+                'message': f'{self.name} successfully broke away from combat!',
+                'opportunity_attack': True  # Enemy gets opportunity attack
+            }
+        else:
+            # Failed breakaway
+            self.morale = max(0, self.morale - CombatConfig.FAILED_BREAKAWAY_MORALE_LOSS)
+            return {
+                'success': False,
+                'message': f'{self.name} failed to break away and lost morale!',
+                'morale_loss': CombatConfig.FAILED_BREAKAWAY_MORALE_LOSS
+            }
+        
     def take_casualties_with_generals(self, amount: int, context: Dict[str, Any] = None) -> bool:
         """Take casualties with general damage reduction"""
         if context is None:
@@ -299,3 +378,233 @@ class Unit:
             return {'success': False, 'reason': 'Cannot use ability'}
             
         return ability.apply(self, context)
+        
+    # Compatibility methods for old Knight class interface
+    def consume_move_ap(self):
+        """Compatibility method - consume AP for movement"""
+        if self.action_points >= 1 and not self.has_moved:
+            self.action_points -= 1
+            self.has_moved = True
+            return True
+        return False
+        
+    def consume_attack_ap(self):
+        """Compatibility method - consume AP for attack"""
+        ap_cost = 3  # Default attack cost
+        if hasattr(self, 'unit_class'):
+            if self.unit_class == KnightClass.WARRIOR:
+                ap_cost = 4
+            elif self.unit_class == KnightClass.ARCHER:
+                ap_cost = 2
+            elif self.unit_class == KnightClass.CAVALRY:
+                ap_cost = 3
+            elif self.unit_class == KnightClass.MAGE:
+                ap_cost = 2
+                
+        if self.action_points >= ap_cost and not self.has_acted:
+            self.action_points -= ap_cost
+            self.has_acted = True
+            return True
+        return False
+        
+    def calculate_damage(self, target, attacker_terrain=None, target_terrain=None):
+        """Compatibility method - calculate damage using combat behavior"""
+        if 'attack' in self.behaviors:
+            attack_behavior = self.behaviors['attack']
+            return attack_behavior.calculate_damage(self, target, attacker_terrain, target_terrain)
+        else:
+            # Fallback calculation
+            attacking_soldiers = self.soldiers
+            base_damage = attacking_soldiers * 1.0  # Default attack per soldier
+            return max(1, int(base_damage * 0.25))  # 25% casualties
+            
+    def calculate_counter_damage(self, attacker, attacker_terrain=None, defender_terrain=None):
+        """Compatibility method - calculate counter damage using combat behavior"""
+        if 'attack' in self.behaviors:
+            attack_behavior = self.behaviors['attack']
+            return attack_behavior.calculate_counter_damage(self, attacker, defender_terrain, attacker_terrain)
+        else:
+            # Fallback calculation - archers don't counter in melee
+            if self.unit_class == KnightClass.ARCHER:
+                return 0
+            defending_soldiers = self.soldiers
+            base_damage = defending_soldiers * 1.0
+            return max(0, int(base_damage * 0.15))  # 15% counter casualties
+            
+    def get_possible_moves(self, board_width, board_height, terrain_map=None, game_state=None):
+        """Compatibility method - get possible moves using movement behavior"""
+        if 'move' in self.behaviors:
+            move_behavior = self.behaviors['move']
+            return move_behavior.get_possible_moves(self, game_state)
+        else:
+            # Fallback to empty list if no movement behavior
+            return []
+            
+    def get_effective_soldiers(self, terrain=None):
+        """Compatibility method - get effective fighting soldiers"""
+        return self.stats.get_effective_soldiers(terrain)
+        
+    def _has_adjacent_friendly(self, x, y, game_state):
+        """Compatibility method - check if position has adjacent friendly units"""
+        if not game_state:
+            return False
+        
+        hex_grid = HexGrid()
+        pos_hex = hex_grid.offset_to_axial(x, y)
+        neighbors = pos_hex.get_neighbors()
+        
+        for neighbor_hex in neighbors:
+            check_x, check_y = hex_grid.axial_to_offset(neighbor_hex)
+            for knight in game_state.knights:
+                if (knight != self and knight.player_id == self.player_id and 
+                    knight.x == check_x and knight.y == check_y and not knight.is_garrisoned):
+                    return True
+        return False
+        
+    def move(self, new_x, new_y):
+        """Compatibility method - simple move (used by AI)"""
+        if self.can_move():
+            self.x = new_x
+            self.y = new_y
+            self.action_points -= 1
+            self.has_moved = True
+            return True
+        return False
+    
+    def can_charge(self, target, game_state):
+        """Check if cavalry can charge the target"""
+        if self.knight_class != KnightClass.CAVALRY:
+            return False, "Only cavalry can charge"
+        
+        # Use will property which goes through stats component
+        if self.will < 40:
+            return False, "Not enough will (need 40)"
+        
+        if self.has_used_special:
+            return False, "Already used special ability"
+        
+        if self.is_routing:
+            return False, "Routing units cannot charge"
+        
+        # Must be adjacent (including diagonals)
+        dx = abs(self.x - target.x)
+        dy = abs(self.y - target.y)
+        if not (dx <= 1 and dy <= 1 and (dx + dy > 0)):
+            return False, "Must be adjacent to charge"
+        
+        # Charges are always possible against adjacent enemies
+        # The outcome (damage/push) depends on what's behind the target
+        return True, "Can charge"
+    
+    def execute_charge(self, target, game_state):
+        """Execute cavalry charge against target"""
+        can_charge, reason = self.can_charge(target, game_state)
+        if not can_charge:
+            return False, reason
+        
+        # Consume will through property
+        self.will -= 40
+        self.has_used_special = True
+        
+        # Initialize message variable
+        message = ""
+        
+        # Calculate push direction
+        push_dir_x = target.x - self.x
+        push_dir_y = target.y - self.y
+        push_x = target.x + push_dir_x
+        push_y = target.y + push_dir_y
+        
+        # Check what's behind the target
+        obstacle_type = None
+        obstacle_unit = None
+        can_push = True
+        
+        # Check map edge
+        if not (0 <= push_x < game_state.board_width and 0 <= push_y < game_state.board_height):
+            can_push = False
+            obstacle_type = 'wall'
+        # Check castles
+        elif any(castle.contains_position(push_x, push_y) for castle in game_state.castles):
+            can_push = False
+            obstacle_type = 'wall'
+        # Check terrain
+        elif game_state.terrain_map and not game_state.terrain_map.is_passable(push_x, push_y, target.knight_class):
+            can_push = False
+            obstacle_type = 'terrain'
+        else:
+            # Check for units
+            for knight in game_state.knights:
+                if knight.x == push_x and knight.y == push_y and not knight.is_garrisoned:
+                    obstacle_unit = knight
+                    can_push = False
+                    obstacle_type = 'unit'
+                    break
+        
+        # Calculate base charge damage
+        base_charge_damage = int(self.soldiers * 0.8)  # 80% of cavalry as base damage
+        
+        # Apply damage based on obstacle type
+        if not can_push:
+            if obstacle_type == 'wall':
+                # Crushing charge against wall/castle
+                charge_damage = int(base_charge_damage * 1.5)
+                self_damage = int(self.soldiers * 0.1)
+                target.take_casualties(charge_damage)
+                if hasattr(target, 'morale'):
+                    target.morale = max(0, target.morale - 30)
+                self.take_casualties(self_damage)
+                message = f"Devastating charge! {target.name} crushed against the wall!"
+                
+            elif obstacle_type == 'terrain':
+                # Trapped by terrain
+                charge_damage = int(base_charge_damage * 1.3)
+                self_damage = int(self.soldiers * 0.08)
+                target.take_casualties(charge_damage)
+                if hasattr(target, 'morale'):
+                    target.morale = max(0, target.morale - 25)
+                self.take_casualties(self_damage)
+                message = f"Crushing charge! {target.name} trapped by terrain!"
+                
+            elif obstacle_type == 'unit' and obstacle_unit:
+                # Slammed into another unit
+                charge_damage = int(base_charge_damage * 1.2)
+                self_damage = int(self.soldiers * 0.07)
+                collateral_damage = int(base_charge_damage * 0.3)
+                
+                # Apply damages
+                target.take_casualties(charge_damage)
+                if hasattr(target, 'morale'):
+                    target.morale = max(0, target.morale - 20)
+                self.take_casualties(self_damage)
+                
+                # Collateral damage to the unit behind
+                obstacle_unit.take_casualties(collateral_damage)
+                if hasattr(obstacle_unit, 'morale'):
+                    obstacle_unit.morale = max(0, obstacle_unit.morale - 15)
+                
+                message = f"Thunderous charge! {target.name} slammed into {obstacle_unit.name}!"
+        else:
+            # Normal charge with push
+            charge_damage = base_charge_damage
+            self_damage = int(self.soldiers * 0.05)
+            
+            target.take_casualties(charge_damage)
+            if hasattr(target, 'morale'):
+                target.morale = max(0, target.morale - 15)
+            self.take_casualties(self_damage)
+            
+            # Execute push
+            target.x = push_x
+            target.y = push_y
+            
+            message = f"Successful charge! {target.name} pushed back!"
+        
+        # Check if target routed
+        if target.soldiers <= 0:
+            message += f" {target.name} destroyed!"
+        elif hasattr(target, 'morale') and target.morale <= 20:
+            target.is_routing = True
+            message += f" {target.name} is routing!"
+        
+        return True, message

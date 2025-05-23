@@ -53,6 +53,75 @@ class MoveAnimation(Animation):
     def _ease_in_out(self, t):
         return t * t * (3.0 - 2.0 * t)
 
+class PathMoveAnimation(Animation):
+    def __init__(self, knight, path, step_duration=0.3, game_state=None):
+        """Animation that follows a multi-step path"""
+        total_duration = len(path) * step_duration if path else 0
+        super().__init__(total_duration)
+        self.knight = knight
+        self.path = path  # List of (x, y) positions to move through
+        self.step_duration = step_duration
+        self.current_step = 0
+        self.position_updated = False
+        self.game_state = game_state
+        
+        # Store the initial position
+        self.start_x = knight.x
+        self.start_y = knight.y
+    
+    def update(self, dt):
+        super().update(dt)
+        
+        # Update knight's actual position when animation completes
+        if self.finished and not self.position_updated:
+            if self.path:
+                final_x, final_y = self.path[-1]
+                self.knight.x = final_x
+                self.knight.y = final_y
+            self.position_updated = True
+            
+            # Clear pending position if game_state is available
+            if self.game_state and id(self.knight) in self.game_state.pending_positions:
+                del self.game_state.pending_positions[id(self.knight)]
+        
+        return not self.finished
+    
+    def get_current_position(self):
+        if not self.path:
+            return self.start_x, self.start_y
+            
+        progress = self.get_progress()
+        total_steps = len(self.path)
+        
+        # Calculate which step we're currently on
+        current_step_float = progress * total_steps
+        current_step = int(current_step_float)
+        step_progress = current_step_float - current_step
+        
+        # Apply easing to step progress
+        step_progress = self._ease_in_out(step_progress)
+        
+        # Determine start and end positions for current step
+        if current_step == 0:
+            start_x, start_y = self.start_x, self.start_y
+        else:
+            start_x, start_y = self.path[current_step - 1]
+            
+        if current_step >= len(self.path):
+            # Animation finished, stay at final position
+            return self.path[-1]
+        else:
+            end_x, end_y = self.path[current_step]
+        
+        # Interpolate between start and end of current step
+        current_x = start_x + (end_x - start_x) * step_progress
+        current_y = start_y + (end_y - start_y) * step_progress
+        
+        return current_x, current_y
+    
+    def _ease_in_out(self, t):
+        return t * t * (3.0 - 2.0 * t)
+
 class AttackAnimation(Animation):
     def __init__(self, attacker, target, damage, counter_damage=0, duration=0.8):
         super().__init__(duration)

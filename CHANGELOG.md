@@ -8,11 +8,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Light/Heavy unit classification system
+  - Heavy units: Warrior, Cavalry (cannot break away from combat)
+  - Light units: Archer, Mage (can break away from heavy units)
+- Breakaway mechanics for tactical disengagement
+  - Light units can break away from heavy units (100% success)
+  - Light vs light has 50% success chance
+  - Costs 2 AP, failed attempts lose 10 morale
+  - Successful breakaway triggers opportunity attack (35% damage)
+- Interface abstraction pattern (IGameState)
+  - GameState: Full implementation with UI/animations
+  - SimplifiedGameState: Lightweight for AI simulations
+  - MockGameState: Clean testing implementation
+- Comprehensive test coverage for new mechanics
+  - Breakaway behavior tests
+  - Archer ranged attack tests
+  - Movement cost calculations
+  - Path animation tests
+
+### Changed
+- Combat system now tracks unit engagement status
+- AP costs vary by unit type (Warriors: 4, Cavalry: 3, Mage/Archer: 2)
+- Archers have 3-tile attack range
+- Counter-attacks don't apply to archers in melee combat
+- Movement system considers terrain costs and diagonal penalties
+- Breaking from enemy Zone of Control costs extra AP
+- AI uses lightweight game state for better performance
+- Animation system supports multi-step path animations
+
+### Fixed
+- Unit engagement tracking during combat
+- Movement path calculation with proper AP costs
+- Animation positioning for hex grid coordinates
+
+## [0.4.0] - 2025-05-24
+
+### Added
 - Hexagonal tile system replacing square grid
-  - Proper hexagonal tessellation with interlocking hex tiles
-  - Flat-top hex orientation with correct spacing calculations
-  - Comprehensive hex coordinate system (offset, axial, cube coordinates)
-  - Hex-based movement, distance calculations, and zone of control
+- Proper hexagonal tessellation with interlocking hex tiles
+- Flat-top hex orientation with correct spacing calculations
+- Comprehensive hex coordinate system (offset, axial, cube coordinates)
+- Hex-based movement, distance calculations, and zone of control
 
 ### Changed
 - Board rendering system now uses hexagonal tiles instead of squares

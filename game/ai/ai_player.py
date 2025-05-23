@@ -169,9 +169,42 @@ class AIPlayer:
     
     def _simulate_move(self, game_state, move):
         import copy
+        from game.interfaces.game_state import IGameState
         
         # Create a simplified copy without UI elements
-        class SimplifiedGameState:
+        class SimplifiedGameState(IGameState):
+            def __init__(self):
+                self._knights = []
+                self._castles = []
+                self._board_width = 0
+                self._board_height = 0
+                self._current_player = 1
+                self._terrain_map = None
+                
+            @property
+            def board_width(self):
+                return self._board_width
+            
+            @property
+            def board_height(self):
+                return self._board_height
+                
+            @property
+            def knights(self):
+                return self._knights
+                
+            @property
+            def castles(self):
+                return self._castles
+                
+            @property
+            def terrain_map(self):
+                return self._terrain_map
+                
+            @property
+            def current_player(self):
+                return self._current_player
+                
             def get_knight_at(self, tile_x, tile_y):
                 for knight in self.knights:
                     if knight.x == tile_x and knight.y == tile_y:
@@ -179,11 +212,14 @@ class AIPlayer:
                 return None
         
         state_copy = SimplifiedGameState()
-        state_copy.knights = copy.deepcopy(game_state.knights)
-        state_copy.castles = copy.deepcopy(game_state.castles)
-        state_copy.board_width = game_state.board_width
-        state_copy.board_height = game_state.board_height
-        state_copy.current_player = game_state.current_player
+        state_copy._knights = copy.deepcopy(game_state.knights)
+        state_copy._castles = copy.deepcopy(game_state.castles)
+        state_copy._board_width = game_state.board_width
+        state_copy._board_height = game_state.board_height
+        state_copy._current_player = game_state.current_player
+        # Copy terrain_map if it exists
+        if hasattr(game_state, 'terrain_map'):
+            state_copy._terrain_map = game_state.terrain_map
         
         # Ensure castles have the needed attributes for AI evaluation
         for castle in state_copy.castles:
