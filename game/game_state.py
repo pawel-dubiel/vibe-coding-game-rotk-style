@@ -7,10 +7,25 @@ from game.animation import AnimationManager, MoveAnimation, AttackAnimation, Arr
 from game.terrain import TerrainMap
 
 class GameState:
-    def __init__(self, vs_ai=True):
-        self.board_width = 16
-        self.board_height = 12
+    def __init__(self, battle_config=None, vs_ai=True):
+        if battle_config:
+            self.board_width = battle_config['board_size'][0]
+            self.board_height = battle_config['board_size'][1]
+            self.knights_per_player = battle_config['knights']
+            self.castles_per_player = battle_config['castles']
+        else:
+            self.board_width = 16
+            self.board_height = 12
+            self.knights_per_player = 3
+            self.castles_per_player = 1
+        
         self.tile_size = 64
+        
+        # Camera/viewport system
+        self.camera_x = 0
+        self.camera_y = 0
+        self.screen_width = 1024
+        self.screen_height = 768
         
         self.castles = []
         self.knights = []
@@ -38,21 +53,49 @@ class GameState:
         self.message_duration = 3.0  # Seconds to display each message
         
         self._init_game()
+        
+        # Center camera on player 1's starting area
+        if self.knights:
+            player1_knights = [k for k in self.knights if k.player_id == 1]
+            if player1_knights:
+                avg_x = sum(k.x for k in player1_knights) / len(player1_knights)
+                avg_y = sum(k.y for k in player1_knights) / len(player1_knights)
+                self.center_camera_on_tile(int(avg_x), int(avg_y))
     
     def _init_game(self):
-        self.castles.append(Castle(2, 6, 1))
-        self.castles.append(Castle(13, 6, 2))
         
-        self.knights.append(Knight("Sir Lancelot", KnightClass.WARRIOR, 4, 5))
-        self.knights.append(Knight("Robin Hood", KnightClass.ARCHER, 4, 7))
-        self.knights.append(Knight("Sir Galahad", KnightClass.CAVALRY, 3, 6))
+        # Place castles
+        castle_spacing = self.board_height // (self.castles_per_player + 1)
+        for i in range(self.castles_per_player):
+            y_pos = castle_spacing * (i + 1)
+            self.castles.append(Castle(2, y_pos, 1))
+            self.castles.append(Castle(self.board_width - 3, y_pos, 2))
         
-        self.knights.append(Knight("Black Knight", KnightClass.WARRIOR, 11, 5))
-        self.knights.append(Knight("Dark Archer", KnightClass.ARCHER, 11, 7))
-        self.knights.append(Knight("Merlin", KnightClass.MAGE, 12, 6))
+        # Knight names and classes for variety
+        knight_names_p1 = ["Sir Lancelot", "Robin Hood", "Sir Galahad", "Sir Kay", "Sir Gawain", 
+                          "Sir Percival", "Sir Tristan", "Sir Bedivere"]
+        knight_names_p2 = ["Black Knight", "Dark Archer", "Shadow Rider", "Dark Mage", "Iron Lord",
+                          "Death Knight", "Void Walker", "Night Hunter"]
+        knight_classes = [KnightClass.WARRIOR, KnightClass.ARCHER, KnightClass.CAVALRY, KnightClass.MAGE]
         
-        for i, knight in enumerate(self.knights):
-            knight.player_id = 1 if i < 3 else 2
+        # Place knights for player 1
+        knight_spacing = self.board_height // (self.knights_per_player + 1)
+        for i in range(self.knights_per_player):
+            y_pos = knight_spacing * (i + 1)
+            x_pos = 4 if i % 2 == 0 else 5
+            knight_class = knight_classes[i % len(knight_classes)]
+            knight = Knight(knight_names_p1[i % len(knight_names_p1)], knight_class, x_pos, y_pos)
+            knight.player_id = 1
+            self.knights.append(knight)
+        
+        # Place knights for player 2
+        for i in range(self.knights_per_player):
+            y_pos = knight_spacing * (i + 1)
+            x_pos = self.board_width - 5 if i % 2 == 0 else self.board_width - 6
+            knight_class = knight_classes[i % len(knight_classes)]
+            knight = Knight(knight_names_p2[i % len(knight_names_p2)], knight_class, x_pos, y_pos)
+            knight.player_id = 2
+            self.knights.append(knight)
     
     def add_message(self, message, priority=1):
         """Add a message to display. Higher priority messages display longer."""
@@ -96,6 +139,41 @@ class GameState:
     def _cleanup_dead_knights(self):
         """Remove knights with 0 or less soldiers"""
         self.knights = [k for k in self.knights if k.soldiers > 0]
+    
+    def set_camera_position(self, x, y):
+        """Set camera position with bounds checking"""
+        # Calculate max camera positions to keep board in view
+        max_camera_x = max(0, self.board_width * self.tile_size - self.screen_width)
+        max_camera_y = max(0, self.board_height * self.tile_size - self.screen_height)
+        
+        self.camera_x = max(0, min(x, max_camera_x))
+        self.camera_y = max(0, min(y, max_camera_y))
+    
+    def move_camera(self, dx, dy):
+        """Move camera by delta amount"""
+        self.set_camera_position(self.camera_x + dx, self.camera_y + dy)
+    
+    def center_camera_on_tile(self, tile_x, tile_y):
+        """Center camera on a specific tile"""
+        pixel_x = tile_x * self.tile_size + self.tile_size // 2
+        pixel_y = tile_y * self.tile_size + self.tile_size // 2
+        
+        camera_x = pixel_x - self.screen_width // 2
+        camera_y = pixel_y - self.screen_height // 2
+        
+        self.set_camera_position(camera_x, camera_y)
+    
+    def screen_to_world(self, screen_x, screen_y):
+        """Convert screen coordinates to world coordinates"""
+        world_x = screen_x + self.camera_x
+        world_y = screen_y + self.camera_y
+        return world_x, world_y
+    
+    def world_to_screen(self, world_x, world_y):
+        """Convert world coordinates to screen coordinates"""
+        screen_x = world_x - self.camera_x
+        screen_y = world_y - self.camera_y
+        return screen_x, screen_y
     
     def _update_zoc_status(self):
         """Update Zone of Control status for all knights"""

@@ -45,8 +45,14 @@ class Renderer:
     def _draw_board(self, game_state):
         from game.terrain import TerrainType
         
-        for x in range(game_state.board_width):
-            for y in range(game_state.board_height):
+        # Calculate visible tiles based on camera position
+        start_tile_x = max(0, int(game_state.camera_x // self.tile_size))
+        end_tile_x = min(game_state.board_width, int((game_state.camera_x + game_state.screen_width) // self.tile_size) + 1)
+        start_tile_y = max(0, int(game_state.camera_y // self.tile_size))
+        end_tile_y = min(game_state.board_height, int((game_state.camera_y + game_state.screen_height) // self.tile_size) + 1)
+        
+        for x in range(start_tile_x, end_tile_x):
+            for y in range(start_tile_y, end_tile_y):
                 # Get terrain color
                 terrain = game_state.terrain_map.get_terrain(x, y)
                 if terrain:
@@ -63,8 +69,9 @@ class Renderer:
                 else:
                     color = self.colors['tile_light'] if (x + y) % 2 == 0 else self.colors['tile_dark']
                 
-                rect = pygame.Rect(x * self.tile_size, y * self.tile_size, 
-                                 self.tile_size, self.tile_size)
+                # Convert world coordinates to screen coordinates
+                screen_x, screen_y = game_state.world_to_screen(x * self.tile_size, y * self.tile_size)
+                rect = pygame.Rect(screen_x, screen_y, self.tile_size, self.tile_size)
                 pygame.draw.rect(self.screen, color, rect)
                 
                 # Add texture patterns for different terrains
@@ -94,8 +101,8 @@ class Renderer:
                 pygame.draw.rect(self.screen, (0, 0, 0), rect, 1)
         
         for move_x, move_y in game_state.possible_moves:
-            rect = pygame.Rect(move_x * self.tile_size, move_y * self.tile_size,
-                             self.tile_size, self.tile_size)
+            screen_x, screen_y = game_state.world_to_screen(move_x * self.tile_size, move_y * self.tile_size)
+            rect = pygame.Rect(screen_x, screen_y, self.tile_size, self.tile_size)
             
             # Check if this move would break formation
             if game_state.selected_knight:
@@ -111,8 +118,8 @@ class Renderer:
                     pygame.draw.rect(self.screen, self.colors['possible_move'], rect, 3)
         
         for target_x, target_y in game_state.attack_targets:
-            rect = pygame.Rect(target_x * self.tile_size, target_y * self.tile_size,
-                             self.tile_size, self.tile_size)
+            screen_x, screen_y = game_state.world_to_screen(target_x * self.tile_size, target_y * self.tile_size)
+            rect = pygame.Rect(screen_x, screen_y, self.tile_size, self.tile_size)
             # Use different color for charge targets
             if game_state.current_action == 'charge':
                 pygame.draw.rect(self.screen, (255, 200, 0), rect, 4)  # Golden color for charge
@@ -123,8 +130,9 @@ class Renderer:
         for castle in game_state.castles:
             # Draw all castle tiles
             for tile_x, tile_y in castle.occupied_tiles:
-                x = tile_x * self.tile_size
-                y = tile_y * self.tile_size
+                world_x = tile_x * self.tile_size
+                world_y = tile_y * self.tile_size
+                x, y = game_state.world_to_screen(world_x, world_y)
                 
                 # Different shading for center vs outer tiles
                 if tile_x == castle.center_x and tile_y == castle.center_y:
@@ -139,8 +147,9 @@ class Renderer:
                                (x + 4, y + 4, self.tile_size - 8, self.tile_size - 8), 3)
             
             # Draw health bar at center
-            center_x = castle.center_x * self.tile_size
-            center_y = castle.center_y * self.tile_size
+            world_center_x = castle.center_x * self.tile_size
+            world_center_y = castle.center_y * self.tile_size
+            center_x, center_y = game_state.world_to_screen(world_center_x, world_center_y)
             
             health_percent = castle.health / castle.max_health
             bar_width = self.tile_size - 16
@@ -169,8 +178,8 @@ class Renderer:
                                     range_x = tile_x + dx
                                     range_y = tile_y + dy
                                     if 0 <= range_x < game_state.board_width and 0 <= range_y < game_state.board_height:
-                                        rect = pygame.Rect(range_x * self.tile_size, range_y * self.tile_size,
-                                                         self.tile_size, self.tile_size)
+                                        screen_x, screen_y = game_state.world_to_screen(range_x * self.tile_size, range_y * self.tile_size)
+                                        rect = pygame.Rect(screen_x, screen_y, self.tile_size, self.tile_size)
                                         pygame.draw.rect(self.screen, (255, 200, 200), rect, 1)
     
     def _draw_knights(self, game_state):
@@ -178,16 +187,19 @@ class Renderer:
         
         for knight in game_state.knights:
             # Check if knight is being animated
-            x = knight.x * self.tile_size
-            y = knight.y * self.tile_size
+            world_x = knight.x * self.tile_size
+            world_y = knight.y * self.tile_size
             
             # Check for move animation
             for anim in game_state.animation_manager.get_current_animations():
                 if isinstance(anim, MoveAnimation) and anim.knight == knight:
                     anim_x, anim_y = anim.get_current_position()
-                    x = anim_x * self.tile_size
-                    y = anim_y * self.tile_size
+                    world_x = anim_x * self.tile_size
+                    world_y = anim_y * self.tile_size
                     break
+            
+            # Convert to screen coordinates
+            x, y = game_state.world_to_screen(world_x, world_y)
             
             player_color = self.colors['player1'] if knight.player_id == 1 else self.colors['player2']
             
@@ -252,8 +264,9 @@ class Renderer:
             if knight.has_zone_of_control():
                 # Draw a subtle circle to show ZOC range (all 8 directions)
                 for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]:
-                    zoc_x = (knight.x + dx) * self.tile_size + self.tile_size // 2
-                    zoc_y = (knight.y + dy) * self.tile_size + self.tile_size // 2
+                    world_zoc_x = (knight.x + dx) * self.tile_size + self.tile_size // 2
+                    world_zoc_y = (knight.y + dy) * self.tile_size + self.tile_size // 2
+                    zoc_x, zoc_y = game_state.world_to_screen(world_zoc_x, world_zoc_y)
                     if 0 <= knight.x + dx < game_state.board_width and 0 <= knight.y + dy < game_state.board_height:
                         pygame.draw.circle(self.screen, player_color, (zoc_x, zoc_y), 3, 1)
     
@@ -265,15 +278,19 @@ class Renderer:
                 result = anim.get_effect_position()
                 if len(result) == 3:  # Before impact
                     x, y, _ = result
-                    pygame.draw.circle(self.screen, (255, 255, 0),
-                                     (int(x * self.tile_size + self.tile_size // 2),
-                                      int(y * self.tile_size + self.tile_size // 2)), 10)
+                    world_x = x * self.tile_size + self.tile_size // 2
+                    world_y = y * self.tile_size + self.tile_size // 2
+                    screen_x, screen_y = game_state.world_to_screen(world_x, world_y)
+                    pygame.draw.circle(self.screen, (255, 255, 0), (int(screen_x), int(screen_y)), 10)
                 else:  # Impact with shake
                     x, y, _, shake_x, shake_y = result
                     # Draw damage number
                     damage_text = self.ui_font.render(str(anim.damage), True, (255, 50, 50))
-                    text_x = int(x * self.tile_size + self.tile_size // 2 + shake_x)
-                    text_y = int(y * self.tile_size + shake_y)
+                    world_x = x * self.tile_size + self.tile_size // 2
+                    world_y = y * self.tile_size
+                    screen_x, screen_y = game_state.world_to_screen(world_x, world_y)
+                    text_x = int(screen_x + shake_x)
+                    text_y = int(screen_y + shake_y)
                     text_rect = damage_text.get_rect(center=(text_x, text_y))
                     self.screen.blit(damage_text, text_rect)
             
@@ -282,8 +299,11 @@ class Renderer:
                 if not hit:
                     # Draw flying arrows
                     for arrow_x, arrow_y in arrows:
-                        center_x = int(arrow_x * self.tile_size + self.tile_size // 2)
-                        center_y = int(arrow_y * self.tile_size + self.tile_size // 2)
+                        world_x = arrow_x * self.tile_size + self.tile_size // 2
+                        world_y = arrow_y * self.tile_size + self.tile_size // 2
+                        center_x, center_y = game_state.world_to_screen(world_x, world_y)
+                        center_x = int(center_x)
+                        center_y = int(center_y)
                         # Draw arrow as a small triangle
                         pygame.draw.polygon(self.screen, (139, 69, 19),
                                           [(center_x - 5, center_y),
@@ -293,9 +313,10 @@ class Renderer:
                     # Show damage on targets
                     for i, (target, damage) in enumerate(zip(anim.targets, anim.damages)):
                         damage_text = self.font.render(f"-{damage}", True, (255, 50, 50))
-                        text_x = int(target.x * self.tile_size + self.tile_size // 2)
-                        text_y = int(target.y * self.tile_size + 20)
-                        text_rect = damage_text.get_rect(center=(text_x, text_y))
+                        world_x = target.x * self.tile_size + self.tile_size // 2
+                        world_y = target.y * self.tile_size + 20
+                        screen_x, screen_y = game_state.world_to_screen(world_x, world_y)
+                        text_rect = damage_text.get_rect(center=(int(screen_x), int(screen_y)))
                         self.screen.blit(damage_text, text_rect)
     
     def _draw_ui(self, game_state):
