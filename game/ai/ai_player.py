@@ -1,5 +1,6 @@
 import random
 from game.entities.knight import KnightClass
+from game.hex_utils import HexGrid
 
 class AIPlayer:
     def __init__(self, player_id, difficulty='medium'):
@@ -30,10 +31,14 @@ class AIPlayer:
             if castle.player_id != self.player_id:
                 for knight in game_state.knights:
                     if knight.player_id == self.player_id:
-                        # Check distance to any castle tile
+                        # Check hex distance to any castle tile
+                        hex_grid = HexGrid()
+                        knight_hex = hex_grid.offset_to_axial(knight.x, knight.y)
                         min_distance = float('inf')
+                        
                         for tile_x, tile_y in castle.occupied_tiles:
-                            distance = abs(knight.x - tile_x) + abs(knight.y - tile_y)
+                            castle_hex = hex_grid.offset_to_axial(tile_x, tile_y)
+                            distance = knight_hex.distance_to(castle_hex)
                             min_distance = min(min_distance, distance)
                         if min_distance <= castle.arrow_range and castle.get_total_archer_soldiers() > 0:
                             score -= 15

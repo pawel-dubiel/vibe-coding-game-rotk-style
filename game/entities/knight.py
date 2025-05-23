@@ -1,5 +1,7 @@
 import pygame
 from enum import Enum
+from game.hex_utils import HexCoord, HexGrid
+from collections import deque
 
 class KnightClass(Enum):
     WARRIOR = "Warrior"
@@ -286,23 +288,24 @@ class Knight:
     
     def get_possible_moves(self, board_width, board_height, terrain_map=None, game_state=None):
         if terrain_map is None:
-            # Fallback to simple range calculation
+            # Fallback to simple range calculation using hex distance
             moves = []
-            for dx in range(-self.movement_range, self.movement_range + 1):
-                for dy in range(-self.movement_range, self.movement_range + 1):
-                    if abs(dx) + abs(dy) <= self.movement_range:
-                        new_x = self.x + dx
-                        new_y = self.y + dy
-                        if 0 <= new_x < board_width and 0 <= new_y < board_height:
-                            moves.append((new_x, new_y))
+            hex_grid = HexGrid()
+            current_hex = hex_grid.offset_to_axial(self.x, self.y)
+            hex_neighbors = current_hex.get_neighbors_within_range(self.movement_range)
+            
+            for hex_coord in hex_neighbors:
+                new_x, new_y = hex_grid.axial_to_offset(hex_coord)
+                if 0 <= new_x < board_width and 0 <= new_y < board_height:
+                    moves.append((new_x, new_y))
             return moves
         
         # Use Dijkstra's algorithm for terrain-based movement
-        from collections import deque
         visited = {}
         queue = deque([(self.x, self.y, 0, False)])  # x, y, movement_cost, broke_formation
         visited[(self.x, self.y)] = 0
         moves = []
+        hex_grid = HexGrid()  # Create hex grid instance
         
         # Check if we start adjacent to friendly units
         start_adjacent_to_friendly = self._has_adjacent_friendly(self.x, self.y, game_state)
@@ -324,9 +327,12 @@ class Knight:
         while queue:
             x, y, cost, broke_formation = queue.popleft()
             
-            # Check all adjacent tiles
-            for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-                new_x, new_y = x + dx, y + dy
+            # For hex grid, get neighbors using hex coordinates
+            current_hex = hex_grid.offset_to_axial(x, y)
+            neighbors = current_hex.get_neighbors()
+            
+            for neighbor_hex in neighbors:
+                new_x, new_y = hex_grid.axial_to_offset(neighbor_hex)
                 
                 if 0 <= new_x < board_width and 0 <= new_y < board_height:
                     # Check if terrain is passable
@@ -345,7 +351,10 @@ class Knight:
                     if game_state:
                         for enemy in game_state.knights:
                             if enemy.player_id != self.player_id and enemy.has_zone_of_control():
-                                if abs(new_x - enemy.x) + abs(new_y - enemy.y) == 1:
+                                # Check hex distance for ZOC
+                                enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
+                                new_hex = hex_grid.offset_to_axial(new_x, new_y)
+                                if enemy_hex.distance_to(new_hex) == 1:
                                     will_enter_zoc = True
                                     break
                     
@@ -385,8 +394,12 @@ class Knight:
         if not game_state:
             return False
         
-        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-            check_x, check_y = x + dx, y + dy
+        hex_grid = HexGrid()
+        pos_hex = hex_grid.offset_to_axial(x, y)
+        neighbors = pos_hex.get_neighbors()
+        
+        for neighbor_hex in neighbors:
+            check_x, check_y = hex_grid.axial_to_offset(neighbor_hex)
             for knight in game_state.knights:
                 if (knight != self and knight.player_id == self.player_id and 
                     knight.x == check_x and knight.y == check_y and not knight.is_garrisoned):
@@ -427,10 +440,13 @@ class Knight:
     
     def is_in_enemy_zoc(self, game_state):
         """Check if this unit is in enemy Zone of Control"""
+        hex_grid = HexGrid()
+        my_hex = hex_grid.offset_to_axial(self.x, self.y)
+        
         for knight in game_state.knights:
             if knight.player_id != self.player_id and knight.has_zone_of_control():
-                distance = abs(self.x - knight.x) + abs(self.y - knight.y)
-                if distance == 1:  # Adjacent
+                enemy_hex = hex_grid.offset_to_axial(knight.x, knight.y)
+                if my_hex.distance_to(enemy_hex) == 1:  # Adjacent in hex grid
                     return True, knight
         return False, None
     
@@ -471,12 +487,16 @@ class Knight:
         """Get movement options for routing units (moving away from enemies)"""
         moves = []
         
-        # Find the nearest enemy
+        # Find the nearest enemy using hex distance
+        hex_grid = HexGrid()
+        my_hex = hex_grid.offset_to_axial(self.x, self.y)
         nearest_enemy = None
         min_distance = float('inf')
+        
         for enemy in game_state.knights:
             if enemy.player_id != self.player_id and not enemy.is_garrisoned:
-                distance = abs(self.x - enemy.x) + abs(self.y - enemy.y)
+                enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
+                distance = my_hex.distance_to(enemy_hex)
                 if distance < min_distance:
                     min_distance = distance
                     nearest_enemy = enemy
@@ -485,15 +505,19 @@ class Knight:
             # No enemies, can move normally but with reduced range
             return self.get_possible_moves(board_width, board_height, terrain_map, None)
         
-        # Move away from nearest enemy
-        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-            new_x, new_y = self.x + dx, self.y + dy
+        # Move away from nearest enemy using hex neighbors
+        current_hex = hex_grid.offset_to_axial(self.x, self.y)
+        neighbors = current_hex.get_neighbors()
+        
+        for neighbor_hex in neighbors:
+            new_x, new_y = hex_grid.axial_to_offset(neighbor_hex)
             
             if (0 <= new_x < board_width and 0 <= new_y < board_height and
                 terrain_map and terrain_map.is_passable(new_x, new_y, self.knight_class)):
                 
                 # Check if this move increases distance from enemy
-                new_distance = abs(new_x - nearest_enemy.x) + abs(new_y - nearest_enemy.y)
+                enemy_hex = hex_grid.offset_to_axial(nearest_enemy.x, nearest_enemy.y)
+                new_distance = neighbor_hex.distance_to(enemy_hex)
                 if new_distance > min_distance and not self._is_enemy_at(new_x, new_y, game_state):
                     moves.append((new_x, new_y))
         

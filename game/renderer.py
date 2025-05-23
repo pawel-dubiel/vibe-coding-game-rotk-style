@@ -1,10 +1,15 @@
 import pygame
+import math
 from game.entities.knight import KnightClass
+from game.hex_utils import HexGrid, HexCoord
+from game.hex_layout import HexLayout
 
 class Renderer:
     def __init__(self, screen):
         self.screen = screen
         self.tile_size = 64
+        self.hex_grid = HexGrid(hex_size=36)  # For hex distance calculations
+        self.hex_layout = HexLayout(hex_size=36, orientation='flat')  # For positioning
         self.font = pygame.font.Font(None, 24)
         self.ui_font = pygame.font.Font(None, 32)
         
@@ -45,16 +50,23 @@ class Renderer:
     def _draw_board(self, game_state):
         from game.terrain import TerrainType
         
-        # Calculate visible tiles based on camera position
-        start_tile_x = max(0, int(game_state.camera_x // self.tile_size))
-        end_tile_x = min(game_state.board_width, int((game_state.camera_x + game_state.screen_width) // self.tile_size) + 1)
-        start_tile_y = max(0, int(game_state.camera_y // self.tile_size))
-        end_tile_y = min(game_state.board_height, int((game_state.camera_y + game_state.screen_height) // self.tile_size) + 1)
+        # Calculate visible hex range based on camera position
+        # We need to draw a bit more to ensure edge hexes are visible
+        start_col = max(0, int(game_state.camera_x / self.hex_grid.hex_width) - 1)
+        end_col = min(game_state.board_width, int((game_state.camera_x + game_state.screen_width) / self.hex_grid.hex_width) + 2)
+        start_row = max(0, int(game_state.camera_y / self.hex_grid.hex_height) - 1)
+        end_row = min(game_state.board_height, int((game_state.camera_y + game_state.screen_height) / self.hex_grid.hex_height) + 2)
         
-        for x in range(start_tile_x, end_tile_x):
-            for y in range(start_tile_y, end_tile_y):
+        for col in range(start_col, end_col):
+            for row in range(start_row, end_row):
+                # Use hex layout for proper positioning
+                pixel_x, pixel_y = self.hex_layout.hex_to_pixel(col, row)
+                
+                # Apply camera offset
+                screen_x, screen_y = game_state.world_to_screen(pixel_x, pixel_y)
+                
                 # Get terrain color
-                terrain = game_state.terrain_map.get_terrain(x, y)
+                terrain = game_state.terrain_map.get_terrain(col, row)
                 if terrain:
                     terrain_colors = {
                         TerrainType.PLAINS: self.colors['plains'],
@@ -67,42 +79,53 @@ class Renderer:
                     }
                     color = terrain_colors.get(terrain.type, self.colors['plains'])
                 else:
-                    color = self.colors['tile_light'] if (x + y) % 2 == 0 else self.colors['tile_dark']
+                    color = self.colors['tile_light'] if (col + row) % 2 == 0 else self.colors['tile_dark']
                 
-                # Convert world coordinates to screen coordinates
-                screen_x, screen_y = game_state.world_to_screen(x * self.tile_size, y * self.tile_size)
-                rect = pygame.Rect(screen_x, screen_y, self.tile_size, self.tile_size)
-                pygame.draw.rect(self.screen, color, rect)
+                # Get hex corners and draw the hexagon
+                corners = self.hex_layout.get_hex_corners(screen_x, screen_y)
+                pygame.draw.polygon(self.screen, color, corners)
+                pygame.draw.polygon(self.screen, (0, 0, 0), corners, 1)  # Black outline
                 
-                # Add texture patterns for different terrains
+                # Draw coordinate labels (optional - for debugging)
+                if game_state.show_coordinates:
+                    coord_text = self.font.render(f"{col},{row}", True, (100, 100, 100))
+                    text_rect = coord_text.get_rect(center=(int(screen_x), int(screen_y)))
+                    self.screen.blit(coord_text, text_rect)
+                
+                # Add texture patterns for different terrains inside hexes
                 if terrain:
                     if terrain.type == TerrainType.FOREST:
-                        # Draw small trees
-                        for i in range(3):
-                            tree_x = rect.x + 10 + i * 20
-                            tree_y = rect.y + 10 + (i % 2) * 20
-                            pygame.draw.circle(self.screen, (0, 100, 0), (tree_x, tree_y), 5)
-                    elif terrain.type == TerrainType.HILLS:
-                        # Draw hill lines
-                        pygame.draw.arc(self.screen, (100, 50, 0), rect, 0, 3.14, 3)
-                    elif terrain.type == TerrainType.WATER:
-                        # Draw waves
+                        # Draw small trees inside hex
                         for i in range(2):
-                            wave_y = rect.y + 20 + i * 20
+                            tree_x = screen_x + (i - 0.5) * 15
+                            tree_y = screen_y + (i % 2 - 0.5) * 15
+                            pygame.draw.circle(self.screen, (0, 100, 0), (int(tree_x), int(tree_y)), 4)
+                    elif terrain.type == TerrainType.HILLS:
+                        # Draw hill symbol
+                        pygame.draw.arc(self.screen, (100, 50, 0), 
+                                      (screen_x - 15, screen_y - 10, 30, 20), 0, 3.14, 3)
+                    elif terrain.type == TerrainType.WATER:
+                        # Draw wave lines
+                        for i in range(2):
+                            wave_y = screen_y + (i - 0.5) * 10
                             pygame.draw.line(self.screen, (100, 200, 255), 
-                                           (rect.x + 5, wave_y), (rect.x + rect.width - 5, wave_y), 2)
+                                           (screen_x - 15, wave_y), (screen_x + 15, wave_y), 2)
                     elif terrain.type == TerrainType.SWAMP:
                         # Draw dots for swamp
-                        for i in range(5):
-                            dot_x = rect.x + 10 + (i * 12) % rect.width
-                            dot_y = rect.y + 10 + (i * 8) % rect.height
-                            pygame.draw.circle(self.screen, (70, 100, 70), (dot_x, dot_y), 2)
-                
-                pygame.draw.rect(self.screen, (0, 0, 0), rect, 1)
+                        for i in range(4):
+                            angle = i * 90
+                            dot_x = screen_x + 10 * math.cos(math.radians(angle))
+                            dot_y = screen_y + 10 * math.sin(math.radians(angle))
+                            pygame.draw.circle(self.screen, (70, 100, 70), (int(dot_x), int(dot_y)), 2)
         
+        # Draw possible moves as highlighted hexes
         for move_x, move_y in game_state.possible_moves:
-            screen_x, screen_y = game_state.world_to_screen(move_x * self.tile_size, move_y * self.tile_size)
-            rect = pygame.Rect(screen_x, screen_y, self.tile_size, self.tile_size)
+            # Use hex layout for proper positioning
+            pixel_x, pixel_y = self.hex_layout.hex_to_pixel(move_x, move_y)
+            screen_x, screen_y = game_state.world_to_screen(pixel_x, pixel_y)
+            
+            # Get hex corners and draw highlight
+            corners = self.hex_layout.get_hex_corners(screen_x, screen_y)
             
             # Check if this move would break formation
             if game_state.selected_knight:
@@ -113,49 +136,58 @@ class Renderer:
                 
                 # Use different color if breaking formation
                 if start_adjacent and not end_adjacent:
-                    pygame.draw.rect(self.screen, (200, 100, 100), rect, 3)  # Red tint for formation break
+                    pygame.draw.polygon(self.screen, (200, 100, 100), corners, 3)  # Red tint
                 else:
-                    pygame.draw.rect(self.screen, self.colors['possible_move'], rect, 3)
+                    pygame.draw.polygon(self.screen, self.colors['possible_move'], corners, 3)
         
+        # Draw attack targets as highlighted hexes
         for target_x, target_y in game_state.attack_targets:
-            screen_x, screen_y = game_state.world_to_screen(target_x * self.tile_size, target_y * self.tile_size)
-            rect = pygame.Rect(screen_x, screen_y, self.tile_size, self.tile_size)
+            # Use hex layout for proper positioning
+            pixel_x, pixel_y = self.hex_layout.hex_to_pixel(target_x, target_y)
+            screen_x, screen_y = game_state.world_to_screen(pixel_x, pixel_y)
+            
+            # Get hex corners and draw highlight
+            corners = self.hex_layout.get_hex_corners(screen_x, screen_y)
+            
             # Use different color for charge targets
             if game_state.current_action == 'charge':
-                pygame.draw.rect(self.screen, (255, 200, 0), rect, 4)  # Golden color for charge
+                pygame.draw.polygon(self.screen, (255, 200, 0), corners, 4)  # Golden color
             else:
-                pygame.draw.rect(self.screen, self.colors['attack_target'], rect, 3)
+                pygame.draw.polygon(self.screen, self.colors['attack_target'], corners, 3)
     
     def _draw_castles(self, game_state):
         for castle in game_state.castles:
-            # Draw all castle tiles
+            # Draw all castle tiles as hexagons
             for tile_x, tile_y in castle.occupied_tiles:
-                world_x = tile_x * self.tile_size
-                world_y = tile_y * self.tile_size
-                x, y = game_state.world_to_screen(world_x, world_y)
+                # Use hex layout for positioning
+                pixel_x, pixel_y = self.hex_layout.hex_to_pixel(tile_x, tile_y)
+                x, y = game_state.world_to_screen(pixel_x, pixel_y)
+                
+                # Get hex corners
+                corners = self.hex_layout.get_hex_corners(x, y)
+                
+                # Draw castle hex
+                player_color = self.colors['player1'] if castle.player_id == 1 else self.colors['player2']
                 
                 # Different shading for center vs outer tiles
                 if tile_x == castle.center_x and tile_y == castle.center_y:
-                    pygame.draw.rect(self.screen, self.colors['castle'],
-                                   (x + 4, y + 4, self.tile_size - 8, self.tile_size - 8))
+                    # Draw filled hex for center
+                    pygame.draw.polygon(self.screen, self.colors['castle'], corners)
+                    pygame.draw.polygon(self.screen, player_color, corners, 4)
                 else:
-                    pygame.draw.rect(self.screen, self.colors['castle'],
-                                   (x + 8, y + 8, self.tile_size - 16, self.tile_size - 16))
-                
-                player_color = self.colors['player1'] if castle.player_id == 1 else self.colors['player2']
-                pygame.draw.rect(self.screen, player_color,
-                               (x + 4, y + 4, self.tile_size - 8, self.tile_size - 8), 3)
+                    # Draw semi-filled hex for outer tiles
+                    pygame.draw.polygon(self.screen, self.colors['castle'], corners)
+                    pygame.draw.polygon(self.screen, player_color, corners, 3)
             
             # Draw health bar at center
-            world_center_x = castle.center_x * self.tile_size
-            world_center_y = castle.center_y * self.tile_size
-            center_x, center_y = game_state.world_to_screen(world_center_x, world_center_y)
+            center_pixel_x, center_pixel_y = self.hex_layout.hex_to_pixel(castle.center_x, castle.center_y)
+            center_x, center_y = game_state.world_to_screen(center_pixel_x, center_pixel_y)
             
             health_percent = castle.health / castle.max_health
-            bar_width = self.tile_size - 16
+            bar_width = int(self.hex_grid.hex_width * 0.6)
             bar_height = 6
-            bar_x = center_x + 8
-            bar_y = center_y + self.tile_size - 14
+            bar_x = center_x - bar_width // 2
+            bar_y = center_y + int(self.hex_grid.hex_height * 0.3)
             
             pygame.draw.rect(self.screen, self.colors['health_bar_bg'],
                            (bar_x, bar_y, bar_width, bar_height))
@@ -171,40 +203,41 @@ class Renderer:
             if castle.get_total_archer_soldiers() > 0:
                 enemies_in_range = castle.get_enemies_in_range(game_state.knights)
                 if enemies_in_range and not castle.has_shot:
+                    # Draw hex range for castle archers
                     for tile_x, tile_y in castle.occupied_tiles:
-                        for dx in range(-castle.arrow_range, castle.arrow_range + 1):
-                            for dy in range(-castle.arrow_range, castle.arrow_range + 1):
-                                if abs(dx) + abs(dy) <= castle.arrow_range:
-                                    range_x = tile_x + dx
-                                    range_y = tile_y + dy
-                                    if 0 <= range_x < game_state.board_width and 0 <= range_y < game_state.board_height:
-                                        screen_x, screen_y = game_state.world_to_screen(range_x * self.tile_size, range_y * self.tile_size)
-                                        rect = pygame.Rect(screen_x, screen_y, self.tile_size, self.tile_size)
-                                        pygame.draw.rect(self.screen, (255, 200, 200), rect, 1)
+                        castle_hex = self.hex_grid.offset_to_axial(tile_x, tile_y)
+                        range_hexes = castle_hex.get_neighbors_within_range(castle.arrow_range)
+                        
+                        for hex_coord in range_hexes:
+                            range_x, range_y = self.hex_grid.axial_to_offset(hex_coord)
+                            if 0 <= range_x < game_state.board_width and 0 <= range_y < game_state.board_height:
+                                # Use hex layout for positioning
+                                pixel_x, pixel_y = self.hex_layout.hex_to_pixel(range_x, range_y)
+                                screen_x, screen_y = game_state.world_to_screen(pixel_x, pixel_y)
+                                corners = self.hex_layout.get_hex_corners(screen_x, screen_y)
+                                pygame.draw.polygon(self.screen, (255, 200, 200), corners, 1)
     
     def _draw_knights(self, game_state):
         from game.animation import MoveAnimation
         
         for knight in game_state.knights:
-            # Check if knight is being animated
-            world_x = knight.x * self.tile_size
-            world_y = knight.y * self.tile_size
+            # Use hex layout for positioning
+            pixel_x, pixel_y = self.hex_layout.hex_to_pixel(knight.x, knight.y)
             
             # Check for move animation
             for anim in game_state.animation_manager.get_current_animations():
                 if isinstance(anim, MoveAnimation) and anim.knight == knight:
                     anim_x, anim_y = anim.get_current_position()
-                    world_x = anim_x * self.tile_size
-                    world_y = anim_y * self.tile_size
+                    pixel_x, pixel_y = self.hex_layout.hex_to_pixel(int(anim_x), int(anim_y))
                     break
             
             # Convert to screen coordinates
-            x, y = game_state.world_to_screen(world_x, world_y)
+            x, y = game_state.world_to_screen(pixel_x, pixel_y)
             
             player_color = self.colors['player1'] if knight.player_id == 1 else self.colors['player2']
             
-            center_x = x + self.tile_size // 2
-            center_y = y + self.tile_size // 2
+            center_x = x
+            center_y = y
             
             if knight.knight_class == KnightClass.WARRIOR:
                 pygame.draw.rect(self.screen, player_color,
@@ -262,13 +295,17 @@ class Renderer:
             
             # Show ZOC indicator
             if knight.has_zone_of_control():
-                # Draw a subtle circle to show ZOC range (all 8 directions)
-                for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]:
-                    world_zoc_x = (knight.x + dx) * self.tile_size + self.tile_size // 2
-                    world_zoc_y = (knight.y + dy) * self.tile_size + self.tile_size // 2
-                    zoc_x, zoc_y = game_state.world_to_screen(world_zoc_x, world_zoc_y)
-                    if 0 <= knight.x + dx < game_state.board_width and 0 <= knight.y + dy < game_state.board_height:
-                        pygame.draw.circle(self.screen, player_color, (zoc_x, zoc_y), 3, 1)
+                # Draw ZOC for hex neighbors
+                knight_hex = self.hex_grid.offset_to_axial(knight.x, knight.y)
+                neighbors = knight_hex.get_neighbors()
+                
+                for neighbor_hex in neighbors:
+                    zoc_x, zoc_y = self.hex_grid.axial_to_offset(neighbor_hex)
+                    if 0 <= zoc_x < game_state.board_width and 0 <= zoc_y < game_state.board_height:
+                        # Use hex layout for positioning
+                        pixel_x, pixel_y = self.hex_layout.hex_to_pixel(zoc_x, zoc_y)
+                        screen_x, screen_y = game_state.world_to_screen(pixel_x, pixel_y)
+                        pygame.draw.circle(self.screen, player_color, (int(screen_x), int(screen_y)), 3, 1)
     
     def _draw_animations(self, game_state):
         from game.animation import AttackAnimation, ArrowAnimation
@@ -278,16 +315,16 @@ class Renderer:
                 result = anim.get_effect_position()
                 if len(result) == 3:  # Before impact
                     x, y, _ = result
-                    world_x = x * self.tile_size + self.tile_size // 2
-                    world_y = y * self.tile_size + self.tile_size // 2
+                    # Use hex layout for proper positioning
+                    world_x, world_y = self.hex_layout.hex_to_pixel(x, y)
                     screen_x, screen_y = game_state.world_to_screen(world_x, world_y)
                     pygame.draw.circle(self.screen, (255, 255, 0), (int(screen_x), int(screen_y)), 10)
                 else:  # Impact with shake
                     x, y, _, shake_x, shake_y = result
                     # Draw damage number
                     damage_text = self.ui_font.render(str(anim.damage), True, (255, 50, 50))
-                    world_x = x * self.tile_size + self.tile_size // 2
-                    world_y = y * self.tile_size
+                    # Use hex layout for proper positioning
+                    world_x, world_y = self.hex_layout.hex_to_pixel(x, y)
                     screen_x, screen_y = game_state.world_to_screen(world_x, world_y)
                     text_x = int(screen_x + shake_x)
                     text_y = int(screen_y + shake_y)
@@ -299,8 +336,8 @@ class Renderer:
                 if not hit:
                     # Draw flying arrows
                     for arrow_x, arrow_y in arrows:
-                        world_x = arrow_x * self.tile_size + self.tile_size // 2
-                        world_y = arrow_y * self.tile_size + self.tile_size // 2
+                        # Use hex layout for proper positioning
+                        world_x, world_y = self.hex_layout.hex_to_pixel(arrow_x, arrow_y)
                         center_x, center_y = game_state.world_to_screen(world_x, world_y)
                         center_x = int(center_x)
                         center_y = int(center_y)

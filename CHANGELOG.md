@@ -8,13 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Nothing yet
+- Hexagonal tile system replacing square grid
+  - Proper hexagonal tessellation with interlocking hex tiles
+  - Flat-top hex orientation with correct spacing calculations
+  - Comprehensive hex coordinate system (offset, axial, cube coordinates)
+  - Hex-based movement, distance calculations, and zone of control
 
 ### Changed
-- Nothing yet
+- Board rendering system now uses hexagonal tiles instead of squares
+- Movement and distance calculations updated for hexagonal grid
+- Unit positioning and highlighting system aligned with hex coordinates
+- Animation system updated to work with hex coordinate positions
 
 ### Fixed
-- Nothing yet
+- Field highlighting misalignment when selecting unit movement options
+- Units moving to incorrect fields when clicking on hex tiles
+- AI player crash due to missing HexGrid import in evaluation function
+- Coordinate consistency between rendering, input handling, and game logic
 
 ## [0.3.0] - 2025-05-23
 
