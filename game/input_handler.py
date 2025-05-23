@@ -1,4 +1,6 @@
 import pygame
+from game.hex_utils import HexGrid
+from game.hex_layout import HexLayout
 
 class InputHandler:
     def __init__(self):
@@ -8,6 +10,8 @@ class InputHandler:
         self.drag_start_y = 0
         self.camera_drag_start_x = 0
         self.camera_drag_start_y = 0
+        self.hex_grid = HexGrid(hex_size=36)  # For hex distance calculations
+        self.hex_layout = HexLayout(hex_size=36, orientation='flat')  # For positioning
     
     def handle_event(self, event, game_state):
         if game_state.ai_thinking or game_state.animation_manager.is_animating():
@@ -45,8 +49,8 @@ class InputHandler:
                         game_state.current_action = None
                         game_state.attack_targets = []
                 else:
-                    tile_x = int(x // game_state.tile_size)
-                    tile_y = int(y // game_state.tile_size)
+                    # Use hex layout to convert click to hex coordinates
+                    tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
                     knight = game_state.get_knight_at(tile_x, tile_y)
                     
                     if knight and knight.player_id == game_state.current_player:
@@ -109,3 +113,6 @@ class InputHandler:
                 game_state.move_camera(0, -100)
             elif event.key == pygame.K_s:
                 game_state.move_camera(0, 100)
+            # Toggle coordinate display
+            elif event.key == pygame.K_c:
+                game_state.show_coordinates = not game_state.show_coordinates

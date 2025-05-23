@@ -5,6 +5,7 @@ from game.ai.ai_player import AIPlayer
 from game.ui.context_menu import ContextMenu
 from game.animation import AnimationManager, MoveAnimation, AttackAnimation, ArrowAnimation
 from game.terrain import TerrainMap
+from game.hex_utils import HexGrid, HexCoord
 
 class GameState:
     def __init__(self, battle_config=None, vs_ai=True):
@@ -48,9 +49,16 @@ class GameState:
         
         self.terrain_map = TerrainMap(self.board_width, self.board_height)
         
+        # Hex layout for coordinate conversions
+        from game.hex_layout import HexLayout
+        self.hex_layout = HexLayout(hex_size=36, orientation='flat')
+        
         # Message system for combat feedback
         self.messages = []  # List of (message, timestamp, priority) tuples
         self.message_duration = 3.0  # Seconds to display each message
+        
+        # Debug options
+        self.show_coordinates = False
         
         self._init_game()
         
@@ -244,8 +252,8 @@ class GameState:
         if not self.selected_knight:
             return False
         
-        tile_x = x // self.tile_size
-        tile_y = y // self.tile_size
+        # Use hex layout to convert pixel coordinates to hex coordinates
+        tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
         
         if (tile_x, tile_y) in self.possible_moves:
             # Consume AP without moving yet
@@ -279,10 +287,14 @@ class GameState:
         if not self.selected_knight or not self.selected_knight.can_attack():
             return False
         
-        tile_x = x // self.tile_size
-        tile_y = y // self.tile_size
+        # Use hex layout to convert pixel coordinates to hex coordinates
+        tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
         
-        distance = abs(self.selected_knight.x - tile_x) + abs(self.selected_knight.y - tile_y)
+        # Calculate hex distance for attack range
+        hex_grid = HexGrid()
+        attacker_hex = hex_grid.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
+        target_hex = hex_grid.offset_to_axial(tile_x, tile_y)
+        distance = attacker_hex.distance_to(target_hex)
         attack_range = 1 if self.selected_knight.knight_class != KnightClass.ARCHER else 3
         
         if distance <= attack_range:
@@ -321,8 +333,8 @@ class GameState:
         if not self.selected_knight or self.selected_knight.knight_class != KnightClass.CAVALRY:
             return False
         
-        tile_x = x // self.tile_size
-        tile_y = y // self.tile_size
+        # Use hex layout to convert pixel coordinates to hex coordinates
+        tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
         
         # Find target at clicked position
         target = self.get_knight_at(tile_x, tile_y)
@@ -447,10 +459,13 @@ class GameState:
         
         targets = []
         attack_range = 1 if self.selected_knight.knight_class != KnightClass.ARCHER else 3
+        hex_grid = HexGrid()
+        attacker_hex = hex_grid.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
         
         for knight in self.knights:
             if knight.player_id != self.current_player:
-                distance = abs(self.selected_knight.x - knight.x) + abs(self.selected_knight.y - knight.y)
+                target_hex = hex_grid.offset_to_axial(knight.x, knight.y)
+                distance = attacker_hex.distance_to(target_hex)
                 if distance <= attack_range:
                     targets.append((knight.x, knight.y))
         
@@ -462,10 +477,13 @@ class GameState:
             return []
         
         targets = []
-        # Check all adjacent positions
-        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-            check_x = self.selected_knight.x + dx
-            check_y = self.selected_knight.y + dy
+        hex_grid = HexGrid()
+        cavalry_hex = hex_grid.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
+        
+        # Check all adjacent hex positions
+        neighbors = cavalry_hex.get_neighbors()
+        for neighbor_hex in neighbors:
+            check_x, check_y = hex_grid.axial_to_offset(neighbor_hex)
             
             # Check for enemy at this position
             for knight in self.knights:
