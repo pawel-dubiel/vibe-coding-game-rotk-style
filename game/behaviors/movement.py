@@ -3,13 +3,16 @@ from typing import List, Tuple, Optional, Set
 from collections import deque
 import math
 from game.components.base import Behavior
+from game.pathfinding import PathFinder, DijkstraPathFinder, AStarPathFinder
+from game.hex_utils import HexGrid
 
 class MovementBehavior(Behavior):
     """Basic movement behavior"""
     
-    def __init__(self, movement_range: int = 3):
+    def __init__(self, movement_range: int = 3, pathfinder: Optional[PathFinder] = None):
         super().__init__("move")
         self.movement_range = movement_range
+        self.pathfinder = pathfinder or DijkstraPathFinder()
         
     def can_execute(self, unit, game_state) -> bool:
         """Check if unit can move"""
@@ -84,76 +87,35 @@ class MovementBehavior(Behavior):
         if not self.can_execute(unit, game_state):
             return []
             
-        # Check if target is reachable
-        possible_moves = self.get_possible_moves(unit, game_state)
-        if (target_x, target_y) not in possible_moves:
-            return []
-            
-        # Use Dijkstra with path reconstruction
-        terrain_map = game_state.terrain_map
-        board_width = game_state.board_width
-        board_height = game_state.board_height
+        # Use pathfinder with custom cost calculation
+        # We need to wrap the pathfinder to use our AP cost calculation
+        original_get_cost = self.pathfinder._get_movement_cost
         
-        # Track costs and parents for path reconstruction
-        costs = {(unit.x, unit.y): 0}
-        parents = {(unit.x, unit.y): None}
-        queue = [(0, unit.x, unit.y)]
+        def custom_get_cost(from_pos, to_pos, game_state, unit):
+            return self.get_ap_cost(from_pos, to_pos, unit, game_state)
         
-        while queue:
-            current_cost, x, y = queue.pop(0)
-            
-            # Found target
-            if x == target_x and y == target_y:
-                # Reconstruct path
-                path = []
-                current = (x, y)
-                while current is not None:
-                    path.append(current)
-                    current = parents[current]
-                path.reverse()
-                return path[1:]  # Exclude starting position
-                
-            # Explore neighbors
-            for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]:
-                new_x, new_y = x + dx, y + dy
-                
-                if not (0 <= new_x < board_width and 0 <= new_y < board_height):
-                    continue
-                    
-                if not terrain_map.is_passable(new_x, new_y, unit.unit_class):
-                    continue
-                    
-                if self._is_enemy_at(new_x, new_y, unit, game_state):
-                    continue
-                    
-                step_cost = self.get_ap_cost((x, y), (new_x, new_y), unit, game_state)
-                new_cost = current_cost + step_cost
-                
-                if new_cost <= unit.action_points and ((new_x, new_y) not in costs or new_cost < costs[(new_x, new_y)]):
-                    costs[(new_x, new_y)] = new_cost
-                    parents[(new_x, new_y)] = (x, y)
-                    
-                    # Insert in sorted order (simple priority queue)
-                    inserted = False
-                    for i, (cost, _, _) in enumerate(queue):
-                        if new_cost < cost:
-                            queue.insert(i, (new_cost, new_x, new_y))
-                            inserted = True
-                            break
-                    if not inserted:
-                        queue.append((new_cost, new_x, new_y))
-                        
-        return []  # No path found
+        # Temporarily replace the cost function
+        self.pathfinder._get_movement_cost = custom_get_cost
+        
+        try:
+            # Find path with AP limit
+            path = self.pathfinder.find_path(
+                start=(unit.x, unit.y),
+                end=(target_x, target_y),
+                game_state=game_state,
+                unit=unit,
+                max_cost=unit.action_points
+            )
+            return path or []
+        finally:
+            # Restore original cost function
+            self.pathfinder._get_movement_cost = original_get_cost
     
     def get_possible_moves(self, unit, game_state) -> List[Tuple[int, int]]:
-        """Calculate possible movement positions using Dijkstra's algorithm"""
+        """Calculate possible movement positions using pathfinding algorithm"""
         if not self.can_execute(unit, game_state):
             return []
             
-        terrain_map = game_state.terrain_map
-        board_width = game_state.board_width
-        board_height = game_state.board_height
-        
         # Special handling for units in ZOC
         if unit.in_enemy_zoc and not self._can_disengage_from_zoc(unit):
             # Can only move to attack the engaging enemy
@@ -165,60 +127,77 @@ class MovementBehavior(Behavior):
         if unit.is_routing:
             return self._get_routing_moves(unit, game_state)
             
-        # Get available AP for movement
-        available_ap = unit.action_points
-        
-        # Dijkstra's algorithm for terrain-based movement
-        visited = {}
-        queue = deque([(unit.x, unit.y, 0, False)])
-        visited[(unit.x, unit.y)] = 0
-        moves = []
-        
-        # Check if we start adjacent to friendly units
-        start_adjacent = self._has_adjacent_friendly(unit.x, unit.y, unit, game_state)
-        
-        while queue:
-            x, y, cost, broke_formation = queue.popleft()
+        # Use Dijkstra pathfinder to find all reachable positions
+        if isinstance(self.pathfinder, DijkstraPathFinder):
+            # We need to wrap the pathfinder to use our AP cost calculation
+            original_get_cost = self.pathfinder._get_movement_cost
             
-            # Check all 8 directions (orthogonal and diagonal)
-            for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]:
-                new_x, new_y = x + dx, y + dy
+            def custom_get_cost(from_pos, to_pos, game_state, unit):
+                base_cost = self.get_ap_cost(from_pos, to_pos, unit, game_state)
+                # Don't modify cost here - we'll handle ZOC in the filtering step
+                return base_cost
+            
+            # Temporarily replace the cost function
+            self.pathfinder._get_movement_cost = custom_get_cost
+            
+            try:
+                # Find all reachable positions within AP limit
+                reachable = self.pathfinder.find_all_reachable(
+                    start=(unit.x, unit.y),
+                    game_state=game_state,
+                    unit=unit,
+                    max_cost=unit.action_points
+                )
                 
-                if not (0 <= new_x < board_width and 0 <= new_y < board_height):
-                    continue
-                    
-                # Check terrain passability
-                if not terrain_map.is_passable(new_x, new_y, unit.unit_class):
-                    continue
-                    
-                # Check for enemy units blocking
-                if self._is_enemy_at(new_x, new_y, unit, game_state):
-                    continue
-                    
-                # Calculate actual AP cost for this step
-                step_ap_cost = self.get_ap_cost((x, y), (new_x, new_y), unit, game_state)
+                # Filter out starting position and positions that would enter ZOC
+                moves = []
+                for pos, cost in reachable.items():
+                    if pos != (unit.x, unit.y) and cost <= unit.action_points:
+                        # Check if position is valid
+                        if self._will_enter_enemy_zoc(pos[0], pos[1], unit, game_state):
+                            # Allow entering ZOC if it's adjacent to current position
+                            # This allows units to approach and attack enemies
+                            hex_grid = HexGrid()
+                            start_hex = hex_grid.offset_to_axial(unit.x, unit.y)
+                            end_hex = hex_grid.offset_to_axial(pos[0], pos[1])
+                            
+                            # If adjacent (distance 1 in hex), allow the move
+                            if start_hex.distance_to(end_hex) == 1:
+                                moves.append(pos)
+                        else:
+                            # Not entering ZOC, so move is allowed
+                            moves.append(pos)
                 
-                # Check if entering enemy ZOC
-                will_enter_zoc = self._will_enter_enemy_zoc(new_x, new_y, unit, game_state)
+                return moves
+            finally:
+                # Restore original cost function
+                self.pathfinder._get_movement_cost = original_get_cost
+        else:
+            # For other pathfinders, use a simple range-based approach
+            moves = []
+            hex_grid = HexGrid()
+            start_hex = hex_grid.offset_to_axial(unit.x, unit.y)
+            
+            # Check all positions within movement range
+            for hex_coord in start_hex.get_neighbors_within_range(self.movement_range):
+                offset_pos = hex_grid.axial_to_offset(hex_coord)
+                x, y = offset_pos
                 
-                # Total AP cost so far
-                new_cost = cost + step_ap_cost
-                new_broke_formation = broke_formation
-                
-                # Check if we've been here with lower cost
-                if (new_x, new_y) in visited and visited[(new_x, new_y)] <= new_cost:
-                    continue
+                if (0 <= x < game_state.board_width and 
+                    0 <= y < game_state.board_height and
+                    (x, y) != (unit.x, unit.y)):
                     
-                # Only add if we have enough AP
-                if new_cost <= available_ap:
-                    visited[(new_x, new_y)] = new_cost
-                    moves.append((new_x, new_y))
-                    
-                    # Don't explore further if entering ZOC (stop movement)
-                    if not will_enter_zoc:
-                        queue.append((new_x, new_y, new_cost, new_broke_formation))
-                        
-        return moves
+                    # Use pathfinder to check if reachable
+                    path = self.pathfinder.find_path(
+                        start=(unit.x, unit.y),
+                        end=(x, y),
+                        game_state=game_state,
+                        unit=unit,
+                        max_cost=unit.action_points
+                    )
+                    if path:
+                        moves.append((x, y))
+            return moves
         
     def _would_break_formation(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], unit, game_state) -> bool:
         """Check if this move would break formation"""
