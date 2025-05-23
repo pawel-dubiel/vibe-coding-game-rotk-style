@@ -20,11 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - GameState: Full implementation with UI/animations
   - SimplifiedGameState: Lightweight for AI simulations
   - MockGameState: Clean testing implementation
+- Pathfinding abstraction layer
+  - PathFinder abstract base class for different algorithms
+  - AStarPathFinder implementation for optimal pathfinding
+  - DijkstraPathFinder implementation with find_all_reachable support
+  - Movement behaviors now use configurable pathfinding strategies
 - Comprehensive test coverage for new mechanics
   - Breakaway behavior tests
   - Archer ranged attack tests
   - Movement cost calculations
   - Path animation tests
+  - Pathfinding algorithm tests
 
 ### Changed
 - Combat system now tracks unit engagement status
@@ -40,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unit engagement tracking during combat
 - Movement path calculation with proper AP costs
 - Animation positioning for hex grid coordinates
+- Zone of Control (ZOC) movement restrictions preventing units from approaching enemies
+  - Units can now properly move adjacent to enemies for melee combat
+  - Movement cost calculation no longer blocks entering enemy ZOC
+  - Units in ZOC can move to any adjacent hex (not just toward the enemy)
 
 ## [0.4.0] - 2025-05-24
 

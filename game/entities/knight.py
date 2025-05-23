@@ -314,12 +314,18 @@ class Knight:
         
         # Special handling for units in ZOC
         if self.in_enemy_zoc and game_state and not self.can_disengage_from_zoc():
-            # Can only move to attack the engaging enemy or stay put
-            in_zoc, enemy = self.is_in_enemy_zoc(game_state)
-            if in_zoc and enemy:
-                # Can only move adjacent to the enemy that has us in ZOC
-                return [(enemy.x, enemy.y)]  # Move to attack
-            return []  # Cannot move
+            # When stuck in ZOC, can only move to adjacent squares (including to attack)
+            adjacent_moves = []
+            hex_grid = HexGrid()
+            current_hex = hex_grid.offset_to_axial(self.x, self.y)
+            
+            for neighbor_hex in current_hex.get_neighbors():
+                new_x, new_y = hex_grid.axial_to_offset(neighbor_hex)
+                if 0 <= new_x < board_width and 0 <= new_y < board_height:
+                    # Allow move to any adjacent square when in ZOC
+                    adjacent_moves.append((new_x, new_y))
+            
+            return adjacent_moves
         
         # Routing units move differently
         if self.is_routing:
@@ -360,15 +366,27 @@ class Knight:
                                     will_enter_zoc = True
                                     break
                     
-                    # If entering ZOC, this must be the last move
-                    if will_enter_zoc and (x, y) != (self.x, self.y):
-                        continue  # Can't move through ZOC
+                    # If already in a ZOC and trying to enter another ZOC, block it
+                    # But allow entering ZOC from free space (to approach enemies)
+                    already_in_zoc = False
+                    if (x, y) != (self.x, self.y) and game_state:
+                        for enemy in game_state.knights:
+                            if enemy.player_id != self.player_id and enemy.has_zone_of_control():
+                                current_pos_hex = hex_grid.offset_to_axial(x, y)
+                                enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
+                                if enemy_hex.distance_to(current_pos_hex) == 1:
+                                    already_in_zoc = True
+                                    break
+                    
+                    # Can't move from one ZOC to another (except starting position)
+                    if will_enter_zoc and already_in_zoc and (x, y) != (self.x, self.y):
+                        continue
                     
                     # Check if we're breaking formation
                     if (x, y) == (self.x, self.y) and start_adjacent_to_friendly:
-                        # First move away from friendly units costs all movement
+                        # First move away from friendly units costs extra
                         if not self._has_adjacent_friendly(new_x, new_y, game_state):
-                            new_cost = self.movement_range  # Use all movement points
+                            new_cost = cost + terrain_cost + 1  # Extra AP cost for breaking formation
                             broke_formation = True
                         else:
                             new_cost = cost + terrain_cost
@@ -377,10 +395,11 @@ class Knight:
                     
                     # If entering ZOC, this uses all remaining movement
                     if will_enter_zoc:
-                        new_cost = self.movement_range
+                        # Use all available AP, not movement range
+                        new_cost = self.action_points
                     
-                    # Check if we can reach this tile with our movement points
-                    if new_cost <= self.movement_range:
+                    # Check if we can reach this tile with our available AP
+                    if new_cost <= self.action_points:
                         # Check if we found a better path to this tile
                         if (new_x, new_y) not in visited or visited[(new_x, new_y)] > new_cost:
                             visited[(new_x, new_y)] = new_cost
