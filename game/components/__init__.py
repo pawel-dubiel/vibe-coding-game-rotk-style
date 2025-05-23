@@ -1,0 +1,1 @@
+# Component system for game entities
