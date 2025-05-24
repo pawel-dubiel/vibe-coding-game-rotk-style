@@ -116,5 +116,43 @@ class Castle:
         self.has_shot = True
         return damages
     
+    def calculate_archer_attack_losses(self, enemies):
+        """Calculate potential losses from castle archer attack
+        
+        Returns:
+            List of dicts containing target and estimated casualties
+        """
+        if not enemies or self.has_shot:
+            return []
+        
+        # Calculate total arrow damage based on garrisoned archers
+        total_archers = self.get_total_archer_soldiers()
+        if total_archers == 0:
+            return []  # No archers to shoot
+        
+        # Each archer can target enemies
+        total_damage = total_archers * self.arrow_damage_per_archer
+        damage_per_enemy = total_damage // len(enemies)
+        remaining_damage = total_damage % len(enemies)
+        
+        results = []
+        for i, enemy in enumerate(enemies):
+            damage = damage_per_enemy
+            if i < remaining_damage:
+                damage += 1
+                
+            # Convert to casualties
+            casualties = min(damage // 10, enemy.soldiers)  # Roughly 10 damage = 1 casualty
+            casualty_percent = (casualties / enemy.max_soldiers) * 100 if enemy.max_soldiers > 0 else 0
+            
+            results.append({
+                'target': enemy,
+                'damage': damage,
+                'casualties': casualties,
+                'casualty_percent': round(casualty_percent, 1)
+            })
+        
+        return results
+    
     def end_turn(self):
         self.has_shot = False

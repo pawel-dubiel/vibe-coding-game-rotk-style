@@ -434,6 +434,51 @@ class Unit:
             defending_soldiers = self.soldiers
             base_damage = defending_soldiers * 1.0
             return max(0, int(base_damage * 0.15))  # 15% counter casualties
+    
+    def calculate_battle_losses(self, target, attacker_terrain=None, target_terrain=None):
+        """Calculate battle losses for both attacker and defender
+        
+        Returns:
+            Dict containing:
+            - attacker_damage: Damage dealt to attacker (counter-attack)
+            - defender_damage: Damage dealt to defender
+            - attacker_casualties: Estimated casualties for attacker
+            - defender_casualties: Estimated casualties for defender
+            - attacker_casualty_percent: Percentage of attacker's force lost
+            - defender_casualty_percent: Percentage of defender's force lost
+        """
+        # Calculate base damage values
+        defender_damage = self.calculate_damage(target, attacker_terrain, target_terrain)
+        attacker_damage = target.calculate_counter_damage(self, attacker_terrain, target_terrain)
+        
+        # Calculate casualties (actual casualties will be applied by animation)
+        defender_casualties = min(defender_damage, target.soldiers)
+        attacker_casualties = min(attacker_damage, self.soldiers)
+        
+        # Calculate casualty percentages
+        attacker_casualty_percent = (attacker_casualties / self.max_soldiers) * 100 if self.max_soldiers > 0 else 0
+        defender_casualty_percent = (defender_casualties / target.max_soldiers) * 100 if target.max_soldiers > 0 else 0
+        
+        # Apply general bonuses/reductions for more accurate estimation
+        # These will be applied again during actual combat, this is just for preview
+        if hasattr(target, 'get_damage_reduction'):
+            reduction = target.get_damage_reduction()
+            defender_casualties = int(defender_casualties * (1 - reduction))
+            defender_casualty_percent = (defender_casualties / target.max_soldiers) * 100 if target.max_soldiers > 0 else 0
+            
+        if hasattr(self, 'get_damage_reduction'):
+            reduction = self.get_damage_reduction()
+            attacker_casualties = int(attacker_casualties * (1 - reduction))
+            attacker_casualty_percent = (attacker_casualties / self.max_soldiers) * 100 if self.max_soldiers > 0 else 0
+        
+        return {
+            'attacker_damage': attacker_damage,
+            'defender_damage': defender_damage,
+            'attacker_casualties': attacker_casualties,
+            'defender_casualties': defender_casualties,
+            'attacker_casualty_percent': round(attacker_casualty_percent, 1),
+            'defender_casualty_percent': round(defender_casualty_percent, 1)
+        }
             
     def get_possible_moves(self, board_width, board_height, terrain_map=None, game_state=None):
         """Compatibility method - get possible moves using movement behavior"""
@@ -502,6 +547,112 @@ class Unit:
         # Charges are always possible against adjacent enemies
         # The outcome (damage/push) depends on what's behind the target
         return True, "Can charge"
+    
+    def calculate_charge_losses(self, target, game_state):
+        """Calculate potential losses from a cavalry charge
+        
+        Returns:
+            Dict containing estimated casualties and effects
+        """
+        if not self.can_charge(target, game_state)[0]:
+            return {
+                'can_charge': False,
+                'reason': 'Cannot perform charge'
+            }
+            
+        # Calculate push direction
+        push_dir_x = target.x - self.x
+        push_dir_y = target.y - self.y
+        push_x = target.x + push_dir_x
+        push_y = target.y + push_dir_y
+        
+        # Check what's behind the target
+        obstacle_type = None
+        obstacle_unit = None
+        can_push = True
+        
+        # Check map edge
+        if not (0 <= push_x < game_state.board_width and 0 <= push_y < game_state.board_height):
+            can_push = False
+            obstacle_type = 'wall'
+        # Check castles
+        elif any(castle.contains_position(push_x, push_y) for castle in game_state.castles):
+            can_push = False
+            obstacle_type = 'wall'
+        # Check terrain
+        elif game_state.terrain_map and not game_state.terrain_map.is_passable(push_x, push_y, target.knight_class):
+            can_push = False
+            obstacle_type = 'terrain'
+        else:
+            # Check for units
+            for knight in game_state.knights:
+                if knight.x == push_x and knight.y == push_y and not knight.is_garrisoned:
+                    obstacle_unit = knight
+                    can_push = False
+                    obstacle_type = 'unit'
+                    break
+        
+        # Calculate base charge damage
+        base_charge_damage = int(self.soldiers * 0.8)  # 80% of cavalry as base damage
+        
+        # Calculate damage based on obstacle type
+        charge_damage = base_charge_damage
+        self_damage = int(self.soldiers * 0.05)  # Default self-damage
+        collateral_damage = 0
+        collateral_unit = None
+        morale_loss = 15  # Default morale loss
+        
+        if not can_push:
+            if obstacle_type == 'wall':
+                # Crushing charge against wall/castle
+                charge_damage = int(base_charge_damage * 1.5)
+                self_damage = int(self.soldiers * 0.1)
+                morale_loss = 30
+            elif obstacle_type == 'terrain':
+                # Trapped by terrain
+                charge_damage = int(base_charge_damage * 1.3)
+                self_damage = int(self.soldiers * 0.08)
+                morale_loss = 25
+            elif obstacle_type == 'unit' and obstacle_unit:
+                # Slammed into another unit
+                charge_damage = int(base_charge_damage * 1.2)
+                self_damage = int(self.soldiers * 0.07)
+                collateral_damage = int(base_charge_damage * 0.3)
+                collateral_unit = obstacle_unit
+                morale_loss = 20
+        
+        # Calculate casualties (capped by available soldiers)
+        defender_casualties = min(charge_damage, target.soldiers)
+        attacker_casualties = min(self_damage, self.soldiers)
+        
+        # Calculate casualty percentages
+        attacker_casualty_percent = (attacker_casualties / self.max_soldiers) * 100 if self.max_soldiers > 0 else 0
+        defender_casualty_percent = (defender_casualties / target.max_soldiers) * 100 if target.max_soldiers > 0 else 0
+        
+        result = {
+            'can_charge': True,
+            'can_push': can_push,
+            'obstacle_type': obstacle_type,
+            'charge_damage': charge_damage,
+            'self_damage': self_damage,
+            'defender_casualties': defender_casualties,
+            'attacker_casualties': attacker_casualties,
+            'attacker_casualty_percent': round(attacker_casualty_percent, 1),
+            'defender_casualty_percent': round(defender_casualty_percent, 1),
+            'morale_loss': morale_loss
+        }
+        
+        if collateral_unit:
+            collateral_casualties = min(collateral_damage, collateral_unit.soldiers)
+            collateral_casualty_percent = (collateral_casualties / collateral_unit.max_soldiers) * 100 if collateral_unit.max_soldiers > 0 else 0
+            result.update({
+                'collateral_unit': collateral_unit,
+                'collateral_damage': collateral_damage,
+                'collateral_casualties': collateral_casualties,
+                'collateral_casualty_percent': round(collateral_casualty_percent, 1)
+            })
+            
+        return result
     
     def execute_charge(self, target, game_state):
         """Execute cavalry charge against target"""
