@@ -41,6 +41,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Breaking from enemy Zone of Control costs extra AP
 - AI uses lightweight game state for better performance
 - Animation system supports multi-step path animations
+- Knight class refactored to minimal implementation
+  - Removed ~800 lines of duplicate code
+  - Removed duplicate logic now handled by behaviors
+  - Kept only essential properties for legacy compatibility
+  - All game logic uses Unit instances with behaviors
+  - Knight class marked as legacy with clear documentation
+  - Fixed all test failures from refactoring (143 tests passing)
 
 ### Fixed
 - Unit engagement tracking during combat

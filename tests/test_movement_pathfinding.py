@@ -1,9 +1,9 @@
 """Test movement behavior with pathfinding integration"""
-import pytest
 from game.behaviors.movement import MovementBehavior
 from game.pathfinding import AStarPathFinder, DijkstraPathFinder
 from game.test_utils.mock_game_state import MockGameState
-from game.entities.unit import Unit, UnitClass
+from game.entities.unit import Unit
+from game.entities.knight import KnightClass
 from game.terrain import TerrainType, TerrainMap
 
 
@@ -12,17 +12,13 @@ class TestMovementPathfinding:
     
     def setup_method(self):
         """Set up test fixtures"""
-        self.game_state = MockGameState()
-        self.game_state.board_width = 10
-        self.game_state.board_height = 10
-        
-        # Create terrain map
-        self.game_state.terrain_map = TerrainMap(10, 10)
+        self.game_state = MockGameState(board_width=10, board_height=10)
         
         # Create test unit
-        self.unit = Unit(x=0, y=0, player_id=1, unit_class=UnitClass.WARRIOR, soldiers=100)
+        self.unit = Unit(name="Test Unit", unit_class=KnightClass.WARRIOR, x=0, y=0)
+        self.unit.player_id = 1
         self.unit.action_points = 5
-        self.game_state.knights = [self.unit]
+        self.game_state.add_knight(self.unit)
         
     def test_movement_with_dijkstra_pathfinder(self):
         """Test movement behavior using Dijkstra pathfinder"""
@@ -55,8 +51,9 @@ class TestMovementPathfinding:
         movement = MovementBehavior(pathfinder=AStarPathFinder())
         
         # Create varied terrain
-        self.game_state.terrain_map.set_terrain(1, 0, TerrainType.FOREST)  # Cost 2
-        self.game_state.terrain_map.set_terrain(2, 0, TerrainType.FOREST)  # Cost 2
+        from game.terrain import Terrain
+        self.game_state.terrain_map.terrain_grid[0][1] = Terrain(TerrainType.FOREST)  # Cost 2
+        self.game_state.terrain_map.terrain_grid[0][2] = Terrain(TerrainType.FOREST)  # Cost 2
         
         # Unit with 5 AP can't reach (3,0) through forest
         path = movement.get_path_to(self.unit, self.game_state, 3, 0)
@@ -78,9 +75,10 @@ class TestMovementPathfinding:
         movement = MovementBehavior(pathfinder=DijkstraPathFinder())
         
         # Place enemy unit that creates ZOC
-        enemy = Unit(x=2, y=1, player_id=2, unit_class=UnitClass.WARRIOR, soldiers=100)
+        enemy = Unit(name="Enemy", unit_class=KnightClass.WARRIOR, x=2, y=1)
+        enemy.player_id = 2
         enemy.morale = 100  # High morale for ZOC
-        self.game_state.knights.append(enemy)
+        self.game_state.add_knight(enemy)
         
         # Get possible moves
         moves = movement.get_possible_moves(self.unit, self.game_state)
@@ -102,8 +100,9 @@ class TestMovementPathfinding:
         movement = MovementBehavior(pathfinder=AStarPathFinder())
         
         # Place friendly unit adjacent for formation
-        friendly = Unit(x=1, y=0, player_id=1, unit_class=UnitClass.WARRIOR, soldiers=100)
-        self.game_state.knights.append(friendly)
+        friendly = Unit(name="Friendly", unit_class=KnightClass.WARRIOR, x=1, y=0)
+        friendly.player_id = 1
+        self.game_state.add_knight(friendly)
         
         # Moving away from friendly should have higher cost
         # Path that maintains formation should be preferred
