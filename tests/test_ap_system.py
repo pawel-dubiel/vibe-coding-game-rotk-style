@@ -38,14 +38,16 @@ class TestAPSystem(unittest.TestCase):
         
         move_behavior = unit.behaviors['move']
         
-        # Test that plains movement has a cost
+        # First ensure we have plains terrain for comparison
+        plains_terrain = Terrain(TerrainType.PLAINS)
+        self.game_state.terrain_map.terrain_grid[5][6] = plains_terrain
         plains_cost = move_behavior.get_ap_cost((5, 5), (6, 5), unit, self.game_state)
         self.assertGreaterEqual(plains_cost, 1)
         
-        # Create forest terrain manually for testing
+        # Now change to forest terrain
         forest_terrain = Terrain(TerrainType.FOREST)
-        self.game_state.terrain_map.terrain_grid[5][7] = forest_terrain
-        forest_cost = move_behavior.get_ap_cost((5, 5), (7, 5), unit, self.game_state)
+        self.game_state.terrain_map.terrain_grid[5][6] = forest_terrain
+        forest_cost = move_behavior.get_ap_cost((5, 5), (6, 5), unit, self.game_state)
         
         # Forest should cost more than plains
         self.assertGreater(forest_cost, plains_cost)
@@ -77,7 +79,7 @@ class TestAPSystem(unittest.TestCase):
         
         # Test attack behavior AP costs
         self.assertEqual(warrior.behaviors['attack'].get_ap_cost(warrior), 4)
-        self.assertEqual(archer.behaviors['archer_attack'].get_ap_cost(archer), 2)
+        self.assertEqual(archer.behaviors['attack'].get_ap_cost(archer), 2)
         self.assertEqual(cavalry.behaviors['attack'].get_ap_cost(cavalry), 3)
         self.assertEqual(mage.behaviors['attack'].get_ap_cost(mage), 2)
         
@@ -132,7 +134,7 @@ class TestAPSystem(unittest.TestCase):
         archer = UnitFactory.create_archer("Archer", 5, 5)
         archer.action_points = 3
         
-        self.assertTrue(archer.can_execute_behavior('archer_attack', self.game_state))
+        self.assertTrue(archer.can_execute_behavior('attack', self.game_state))
         
     def test_multiple_actions_per_turn(self):
         """Test units can perform multiple actions if they have AP"""
@@ -153,11 +155,15 @@ class TestAPSystem(unittest.TestCase):
         
         ap_after_move = cavalry.action_points
         
+        # Simulate animation completion - position would be updated by animation
+        cavalry.x = 6
+        cavalry.y = 5
+        
         # Reset has_moved flag to allow another move
         cavalry.has_moved = False
         
-        # Move again
-        result2 = cavalry.execute_behavior('move', self.game_state, target_x=7, target_y=5)
+        # Move again (to a different position since enemy is at 7,5)
+        result2 = cavalry.execute_behavior('move', self.game_state, target_x=7, target_y=6)
         self.assertTrue(result2['success'])
         self.assertLess(cavalry.action_points, ap_after_move)
         
