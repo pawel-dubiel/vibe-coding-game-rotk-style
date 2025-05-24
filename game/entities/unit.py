@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from game.components.stats import StatsComponent, UnitStats
 from game.components.base import Behavior
 from game.components.generals import GeneralRoster
+from game.components.facing import FacingComponent, FacingDirection
 from game.entities.knight import KnightClass
 from game.combat_config import CombatConfig
 from game.hex_utils import HexGrid
@@ -38,6 +39,9 @@ class Unit:
         
         # General roster
         self.generals = GeneralRoster(max_generals=3)
+        
+        # Facing component
+        self.facing = FacingComponent()
         
         # Behaviors
         self.behaviors: Dict[str, Behavior] = {}
@@ -464,8 +468,11 @@ class Unit:
     def move(self, new_x, new_y):
         """Compatibility method - simple move (used by AI)"""
         if self.can_move():
+            # Update facing based on movement
+            old_x, old_y = self.x, self.y
             self.x = new_x
             self.y = new_y
+            self.facing.update_facing_from_movement(old_x, old_y, new_x, new_y)
             self.action_points -= 1
             self.has_moved = True
             return True

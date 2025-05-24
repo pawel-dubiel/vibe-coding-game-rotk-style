@@ -25,12 +25,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - AStarPathFinder implementation for optimal pathfinding
   - DijkstraPathFinder implementation with find_all_reachable support
   - Movement behaviors now use configurable pathfinding strategies
+- Unit facing system with directional combat modifiers
+  - Six facing directions in hexagonal grid (NE, E, SE, SW, W, NW)
+  - Frontal attacks: normal damage
+  - Flank attacks: +25% damage bonus
+  - Rear attacks: +50% damage bonus
+  - Rear attacks can trigger immediate routing checks
+  - Visual indicators show unit facing direction (yellow arrows)
+  - AI considers facing in tactical evaluations
+- Rotation mechanics for tactical positioning
+  - Manual rotation action available in context menu
+  - Rotation costs AP based on terrain (Plains: 1, Forest/Hills: 2, Swamp: 3)
+  - Cannot rotate when adjacent to enemies (combat locked)
+  - Can rotate clockwise or counter-clockwise
+- Movement facing system
+  - Units automatically face the direction they move
+  - Auto-facing towards enemies when ending movement within 2 hexes
+  - Manual facing selection after movement (limited to 60° turn)
+  - Free rotation option when not near enemies
+- Multiplayer mode (Hot Seat)
+  - Game mode selection screen (Single Player vs Multiplayer)
+  - Both players control units on same computer
+  - Clear turn indicators showing which human player is active
+  - No AI delays in multiplayer mode
+  - Visual mode indicators in UI and battle setup
 - Comprehensive test coverage for new mechanics
   - Breakaway behavior tests
   - Archer ranged attack tests
   - Movement cost calculations
   - Path animation tests
   - Pathfinding algorithm tests
+  - Unit facing tests
+  - Rotation mechanics tests
+  - Movement facing tests
+  - Multiplayer mode tests
 
 ### Changed
 - Combat system now tracks unit engagement status
@@ -48,6 +76,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All game logic uses Unit instances with behaviors
   - Knight class marked as legacy with clear documentation
   - Fixed all test failures from refactoring (143 tests passing)
+- Knight class completely removed
+  - Eliminated backward compatibility class entirely
+  - KnightAdapter no longer inherits from Knight
+  - All tests use UnitFactory directly
+  - Cleaner codebase with no legacy dependencies
+- Combat damage calculations now include facing modifiers
+- AI evaluation function enhanced with facing considerations
+- Movement animations update unit facing during execution
+- Game flow updated: Main Menu → Game Mode → Battle Setup → Game
 
 ### Fixed
 - Unit engagement tracking during combat
@@ -57,6 +94,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Units can now properly move adjacent to enemies for melee combat
   - Movement cost calculation no longer blocks entering enemy ZOC
   - Units in ZOC can move to any adjacent hex (not just toward the enemy)
+- Health bar alignment on units (properly centered)
+- Hex alignment in visual tests (using HexLayout for consistency)
+- AI division by zero error when evaluating facing positions
+- Zone of Control mechanics for heavy units
+  - Heavy units cannot disengage from other heavy units
+  - Proper checking of unit engagement status
+  - Breakaway rules correctly enforced based on unit types
+- Multiplayer input handling
+  - Removed hardcoded Player 1 restrictions from input handler
+  - Both players can now select units and end turns
+  - Fixed "End Turn" button to work for both players
+  - Fixed spacebar and mouse controls for all players
 
 ## [0.4.0] - 2025-05-24
 

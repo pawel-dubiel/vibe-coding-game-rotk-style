@@ -23,11 +23,11 @@ class InputHandler:
             x, y = game_state.screen_to_world(screen_x, screen_y)
             
             if screen_y >= pygame.display.get_surface().get_height() - 100:
-                if screen_x >= pygame.display.get_surface().get_width() - 140 and game_state.current_player == 1:
+                if screen_x >= pygame.display.get_surface().get_width() - 140:
                     game_state.end_turn()
                 return
             
-            if event.button == 1 and game_state.current_player == 1:
+            if event.button == 1:
                 self.left_click_held = True
                 
                 # Context menu uses screen coordinates
@@ -67,9 +67,8 @@ class InputHandler:
                 self.drag_start_y = screen_y
                 self.camera_drag_start_x = game_state.camera_x
                 self.camera_drag_start_y = game_state.camera_y
-                # Only deselect if player 1
-                if game_state.current_player == 1:
-                    game_state.deselect_knight()
+                # Deselect on right click
+                game_state.deselect_knight()
         
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
@@ -93,7 +92,7 @@ class InputHandler:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 game_state.deselect_knight()
-            elif event.key == pygame.K_SPACE and game_state.current_player == 1:
+            elif event.key == pygame.K_SPACE:
                 game_state.end_turn()
             # Arrow keys for camera movement
             elif event.key == pygame.K_LEFT:

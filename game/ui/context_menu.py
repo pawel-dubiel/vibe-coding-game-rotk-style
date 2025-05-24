@@ -98,6 +98,28 @@ class ContextMenu:
                         'action': 'charge',
                         'enabled': False
                     })
+            
+            # Add rotation options
+            if hasattr(knight, 'behaviors') and 'rotate' in knight.behaviors:
+                rotate_behavior = knight.behaviors['rotate']
+                if rotate_behavior.can_execute(knight, game_state):
+                    ap_cost = rotate_behavior.get_ap_cost(knight, game_state)
+                    rotation_options = rotate_behavior.get_rotation_options(knight)
+                    
+                    for action_id, text, direction in rotation_options:
+                        actions.append({
+                            'text': f'{text} ({ap_cost} AP)',
+                            'action': action_id,
+                            'enabled': True,
+                            'data': direction  # Store rotation direction
+                        })
+                else:
+                    # Show disabled if can't rotate
+                    actions.append({
+                        'text': f'Rotate (In Combat)',
+                        'action': 'rotate_disabled',
+                        'enabled': False
+                    })
         
         actions.append({
             'text': 'Info',

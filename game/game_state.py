@@ -329,18 +329,33 @@ class GameState(IGameState):
                 attacker_terrain = self.terrain_map.get_terrain(self.selected_knight.x, self.selected_knight.y)
                 target_terrain = self.terrain_map.get_terrain(target.x, target.y)
                 
-                # Calculate damage with terrain modifiers and consume AP without applying damage yet
-                damage = self.selected_knight.calculate_damage(target, attacker_terrain, target_terrain)
-                self.selected_knight.consume_attack_ap()
-                
-                # Calculate counter damage for melee attacks (not ranged)
-                counter_damage = 0
-                if distance == 1:  # Melee range
-                    counter_damage = target.calculate_counter_damage(self.selected_knight, attacker_terrain, target_terrain)
-                
-                # Create attack animation - animation will apply damage when projectile hits
-                anim = AttackAnimation(self.selected_knight, target, damage, counter_damage)
-                self.animation_manager.add_animation(anim)
+                # Use attack behavior if available
+                if hasattr(self.selected_knight, 'behaviors') and 'attack' in self.selected_knight.behaviors:
+                    result = self.selected_knight.behaviors['attack'].execute(self.selected_knight, self, target)
+                    if result['success']:
+                        damage = result['damage']
+                        counter_damage = result.get('counter_damage', 0)
+                        attack_angle = result.get('attack_angle', None)
+                        extra_morale_penalty = result.get('extra_morale_penalty', 0)
+                        should_check_routing = result.get('should_check_routing', False)
+                        
+                        # Create attack animation with facing info
+                        anim = AttackAnimation(self.selected_knight, target, damage, counter_damage,
+                                             attack_angle=attack_angle, 
+                                             extra_morale_penalty=extra_morale_penalty,
+                                             should_check_routing=should_check_routing)
+                        self.animation_manager.add_animation(anim)
+                else:
+                    # Fallback to old method
+                    damage = self.selected_knight.calculate_damage(target, attacker_terrain, target_terrain)
+                    self.selected_knight.consume_attack_ap()
+                    
+                    counter_damage = 0
+                    if distance == 1:  # Melee range
+                        counter_damage = target.calculate_counter_damage(self.selected_knight, attacker_terrain, target_terrain)
+                    
+                    anim = AttackAnimation(self.selected_knight, target, damage, counter_damage)
+                    self.animation_manager.add_animation(anim)
                 
                 # Add combat message
                 if counter_damage > 0:
@@ -444,6 +459,10 @@ class GameState(IGameState):
             self._enter_garrison()
         elif action == 'exit_garrison':
             self._exit_garrison()
+        elif action == 'rotate_cw':
+            self._rotate_selected_knight('clockwise')
+        elif action == 'rotate_ccw':
+            self._rotate_selected_knight('counter_clockwise')
         elif action == 'info':
             pass
         elif action == 'cancel':
@@ -477,6 +496,20 @@ class GameState(IGameState):
                         self.selected_knight.x = new_x
                         self.selected_knight.y = new_y
                         return
+    
+    def _rotate_selected_knight(self, direction):
+        """Rotate the selected knight in the specified direction"""
+        if not self.selected_knight:
+            return
+            
+        if hasattr(self.selected_knight, 'behaviors') and 'rotate' in self.selected_knight.behaviors:
+            rotate_behavior = self.selected_knight.behaviors['rotate']
+            result = rotate_behavior.execute(self.selected_knight, self, direction)
+            
+            if result['success']:
+                self.add_message(result['message'])
+            else:
+                self.add_message(f"Cannot rotate: {result['reason']}")
     
     def _get_attack_targets(self):
         if not self.selected_knight:

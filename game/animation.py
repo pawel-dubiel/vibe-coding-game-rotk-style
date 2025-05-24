@@ -34,6 +34,11 @@ class MoveAnimation(Animation):
         if self.finished and not self.position_updated:
             self.knight.x = self.end_x
             self.knight.y = self.end_y
+            
+            # Update facing based on movement direction
+            if hasattr(self.knight, 'facing'):
+                self.knight.facing.update_facing_from_movement(self.start_x, self.start_y, self.end_x, self.end_y)
+                
             self.position_updated = True
             
             # Clear pending position if game_state is available
@@ -64,6 +69,7 @@ class PathMoveAnimation(Animation):
         self.current_step = 0
         self.position_updated = False
         self.game_state = game_state
+        self.last_completed_step = -1
         
         # Store the initial position
         self.start_x = knight.x
@@ -71,6 +77,27 @@ class PathMoveAnimation(Animation):
     
     def update(self, dt):
         super().update(dt)
+        
+        # Update facing as we reach each step
+        if self.path and hasattr(self.knight, 'facing'):
+            progress = self.get_progress()
+            total_steps = len(self.path)
+            current_step_float = progress * total_steps
+            current_step = int(current_step_float)
+            
+            # Update facing when we complete a step
+            if current_step > self.last_completed_step and current_step < total_steps:
+                # Get positions for facing update
+                if self.last_completed_step < 0:
+                    from_x, from_y = self.start_x, self.start_y
+                else:
+                    from_x, from_y = self.path[self.last_completed_step]
+                    
+                to_x, to_y = self.path[current_step]
+                
+                # Update facing
+                self.knight.facing.update_facing_from_movement(from_x, from_y, to_x, to_y)
+                self.last_completed_step = current_step
         
         # Update knight's actual position when animation completes
         if self.finished and not self.position_updated:
@@ -123,7 +150,8 @@ class PathMoveAnimation(Animation):
         return t * t * (3.0 - 2.0 * t)
 
 class AttackAnimation(Animation):
-    def __init__(self, attacker, target, damage, counter_damage=0, duration=0.8):
+    def __init__(self, attacker, target, damage, counter_damage=0, duration=0.8, 
+                 attack_angle=None, extra_morale_penalty=0, should_check_routing=False):
         super().__init__(duration)
         self.attacker = attacker
         self.target = target
@@ -131,13 +159,32 @@ class AttackAnimation(Animation):
         self.counter_damage = counter_damage
         self.shake_intensity = 10
         self.damage_applied = False
+        self.attack_angle = attack_angle
+        self.extra_morale_penalty = extra_morale_penalty
+        self.should_check_routing = should_check_routing
     
     def update(self, dt):
         super().update(dt)
         # Apply casualties when projectile hits (at 50% progress)
         progress = self.get_progress()
         if progress >= 0.5 and not self.damage_applied:
+            # Calculate casualties before applying
+            initial_soldiers = self.target.soldiers
             self.target.take_casualties(self.damage)
+            casualties_taken = initial_soldiers - self.target.soldiers
+            
+            # Apply extra morale penalty for flank/rear attacks
+            if self.extra_morale_penalty > 0:
+                self.target.morale = max(0, self.target.morale - self.extra_morale_penalty)
+            
+            # Check for routing from rear/flank attacks
+            if self.should_check_routing and hasattr(self.target, 'facing') and casualties_taken > 0:
+                casualties_percent = casualties_taken / initial_soldiers
+                if self.target.facing.check_routing_chance(self.attack_angle, 
+                                                          self.target.morale, 
+                                                          casualties_percent):
+                    self.target.is_routing = True
+            
             # Apply counter damage to attacker if melee
             if self.counter_damage > 0:
                 self.attacker.take_casualties(self.counter_damage)

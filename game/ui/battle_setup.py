@@ -14,8 +14,10 @@ class BattleSetupScreen:
         self.screen = screen
         self.font = pygame.font.Font(None, 48)
         self.title_font = pygame.font.Font(None, 72)
+        self.info_font = pygame.font.Font(None, 32)
         self.selected_size: Optional[BattleSize] = None
         self.ready = False
+        self.vs_ai = True  # Will be set by main game
         
         self.battle_configs = {
             BattleSize.SMALL: {
@@ -75,8 +77,14 @@ class BattleSetupScreen:
         self.screen.fill((50, 50, 50))
         
         title_text = self.title_font.render("Choose Battle Size", True, (255, 255, 255))
-        title_rect = title_text.get_rect(center=(self.screen.get_width() // 2, 100))
+        title_rect = title_text.get_rect(center=(self.screen.get_width() // 2, 80))
         self.screen.blit(title_text, title_rect)
+        
+        # Show selected game mode
+        mode_text = "Single Player (vs AI)" if self.vs_ai else "Multiplayer (vs Human)"
+        mode_surface = self.info_font.render(f"Mode: {mode_text}", True, (200, 200, 200))
+        mode_rect = mode_surface.get_rect(center=(self.screen.get_width() // 2, 120))
+        self.screen.blit(mode_surface, mode_rect)
         
         mouse_pos = pygame.mouse.get_pos()
         

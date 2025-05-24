@@ -57,6 +57,21 @@ class CavalryChargeBehavior(Behavior):
         # Calculate base damage
         base_charge_damage = int(unit.stats.stats.current_soldiers * 0.8)
         
+        # Check attack angle for devastating rear charges
+        rear_charge_multiplier = 1.0
+        extra_morale_damage = 0
+        
+        if hasattr(target, 'facing'):
+            attack_angle = target.facing.get_attack_angle(unit.x, unit.y, target.x, target.y)
+            if attack_angle.is_rear:
+                rear_charge_multiplier = 2.0  # Double damage from rear
+                extra_morale_damage = 30  # Devastating morale impact
+            elif attack_angle.is_flank:
+                rear_charge_multiplier = 1.5  # 50% more damage from flank
+                extra_morale_damage = 15
+                
+        base_charge_damage = int(base_charge_damage * rear_charge_multiplier)
+        
         # Calculate damage based on what's behind
         if not can_push:
             if obstacle_type == 'wall':  # Map edge or castle
@@ -101,16 +116,27 @@ class CavalryChargeBehavior(Behavior):
         unit.action_points -= self.get_ap_cost()
         unit.has_used_special = True
         
+        # Add extra morale damage from angle
+        total_morale_damage = morale_damage + extra_morale_damage
+        
+        # Update message for rear charges
+        if hasattr(target, 'facing') and extra_morale_damage > 0:
+            if attack_angle.is_rear:
+                message = f"DEVASTATING REAR CHARGE! {message}"
+            elif attack_angle.is_flank:
+                message = f"FLANK CHARGE! {message}"
+        
         result = {
             'success': True,
             'damage': charge_damage,
             'self_damage': self_damage,
             'push': can_push,
             'push_to': (push_x, push_y) if can_push else None,
-            'morale_damage': morale_damage,
+            'morale_damage': total_morale_damage,
             'message': message,
             'animation': 'charge',
-            'target': target
+            'target': target,
+            'is_rear_charge': extra_morale_damage > 20  # Flag for special effects
         }
         
         # Add collateral damage info if applicable
