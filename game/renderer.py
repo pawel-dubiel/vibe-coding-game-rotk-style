@@ -260,7 +260,7 @@ class Renderer:
             health_percent = knight.health / knight.max_health
             bar_width = 40
             bar_height = 4
-            bar_x = x + (self.tile_size - bar_width) // 2
+            bar_x = x - bar_width // 2  # Center the bar horizontally
             bar_y = y + 8
             
             pygame.draw.rect(self.screen, self.colors['health_bar_bg'],
