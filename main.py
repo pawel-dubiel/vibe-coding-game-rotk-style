@@ -4,6 +4,7 @@ from game.game_state import GameState
 from game.renderer import Renderer
 from game.input_handler import InputHandler
 from game.ui.battle_setup import BattleSetupScreen
+from game.ui.game_mode_select import GameModeSelectScreen
 from game.ui.main_menu import MainMenu, PauseMenu, MenuOption
 
 class Game:
@@ -16,6 +17,7 @@ class Game:
         
         # Game states
         self.in_main_menu = True
+        self.in_mode_select = False
         self.in_setup = False
         self.in_game = False
         self.paused = False
@@ -23,7 +25,11 @@ class Game:
         # UI screens
         self.main_menu = MainMenu(self.screen)
         self.pause_menu = PauseMenu(self.screen)
+        self.game_mode_screen = GameModeSelectScreen(self.screen)
         self.battle_setup_screen = BattleSetupScreen(self.screen)
+        
+        # Game configuration
+        self.vs_ai = True  # Default to single player
         
         self.game_state = None
         self.renderer = Renderer(self.screen)
@@ -35,6 +41,8 @@ class Game:
             
             if self.in_main_menu:
                 self._handle_main_menu()
+            elif self.in_mode_select:
+                self._handle_mode_select()
             elif self.in_setup:
                 self._handle_battle_setup()
             elif self.in_game:
@@ -53,7 +61,7 @@ class Game:
                 option = self.main_menu.handle_event(event)
                 if option == MenuOption.NEW_GAME:
                     self.in_main_menu = False
-                    self.in_setup = True
+                    self.in_mode_select = True
                 elif option == MenuOption.LOAD_GAME:
                     # Placeholder for load game functionality
                     print("Load Game - Not implemented yet")
@@ -66,21 +74,48 @@ class Game:
         self.screen.fill((0, 0, 0))
         self.main_menu.draw()
     
-    def _handle_battle_setup(self):
+    def _handle_mode_select(self):
+        """Handle game mode selection screen"""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 # Go back to main menu
-                self.in_setup = False
+                self.in_mode_select = False
                 self.in_main_menu = True
+                self.game_mode_screen.reset()
+            else:
+                if self.game_mode_screen.handle_event(event):
+                    if self.game_mode_screen.ready:
+                        # Mode selected, save the choice and move to battle setup
+                        self.vs_ai = self.game_mode_screen.get_vs_ai()
+                        self.battle_setup_screen.vs_ai = self.vs_ai
+                        self.in_mode_select = False
+                        self.in_setup = True
+                        self.game_mode_screen.reset()
+                    else:
+                        # ESC was pressed, go back to main menu
+                        self.in_mode_select = False
+                        self.in_main_menu = True
+                        self.game_mode_screen.reset()
+        
+        self.game_mode_screen.draw()
+    
+    def _handle_battle_setup(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                # Go back to mode select
+                self.in_setup = False
+                self.in_mode_select = True
                 self.battle_setup_screen.ready = False
             else:
                 self.battle_setup_screen.handle_event(event)
         
         if self.battle_setup_screen.ready:
             battle_config = self.battle_setup_screen.get_battle_config()
-            self.game_state = GameState(battle_config)
+            self.game_state = GameState(battle_config, vs_ai=self.vs_ai)
             self.in_setup = False
             self.in_game = True
             self.battle_setup_screen.ready = False
@@ -106,7 +141,7 @@ class Game:
                 elif option == MenuOption.NEW_GAME:
                     self.paused = False
                     self.in_game = False
-                    self.in_setup = True
+                    self.in_mode_select = True
                     self.pause_menu.hide()
                 elif option == MenuOption.SAVE_GAME:
                     print("Save Game - Not implemented yet")

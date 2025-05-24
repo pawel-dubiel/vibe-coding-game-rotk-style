@@ -82,7 +82,79 @@ class AIPlayer:
                 if terrain.defense_bonus < 0:
                     bonus += terrain.defense_bonus * 3
         
+        # Facing bonus - better to face enemies
+        if hasattr(knight, 'facing'):
+            facing_bonus = self._evaluate_facing_position(knight, game_state)
+            bonus += facing_bonus
+        
         return bonus
+    
+    def _evaluate_facing_position(self, knight, game_state):
+        """Evaluate how well positioned unit is based on facing"""
+        bonus = 0
+        
+        # Check threats from different directions
+        for enemy in game_state.knights:
+            if enemy.player_id == self.player_id:
+                continue
+                
+            # Calculate distance
+            dx = abs(knight.x - enemy.x)
+            dy = abs(knight.y - enemy.y)
+            distance = max(dx, dy)
+            
+            # Only consider nearby threats (but not on same position)
+            if 0 < distance <= 3:
+                # Check if enemy is behind us
+                if hasattr(knight, 'facing'):
+                    attack_angle = knight.facing.get_attack_angle(enemy.x, enemy.y, knight.x, knight.y)
+                    
+                    if attack_angle.is_rear:
+                        # Heavy penalty for enemies behind us
+                        bonus -= 30 / distance
+                    elif attack_angle.is_flank:
+                        # Moderate penalty for enemies on flank
+                        bonus -= 15 / distance
+                    else:
+                        # Small bonus for facing enemies
+                        bonus += 5 / distance
+                        
+                    # Extra penalty if enemy is cavalry behind us
+                    if attack_angle.is_rear and enemy.knight_class == KnightClass.CAVALRY:
+                        bonus -= 40 / distance
+        
+        return bonus
+    
+    def _evaluate_attack(self, attacker, target):
+        """Evaluate the value of attacking a target, considering facing"""
+        base_value = 100  # Base value for any attack
+        
+        # Value based on target
+        target_value = self._get_knight_value(target)
+        base_value += target_value * 0.5
+        
+        # Bonus for attacking damaged units
+        health_percent = target.health / target.max_health
+        if health_percent < 0.5:
+            base_value += 50
+        
+        # Facing bonus
+        if hasattr(target, 'facing'):
+            attack_angle = target.facing.get_attack_angle(attacker.x, attacker.y, target.x, target.y)
+            
+            if attack_angle.is_rear:
+                base_value += 100  # Huge bonus for rear attacks
+                # Extra bonus if we're cavalry attacking rear
+                if attacker.knight_class == KnightClass.CAVALRY:
+                    base_value += 150
+            elif attack_angle.is_flank:
+                base_value += 50  # Good bonus for flank attacks
+        
+        # Consider if attack might cause routing
+        if hasattr(target, 'morale') and target.morale < 50:
+            base_value += 75  # Bonus for attacking low morale units
+        
+        return base_value
     
     def get_all_possible_moves(self, game_state):
         moves = []
@@ -121,7 +193,9 @@ class AIPlayer:
                     
                     distance = abs(knight.x - enemy.x) + abs(knight.y - enemy.y)
                     if distance <= attack_range:
-                        moves.append(('attack', knight, enemy))
+                        # Calculate attack value considering facing
+                        attack_value = self._evaluate_attack(knight, enemy)
+                        moves.append(('attack', knight, enemy, attack_value))
         
         return moves
     
@@ -241,8 +315,10 @@ class AIPlayer:
             knight.move(move[2], move[3])
         elif move_type == 'attack':
             target = None
+            # Handle both 3-tuple and 4-tuple attack moves
+            target_ref = move[2]
             for k in state_copy.knights:
-                if k.name == move[2].name and k.x == move[2].x and k.y == move[2].y:
+                if k.name == target_ref.name and k.x == target_ref.x and k.y == target_ref.y:
                     target = k
                     break
             if target:
@@ -265,6 +341,18 @@ class AIPlayer:
         
         possible_moves = self.get_all_possible_moves(game_state)
         if possible_moves:
+            # Sort attacks by value if difficulty is medium or hard
+            if self.difficulty in ['medium', 'hard']:
+                attack_moves = [m for m in possible_moves if m[0] == 'attack' and len(m) > 3]
+                if attack_moves:
+                    # Sort by attack value (highest first)
+                    attack_moves.sort(key=lambda m: m[3], reverse=True)
+                    # Take best attack with some randomness for medium difficulty
+                    if self.difficulty == 'medium' and random.random() < 0.3:
+                        return random.choice(attack_moves[:3] if len(attack_moves) >= 3 else attack_moves)
+                    else:
+                        return attack_moves[0]
+            
             return random.choice(possible_moves)
         
         return None

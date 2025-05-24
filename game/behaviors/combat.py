@@ -72,12 +72,28 @@ class AttackBehavior(Behavior):
         target.is_engaged_in_combat = True
         target.engaged_with = unit
         
+        # Check attack angle for additional effects
+        attack_angle = None
+        extra_morale_penalty = 0
+        should_check_routing = False
+        
+        if hasattr(target, 'facing'):
+            attack_angle = target.facing.get_attack_angle(unit.x, unit.y, target.x, target.y)
+            extra_morale_penalty = target.facing.get_morale_penalty(attack_angle)
+            
+            # Check for routing on rear/flank attacks
+            if attack_angle.is_rear or attack_angle.is_flank:
+                should_check_routing = True
+        
         return {
             'success': True,
             'damage': damage,
             'counter_damage': counter_damage,
             'animation': 'attack',
-            'target': target
+            'target': target,
+            'attack_angle': attack_angle,
+            'extra_morale_penalty': extra_morale_penalty,
+            'should_check_routing': should_check_routing
         }
         
     def calculate_damage(self, attacker, target, attacker_terrain=None, target_terrain=None) -> int:
@@ -96,6 +112,12 @@ class AttackBehavior(Behavior):
         # Apply general damage bonuses
         if hasattr(attacker, 'get_damage_modifier'):
             base_damage *= attacker.get_damage_modifier()
+            
+        # Apply facing modifier
+        if hasattr(target, 'facing'):
+            attack_angle = target.facing.get_attack_angle(attacker.x, attacker.y, target.x, target.y)
+            facing_modifier = target.facing.get_damage_modifier(attack_angle)
+            base_damage *= facing_modifier
             
         # Calculate defense with general bonuses
         target_defense = target.stats.stats.base_defense

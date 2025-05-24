@@ -257,6 +257,32 @@ class Renderer:
                 pygame.draw.circle(self.screen, self.colors['selected'],
                                  (center_x, center_y), 30, 3)
             
+            # Draw facing indicator
+            if hasattr(knight, 'facing'):
+                # Get arrow coordinates
+                start, end = knight.facing.get_facing_arrow_coords(center_x, center_y, 25)
+                
+                # Draw arrow line
+                pygame.draw.line(self.screen, (255, 255, 0), start, end, 3)
+                
+                # Draw arrowhead
+                arrow_angle = math.atan2(end[1] - start[1], end[0] - start[0])
+                arrow_length = 8
+                arrow_degrees = 25
+                
+                # Calculate arrowhead points
+                angle1 = arrow_angle + math.radians(180 - arrow_degrees)
+                angle2 = arrow_angle + math.radians(180 + arrow_degrees)
+                
+                arrow_x1 = end[0] + arrow_length * math.cos(angle1)
+                arrow_y1 = end[1] + arrow_length * math.sin(angle1)
+                arrow_x2 = end[0] + arrow_length * math.cos(angle2)
+                arrow_y2 = end[1] + arrow_length * math.sin(angle2)
+                
+                # Draw filled arrowhead
+                pygame.draw.polygon(self.screen, (255, 255, 0), 
+                                  [end, (arrow_x1, arrow_y1), (arrow_x2, arrow_y2)])
+            
             health_percent = knight.health / knight.max_health
             bar_width = 40
             bar_height = 4
@@ -373,9 +399,16 @@ class Renderer:
         # Draw messages
         self._draw_messages(game_state)
         
-        # Current player in UI bar
-        player_text = self.ui_font.render(f"Player {game_state.current_player}",
-                                      True, self.colors['text'])
+        # Current player in UI bar with mode indicator
+        if game_state.vs_ai:
+            if game_state.current_player == 1:
+                player_info = "Player 1 (Human)"
+            else:
+                player_info = "Player 2 (AI)" + (" - Thinking..." if game_state.ai_thinking else "")
+        else:
+            player_info = f"Player {game_state.current_player} (Human)"
+        
+        player_text = self.ui_font.render(player_info, True, self.colors['text'])
         self.screen.blit(player_text, (20, ui_y + 10))
         
         if game_state.selected_knight:
