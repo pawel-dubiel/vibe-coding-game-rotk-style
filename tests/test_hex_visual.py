@@ -1,6 +1,11 @@
 import pygame
 import math
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from game.hex_utils import HexGrid
+from game.hex_layout import HexLayout
 
 
 def visualize_hex_grid():
@@ -10,7 +15,8 @@ def visualize_hex_grid():
     pygame.display.set_caption("Hex Grid Visual Test")
     clock = pygame.time.Clock()
     
-    hex_grid = HexGrid(hex_size=30)
+    # Use HexLayout like the game does
+    hex_layout = HexLayout(hex_size=30, orientation='flat')
     font = pygame.font.Font(None, 20)
     
     running = True
@@ -29,16 +35,15 @@ def visualize_hex_grid():
         # Draw hex grid
         for col in range(12):
             for row in range(10):
-                # Current positioning logic from renderer
-                pixel_x = col * hex_grid.hex_width * 0.75
-                pixel_y = row * hex_grid.hex_height
+                # Use HexLayout for positioning (same as game renderer)
+                pixel_x, pixel_y = hex_layout.hex_to_pixel(col, row)
                 
-                # Offset odd rows
-                if row % 2 == 1:
-                    pixel_x += hex_grid.hex_width * 0.375
+                # Offset to center on screen
+                screen_x = pixel_x + 50
+                screen_y = pixel_y + 50
                 
                 # Get hex corners
-                corners = hex_grid.get_hex_corners(pixel_x + 50, pixel_y + 50)
+                corners = hex_layout.get_hex_corners(screen_x, screen_y)
                 
                 # Draw hex
                 color = (100, 100, 100) if (col + row) % 2 == 0 else (80, 80, 80)
@@ -48,7 +53,7 @@ def visualize_hex_grid():
                 # Draw coordinates
                 if show_coords:
                     text = font.render(f"{col},{row}", True, (255, 255, 255))
-                    text_rect = text.get_rect(center=(pixel_x + 50, pixel_y + 50))
+                    text_rect = text.get_rect(center=(int(screen_x), int(screen_y)))
                     screen.blit(text, text_rect)
         
         # Draw info
@@ -68,53 +73,43 @@ def visualize_hex_grid():
 
 def test_hex_neighbor_positions():
     """Test that hex neighbors are positioned correctly"""
-    hex_grid = HexGrid(hex_size=30)
+    hex_layout = HexLayout(hex_size=30, orientation='flat')
+    hex_grid = HexGrid(hex_size=30)  # For axial coordinate calculations
     
-    # For flat-top hexes, the width between hex centers should be:
-    # - Horizontal: hex_width * 3/4 (for the overlapping columns)
-    # - Vertical: hex_height (for rows)
+    print("\nHex dimensions (using HexLayout):")
+    print(f"Hex size: {hex_layout.hex_size}")
+    print(f"Orientation: {hex_layout.orientation}")
     
-    print("\nHex dimensions:")
-    print(f"Hex size: {hex_grid.hex_size}")
-    print(f"Hex width: {hex_grid.hex_width}")
-    print(f"Hex height: {hex_grid.hex_height}")
-    
-    print("\nExpected distances between hex centers:")
-    print(f"Horizontal spacing: {hex_grid.hex_width * 0.75}")
-    print(f"Vertical spacing: {hex_grid.hex_height}")
-    
-    # Test specific positions
+    # Test specific positions using HexLayout
     positions = []
     for col in range(3):
         for row in range(3):
-            pixel_x = col * hex_grid.hex_width * 0.75
-            pixel_y = row * hex_grid.hex_height
-            
-            if row % 2 == 1:
-                pixel_x += hex_grid.hex_width * 0.375
-            
+            pixel_x, pixel_y = hex_layout.hex_to_pixel(col, row)
             positions.append(((col, row), (pixel_x, pixel_y)))
             print(f"Hex ({col},{row}) at ({pixel_x:.1f}, {pixel_y:.1f})")
     
     # Check distances between adjacent hexes
     print("\nDistances between adjacent hexes:")
     
-    # (0,0) to (1,0) - horizontal neighbors in same row
-    p1 = next(p for (c, r), p in positions if c == 0 and r == 0)
-    p2 = next(p for (c, r), p in positions if c == 1 and r == 0)
-    dist = math.sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
-    print(f"(0,0) to (1,0): {dist:.1f} (expected: {hex_grid.hex_width * 0.75:.1f})")
+    # Test all 6 neighbors of hex (1,1)
+    center_col, center_row = 1, 1
+    center_hex = hex_grid.offset_to_axial(center_col, center_row)
+    center_pixel = hex_layout.hex_to_pixel(center_col, center_row)
     
-    # (0,0) to (0,1) - vertical neighbors
-    p1 = next(p for (c, r), p in positions if c == 0 and r == 0)
-    p2 = next(p for (c, r), p in positions if c == 0 and r == 1)
-    dist = math.sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
-    print(f"(0,0) to (0,1): {dist:.1f} (expected: ~{hex_grid.hex_height:.1f})")
+    print(f"\nNeighbors of hex ({center_col},{center_row}):")
+    neighbors = center_hex.get_neighbors()
     
-    # The issue: for proper hex interlocking, neighbors should be at equal distances
-    # A hex has 6 neighbors, all at the same distance from center
-    expected_neighbor_dist = hex_grid.hex_size * math.sqrt(3)
-    print(f"\nFor proper interlocking, all neighbors should be at distance: {expected_neighbor_dist:.1f}")
+    for i, neighbor_hex in enumerate(neighbors):
+        neighbor_col, neighbor_row = hex_grid.axial_to_offset(neighbor_hex)
+        if 0 <= neighbor_col < 3 and 0 <= neighbor_row < 3:
+            neighbor_pixel = hex_layout.hex_to_pixel(neighbor_col, neighbor_row)
+            dist = math.sqrt((neighbor_pixel[0] - center_pixel[0])**2 + 
+                           (neighbor_pixel[1] - center_pixel[1])**2)
+            print(f"  Neighbor {i} at ({neighbor_col},{neighbor_row}): distance = {dist:.1f}")
+    
+    # All neighbors should be at the same distance
+    expected_dist = hex_layout.hex_size * 2  # For flat-top hexes
+    print(f"\nExpected neighbor distance: {expected_dist:.1f}")
 
 
 if __name__ == "__main__":
