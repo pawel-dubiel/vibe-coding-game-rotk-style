@@ -38,6 +38,11 @@ class MockGameState(IGameState):
     @property
     def knights(self) -> List:
         return self._knights
+        
+    @property
+    def units(self) -> List:
+        """Alias for knights property"""
+        return self._knights
     
     @property
     def castles(self) -> List:
@@ -61,6 +66,10 @@ class MockGameState(IGameState):
             if knight.x == x and knight.y == y and not getattr(knight, 'is_garrisoned', False):
                 return knight
         return None
+        
+    def get_unit_at(self, x: int, y: int) -> Optional:
+        """Get unit at specific position (alias for get_knight_at)"""
+        return self.get_knight_at(x, y)
     
     def get_castle_at(self, x: int, y: int) -> Optional:
         """Get castle at specific position"""

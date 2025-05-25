@@ -26,13 +26,9 @@ class VisibilityState(Enum):
 
 @dataclass
 class VisionRange:
-    """Vision range configuration for units."""
-    base_range: int = 3  # Base vision range in hexes
-    cavalry_range: int = 4  # Cavalry has better vision
-    archer_range: int = 4   # Archers have good vision
-    mage_range: int = 3     # Mages have normal vision
-    warrior_range: int = 3  # Warriors have normal vision
-    general_bonus: int = 1  # Additional range with skilled general
+    """Vision range configuration for fog of war."""
+    # Default/fallback vision range for units without vision behavior
+    default_range: int = 3
     
     # Distance thresholds for unit identification
     full_id_range: int = 2      # Can identify unit type within this range
@@ -59,11 +55,15 @@ class FogOfWar:
                     self.visibility_maps[player_id][(x, y)] = VisibilityState.HIDDEN
                     
         self.vision_config = VisionRange()
+        self._cached_game_state = None  # Initialize in __init__
         
     def update_player_visibility(self, game_state, player_id: int):
         """Update visibility map for a specific player based on their units."""
         from game.entities.unit import Unit
         from game.entities.castle import Castle
+        
+        # Cache game_state for use in helper methods
+        self._cached_game_state = game_state
         
         # First, downgrade all visible hexes to explored
         for coords in self.visibility_maps[player_id]:
@@ -88,11 +88,15 @@ class FogOfWar:
         # Calculate visibility from each unit
         for unit in player_units:
             vision_range = self._get_unit_vision_range(unit)
+            # Check if unit has elevated vision
+            vision_behavior = unit.get_behavior('VisionBehavior') if hasattr(unit, 'get_behavior') else None
+            is_elevated = vision_behavior.is_elevated() if vision_behavior else False
+            
             visible_hexes = self._calculate_los_from_position(
                 game_state, 
                 (unit.x, unit.y), 
                 vision_range,
-                str(unit.unit_class).split('.')[-1].lower() == 'cavalry'  # Cavalry is taller
+                is_elevated
             )
             
             # Update visibility states
@@ -131,24 +135,20 @@ class FogOfWar:
                     self.visibility_maps[player_id][hex_coords] = new_state
                     
     def _get_unit_vision_range(self, unit) -> int:
-        """Get vision range for a unit including general bonuses."""
-        # Map unit class to string for lookup
-        unit_type = str(unit.unit_class).split('.')[-1].lower() if hasattr(unit, 'unit_class') else 'warrior'
+        """Get vision range for a unit using its vision behavior."""
+        # Get vision behavior if it exists
+        vision_behavior = unit.get_behavior('VisionBehavior') if hasattr(unit, 'get_behavior') else None
         
-        base_range = {
-            'warrior': self.vision_config.warrior_range,
-            'archer': self.vision_config.archer_range,
-            'cavalry': self.vision_config.cavalry_range,
-            'mage': self.vision_config.mage_range
-        }.get(unit_type, self.vision_config.base_range)
+        if vision_behavior:
+            # Use the behavior to get vision range
+            terrain = None
+            if hasattr(unit, 'get_terrain'):
+                # Pass game_state to get_terrain if available
+                terrain = unit.get_terrain(self._cached_game_state if hasattr(self, '_cached_game_state') else None)
+            return vision_behavior.get_vision_range(terrain)
         
-        # Check for general with keen sight ability
-        if hasattr(unit, 'generals') and unit.generals:
-            bonuses = unit.generals.get_all_passive_bonuses(unit)
-            vision_bonus = bonuses.get('vision_bonus', 0)
-            base_range += vision_bonus
-                
-        return base_range
+        # Fallback for units without vision behavior
+        return self.vision_config.default_range
         
     def _calculate_los_from_position(self, game_state, origin: Tuple[int, int], 
                                    max_range: int, is_elevated: bool = False) -> Dict[Tuple[int, int], int]:
@@ -173,7 +173,7 @@ class FogOfWar:
                 target_hex = hex_grid.offset_to_axial(x, y)
                 distance = origin_hex.distance_to(target_hex)
                 
-                if distance > 0 and distance <= max_range:
+                if 0 < distance <= max_range:
                     # Check if we have line of sight to this hex
                     if self._has_line_of_sight(game_state, origin, (x, y), is_elevated):
                         visible_hexes[(x, y)] = distance
@@ -205,18 +205,22 @@ class FogOfWar:
                 if not is_elevated and (not origin_terrain or origin_terrain.type.value.lower() != 'hills'):
                     return False
                     
-            # Check unit blocking (cavalry blocks view behind it)
+            # Check unit blocking
             blocking_unit = game_state.get_unit_at(hex_x, hex_y)
-            if blocking_unit and str(blocking_unit.unit_class).split('.')[-1].lower() == 'cavalry':
-                # Cavalry blocks view unless viewer is elevated
-                if not is_elevated:
-                    # Check if target is directly behind the cavalry
-                    if self._is_behind_blocker(origin, (hex_x, hex_y), target):
-                        return False
+            if blocking_unit:
+                # Check if unit blocks vision using its behavior
+                vision_behavior = blocking_unit.get_behavior('VisionBehavior') if hasattr(blocking_unit, 'get_behavior') else None
+                if vision_behavior and vision_behavior.blocks_vision():
+                    # Unit blocks view unless viewer is elevated
+                    if not is_elevated:
+                        # Check if target is directly behind the blocking unit
+                        if self._is_behind_blocker(origin, (hex_x, hex_y), target):
+                            return False
                         
         return True
         
-    def _is_behind_blocker(self, viewer: Tuple[int, int], blocker: Tuple[int, int], 
+    @staticmethod
+    def _is_behind_blocker(viewer: Tuple[int, int], blocker: Tuple[int, int], 
                           target: Tuple[int, int]) -> bool:
         """Check if target is behind blocker from viewer's perspective."""
         # Simple check: if blocker is between viewer and target on the line
@@ -232,11 +236,12 @@ class FogOfWar:
         # Target is behind if it's further than blocker
         return viewer_to_target > viewer_to_blocker
         
-    def _is_valid_hex(self, game_state, x: int, y: int) -> bool:
+    def _is_valid_hex(self, x: int, y: int) -> bool:
         """Check if hex coordinates are valid on the board."""
         return 0 <= x < self.width and 0 <= y < self.height
         
-    def _get_line(self, start: HexCoord, end: HexCoord) -> List[HexCoord]:
+    @staticmethod
+    def _get_line(start: HexCoord, end: HexCoord) -> List[HexCoord]:
         """Get a line of hexes between two points"""
         distance = start.distance_to(end)
         results = []
@@ -317,8 +322,11 @@ class FogOfWar:
             visibility = self.get_visibility_state(player_id, unit.x, unit.y)
             
             if visibility == VisibilityState.VISIBLE:
-                # Full identification - convert unit class to string
-                unit_type = str(unit.unit_class).split('.')[-1].lower()
+                # Full identification - get unit type
+                if hasattr(unit, 'unit_class'):
+                    unit_type = str(unit.unit_class).split('.')[-1].lower()
+                else:
+                    unit_type = 'unknown'
                 known_units[(unit.x, unit.y)] = unit_type
             elif visibility == VisibilityState.PARTIAL:
                 # Can see unit but not identify

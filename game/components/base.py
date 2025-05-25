@@ -23,6 +23,11 @@ class Behavior(ABC):
     """Base class for behaviors that can be executed"""
     def __init__(self, name: str):
         self.name = name
+        self.parent: Optional['Unit'] = None
+        
+    def attach(self, unit: 'Unit'):
+        """Attach this behavior to a unit"""
+        self.parent = unit
         
     @abstractmethod
     def can_execute(self, unit: 'Unit', game_state: Any) -> bool:

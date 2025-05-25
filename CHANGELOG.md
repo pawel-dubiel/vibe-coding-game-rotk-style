@@ -108,6 +108,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AI evaluation function enhanced with facing considerations
 - Movement animations update unit facing during execution
 - Game flow updated: Main Menu → Game Mode → Battle Setup → Game
+- Attack targeting now respects fog of war visibility
+  - Units can only target visible enemies
+  - Invisible units not highlighted during attack selection
+  - AI targeting limited to visible units
+- Renderer updated to show all terrain with fog overlays
+  - Previously hidden terrain now visible but greyed out
+  - Better player understanding of battlefield layout
 
 ### Fixed
 - Unit engagement tracking during combat

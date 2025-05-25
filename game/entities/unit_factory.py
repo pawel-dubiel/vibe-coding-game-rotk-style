@@ -6,6 +6,7 @@ from game.behaviors.combat import AttackBehavior, ArcherAttackBehavior
 from game.behaviors.special_abilities import CavalryChargeBehavior
 from game.behaviors.breakaway import BreakawayBehavior
 from game.behaviors.rotation import RotationBehavior
+from game.behaviors.vision import VisionBehavior, ArcherVisionBehavior, ScoutVisionBehavior, StandardVisionBehavior
 from game.components.general_factory import GeneralFactory
 
 class UnitFactory:
@@ -22,12 +23,14 @@ class UnitFactory:
             unit.add_behavior(AttackBehavior(attack_range=1))
             unit.add_behavior(BreakawayBehavior())
             unit.add_behavior(RotationBehavior())
+            unit.add_behavior(StandardVisionBehavior())
             
         elif unit_class == KnightClass.ARCHER:
             unit.add_behavior(MovementBehavior(movement_range=3))
             unit.add_behavior(ArcherAttackBehavior())
             unit.add_behavior(BreakawayBehavior())
             unit.add_behavior(RotationBehavior())
+            unit.add_behavior(ArcherVisionBehavior())
             
         elif unit_class == KnightClass.CAVALRY:
             unit.add_behavior(MovementBehavior(movement_range=4))
@@ -35,12 +38,14 @@ class UnitFactory:
             unit.add_behavior(CavalryChargeBehavior())
             unit.add_behavior(BreakawayBehavior())
             unit.add_behavior(RotationBehavior())
+            unit.add_behavior(ScoutVisionBehavior())  # Cavalry scouts ahead
             
         elif unit_class == KnightClass.MAGE:
             unit.add_behavior(MovementBehavior(movement_range=2))
             unit.add_behavior(AttackBehavior(attack_range=2))
             unit.add_behavior(BreakawayBehavior())
             unit.add_behavior(RotationBehavior())
+            unit.add_behavior(StandardVisionBehavior())
             
         # Add starting generals if requested
         if add_generals:

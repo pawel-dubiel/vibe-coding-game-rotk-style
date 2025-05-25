@@ -115,6 +115,7 @@ class Unit:
     def add_behavior(self, behavior: Behavior):
         """Add a behavior to this unit"""
         self.behaviors[behavior.name] = behavior
+        behavior.attach(self)
         
     def remove_behavior(self, behavior_name: str):
         """Remove a behavior from this unit"""
@@ -147,6 +148,13 @@ class Unit:
         """Check if unit has a component"""
         # Currently we only have 'stats' and 'generals' components
         return component_name in ['stats', 'generals']
+        
+    def get_behavior(self, behavior_type: str) -> Optional[Behavior]:
+        """Get a behavior by its type name (e.g. 'VisionBehavior')"""
+        for behavior in self.behaviors.values():
+            if type(behavior).__name__ == behavior_type or behavior_type in str(type(behavior)):
+                return behavior
+        return None
     
     def get_component(self, component_name: str):
         """Get a component by name"""
@@ -303,6 +311,13 @@ class Unit:
     def is_light_unit(self) -> bool:
         """Check if this unit is considered light"""
         return CombatConfig.is_light_unit(self.unit_class.value)
+        
+    def get_terrain(self, game_state=None):
+        """Get the terrain this unit is currently on"""
+        # If we have a cached game_state reference, use it
+        if game_state and hasattr(game_state, 'terrain_map'):
+            return game_state.terrain_map.get_terrain(self.x, self.y)
+        return None
         
     def can_break_away_from(self, enemy_unit) -> bool:
         """Check if this unit can break away from combat with enemy"""
