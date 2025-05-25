@@ -422,6 +422,8 @@ class Renderer:
             status_str = ""
             if knight.is_routing:
                 status_str = " - ROUTING!"
+            elif knight.is_disrupted:
+                status_str = " - DISRUPTED"
             elif knight.in_enemy_zoc:
                 status_str = " - ENGAGED"
             
@@ -435,6 +437,50 @@ class Renderer:
                 True, self.colors['text']
             )
             self.screen.blit(info_text, (20, ui_y + 50))
+            
+            # Show attached generals
+            if knight.generals and knight.generals.generals:
+                general_names = [g.name for g in knight.generals.generals]
+                generals_text = self.font.render(
+                    f"Generals: {', '.join(general_names)}",
+                    True, self.colors['text']
+                )
+                self.screen.blit(generals_text, (20, ui_y + 75))
+        
+        # Show enemy unit info if clicked
+        elif game_state.enemy_info_unit:
+            enemy = game_state.enemy_info_unit
+            terrain = game_state.terrain_map.get_terrain(enemy.x, enemy.y)
+            terrain_str = f" - Terrain: {terrain.type.value}" if terrain else ""
+            
+            # Check status
+            status_str = ""
+            if enemy.is_routing:
+                status_str = " - ROUTING!"
+            elif enemy.is_disrupted:
+                status_str = " - DISRUPTED"
+            elif enemy.in_enemy_zoc:
+                status_str = " - ENGAGED"
+            
+            enemy_info_text = self.font.render(
+                f"Enemy: {enemy.name} ({enemy.knight_class.value}) - "
+                f"Soldiers: {enemy.soldiers}/{enemy.max_soldiers} - "
+                f"Morale: {int(enemy.morale)}% - "
+                f"Will: {int(enemy.will)}% - "
+                f"AP: {enemy.action_points} - "
+                f"Frontage: {enemy.get_effective_soldiers(terrain)}{terrain_str}{status_str}",
+                True, (255, 100, 100)  # Red color for enemy
+            )
+            self.screen.blit(enemy_info_text, (20, ui_y + 50))
+            
+            # Show enemy generals
+            if enemy.generals and enemy.generals.generals:
+                enemy_general_names = [g.name for g in enemy.generals.generals]
+                enemy_generals_text = self.font.render(
+                    f"Enemy Generals: {', '.join(enemy_general_names)}",
+                    True, (255, 100, 100)
+                )
+                self.screen.blit(enemy_generals_text, (20, ui_y + 75))
         
         # Show castle status
         player_castle = game_state.castles[0] if game_state.current_player == 1 else game_state.castles[1]
@@ -447,7 +493,8 @@ class Renderer:
             f"{garrison_info} - Archers: {archer_count} - Enemies in range: {enemies_near}",
             True, self.colors['text']
         )
-        self.screen.blit(castle_text, (20, ui_y + 75))
+        castle_y = ui_y + 100 if game_state.selected_knight or game_state.enemy_info_unit else ui_y + 75
+        self.screen.blit(castle_text, (20, castle_y))
         
         end_turn_rect = pygame.Rect(self.screen.get_width() - 140, ui_y + 20, 120, 40)
         pygame.draw.rect(self.screen, (100, 100, 100), end_turn_rect)

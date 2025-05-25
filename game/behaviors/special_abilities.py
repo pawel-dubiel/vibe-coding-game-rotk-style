@@ -54,8 +54,10 @@ class CavalryChargeBehavior(Behavior):
         obstacle_type = push_result['obstacle_type']
         obstacle_unit = push_result['obstacle_unit']
         
-        # Calculate base damage
-        base_charge_damage = int(unit.stats.stats.current_soldiers * 0.8)
+        # Calculate base damage using frontage
+        terrain = game_state.hex_grid.get_terrain(unit.x, unit.y)
+        effective_soldiers = unit.stats.get_effective_soldiers(terrain)
+        base_charge_damage = int(effective_soldiers * 0.8)
         
         # Check attack angle for devastating rear charges
         rear_charge_multiplier = 1.0

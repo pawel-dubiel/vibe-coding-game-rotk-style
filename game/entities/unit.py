@@ -48,6 +48,7 @@ class Unit:
         
         # State flags
         self.is_garrisoned = False
+        self.is_disrupted = False
         self.garrison_location = None
         self.in_enemy_zoc = False
         self.is_routing = False

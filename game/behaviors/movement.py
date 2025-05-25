@@ -5,6 +5,7 @@ import math
 from game.components.base import Behavior
 from game.pathfinding import PathFinder, DijkstraPathFinder, AStarPathFinder
 from game.hex_utils import HexGrid
+from game.entities.knight import KnightClass
 
 class MovementBehavior(Behavior):
     """Basic movement behavior"""

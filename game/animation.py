@@ -1,5 +1,6 @@
 import pygame
 import math
+from game.entities.unit_helpers import check_cavalry_disruption_for_terrain
 
 class Animation:
     def __init__(self, duration):
@@ -40,6 +41,10 @@ class MoveAnimation(Animation):
                 self.knight.facing.update_facing_from_movement(self.start_x, self.start_y, self.end_x, self.end_y)
                 
             self.position_updated = True
+            
+            # Check cavalry disruption after movement
+            if self.game_state:
+                check_cavalry_disruption_for_terrain(self.knight, self.game_state)
             
             # Clear pending position if game_state is available
             if self.game_state and id(self.knight) in self.game_state.pending_positions:
@@ -106,6 +111,10 @@ class PathMoveAnimation(Animation):
                 self.knight.x = final_x
                 self.knight.y = final_y
             self.position_updated = True
+            
+            # Check cavalry disruption after movement
+            if self.game_state:
+                check_cavalry_disruption_for_terrain(self.knight, self.game_state)
             
             # Clear pending position if game_state is available
             if self.game_state and id(self.knight) in self.game_state.pending_positions:

@@ -1,0 +1,11 @@
+1 done I want to see in info panel what generals are attached to a unit
+2 done I want to ensure that frontage is in use so we not calculating strength during combat just from unit soldiers but we take frontage into account
+3 Maybe we should try to simulate a single battle between units, in rounds we need some good algorithm used from real war simulators, but still simple
+4 done When I click enemy unit i want to see info about enemy unit
+5 players should be able to attack enemy castle and force enemy to surrender
+6 Will be nice to have a unit type like ram for taking the gate in the castle
+7 Cavarly shouldn't be able to attack castle
+8 We should have a status like distrupted and for example if unit is disrupted it get severe penalty in combat
+9 Cavarly is automatically distrupted when it is in the forest, or when it is in the castle or in the hill
+10 When animating movement i would like to see an arrow between each field to show choosen path
+11 Fog of war

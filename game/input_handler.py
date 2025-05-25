@@ -53,13 +53,20 @@ class InputHandler:
                     tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
                     knight = game_state.get_knight_at(tile_x, tile_y)
                     
-                    if knight and knight.player_id == game_state.current_player:
-                        game_state.selected_knight = knight
-                        knight.selected = True
-                        # Context menu uses screen coordinates
-                        game_state.context_menu.show(screen_x, screen_y, knight, game_state)
+                    if knight:
+                        if knight.player_id == game_state.current_player:
+                            game_state.selected_knight = knight
+                            knight.selected = True
+                            # Context menu uses screen coordinates
+                            game_state.context_menu.show(screen_x, screen_y, knight, game_state)
+                            game_state.enemy_info_unit = None
+                        else:
+                            # Clicked on enemy unit - show its info
+                            game_state.enemy_info_unit = knight
+                            game_state.deselect_knight()
                     else:
                         game_state.deselect_knight()
+                        game_state.enemy_info_unit = None
             
             elif event.button == 3:  # Right mouse button for scrolling
                 self.right_click_held = True

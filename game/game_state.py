@@ -45,6 +45,7 @@ class GameState(IGameState):
         self.context_menu = ContextMenu()
         self.current_action = None
         self.attack_targets = []
+        self.enemy_info_unit = None  # Track enemy unit to display info
         
         self.animation_manager = AnimationManager()
         self.pending_positions = {}  # Track where knights are moving to
@@ -106,6 +107,11 @@ class GameState(IGameState):
             knight = UnitFactory.create_unit(knight_names_p2[i % len(knight_names_p2)], knight_class, x_pos, y_pos)
             knight.player_id = 2
             self.knights.append(knight)
+        
+        # Check initial cavalry disruption for all units
+        from game.entities.unit_helpers import check_cavalry_disruption_for_terrain
+        for knight in self.knights:
+            check_cavalry_disruption_for_terrain(knight, self)
     
     def add_message(self, message, priority=1):
         """Add a message to display. Higher priority messages display longer."""

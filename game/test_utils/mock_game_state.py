@@ -2,6 +2,7 @@
 from typing import List, Optional
 from game.interfaces.game_state import IGameState
 from game.terrain import TerrainMap
+from game.entities.castle import Castle
 
 class MockGameState(IGameState):
     """Mock implementation of IGameState for testing"""
@@ -17,6 +18,14 @@ class MockGameState(IGameState):
         
         # Additional test-specific attributes
         self.pending_positions = {}  # For tracking movement animations
+        self.enemy_info_unit = None  # For tracking enemy unit info
+        self.selected_knight = None  # For tracking selected unit
+        
+        # Create default castles for tests
+        if self._board_width >= 10 and self._board_height >= 10:
+            castle1 = Castle(2, 2, 1)
+            castle2 = Castle(board_width - 3, board_height - 3, 2)
+            self._castles = [castle1, castle2]
         
     @property
     def board_width(self) -> int:
@@ -51,6 +60,13 @@ class MockGameState(IGameState):
         for knight in self._knights:
             if knight.x == x and knight.y == y and not getattr(knight, 'is_garrisoned', False):
                 return knight
+        return None
+    
+    def get_castle_at(self, x: int, y: int) -> Optional:
+        """Get castle at specific position"""
+        for castle in self._castles:
+            if hasattr(castle, 'contains_position') and castle.contains_position(x, y):
+                return castle
         return None
     
     def add_knight(self, knight):

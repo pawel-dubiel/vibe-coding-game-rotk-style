@@ -109,6 +109,10 @@ class AttackBehavior(Behavior):
         # Apply morale modifier
         base_damage *= (attacker.morale / 100)  # Use property that includes general bonuses
         
+        # Apply disrupted penalty
+        if hasattr(attacker, 'is_disrupted') and attacker.is_disrupted:
+            base_damage *= 0.5  # 50% damage penalty when disrupted
+        
         # Apply general damage bonuses
         if hasattr(attacker, 'get_damage_modifier'):
             base_damage *= attacker.get_damage_modifier()
@@ -127,6 +131,10 @@ class AttackBehavior(Behavior):
             
         if target_terrain:
             target_defense += target_terrain.defense_bonus
+            
+        # Apply disrupted penalty to defense
+        if hasattr(target, 'is_disrupted') and target.is_disrupted:
+            target_defense *= 0.5  # 50% defense penalty when disrupted
             
         # Special case: garrisoned units
         if hasattr(target, 'is_garrisoned') and target.is_garrisoned:
