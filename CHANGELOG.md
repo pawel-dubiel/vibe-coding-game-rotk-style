@@ -68,6 +68,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Cavalry cannot initiate charges when standing on hills
   - Cavalry cannot charge at enemies positioned on hills
   - Prevents unrealistic cavalry charges up steep terrain
+- Terrain movement behaviors for proper abstraction
+  - TerrainMovementBehavior base class for unit terrain interactions
+  - CavalryTerrainBehavior: Struggles in forests/swamps, excels on plains
+  - ArcherTerrainBehavior: Forest movement bonus and combat advantages
+  - WarriorTerrainBehavior: Reduced penalties in difficult terrain
+  - MageTerrainBehavior: Extra penalties in swamps
+  - Eliminates type checking in terrain system (Liskov Substitution Principle)
 - Comprehensive test coverage for new mechanics
   - Breakaway behavior tests
   - Archer ranged attack tests
@@ -82,6 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Attack targeting visibility tests
   - Cavalry charge hill restriction tests
   - Height advantage combat tests
+  - Terrain behavior abstraction tests
 
 ### Changed
 - Combat system now tracks unit engagement status
@@ -115,6 +123,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renderer updated to show all terrain with fog overlays
   - Previously hidden terrain now visible but greyed out
   - Better player understanding of battlefield layout
+- Terrain system refactored to use behavior pattern
+  - Removed hardcoded unit type checks in terrain.py
+  - Terrain modifiers now determined by unit behaviors
+  - Follows Liskov Substitution Principle
+- Vision system refactored to use behavior pattern
+  - Removed hardcoded vision ranges per unit type
+  - Vision capabilities now encapsulated in VisionBehavior subclasses
+  - Cleaner separation of concerns
 
 ### Fixed
 - Unit engagement tracking during combat

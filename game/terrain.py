@@ -44,51 +44,30 @@ class Terrain:
     def _is_passable(self):
         return self.type != TerrainType.WATER
     
-    def get_movement_cost_for_unit(self, knight_class):
-        from game.entities.knight import KnightClass
+    def get_movement_cost_for_unit(self, unit):
+        """Get movement cost for a unit using its terrain behavior"""
         base_cost = self.movement_cost
         
-        # Cavalry penalties in difficult terrain
-        if knight_class == KnightClass.CAVALRY:
-            if self.type in [TerrainType.FOREST, TerrainType.SWAMP]:
-                return base_cost * 2  # Double penalty for cavalry
-            elif self.type == TerrainType.HILLS:
-                return base_cost * 1.5
+        # Check if unit has terrain movement behavior
+        if hasattr(unit, 'get_behavior'):
+            terrain_behavior = unit.get_behavior('TerrainMovementBehavior')
+            if terrain_behavior:
+                modifier = terrain_behavior.get_movement_cost_modifier(self.type)
+                return base_cost * modifier
         
-        # Archers get bonus in forest
-        elif knight_class == KnightClass.ARCHER:
-            if self.type == TerrainType.FOREST:
-                return base_cost * 0.75
-        
-        # Warriors are less affected by difficult terrain
-        elif knight_class == KnightClass.WARRIOR:
-            if self.type in [TerrainType.HILLS, TerrainType.SWAMP]:
-                return base_cost * 0.8
-        
+        # Fallback for units without the behavior or legacy code
         return base_cost
     
-    def get_combat_modifier_for_unit(self, knight_class):
-        from game.entities.knight import KnightClass
-        modifier = 1.0
+    def get_combat_modifier_for_unit(self, unit):
+        """Get combat modifier for a unit using its terrain behavior"""
+        # Check if unit has terrain movement behavior
+        if hasattr(unit, 'get_behavior'):
+            terrain_behavior = unit.get_behavior('TerrainMovementBehavior')
+            if terrain_behavior:
+                return terrain_behavior.get_combat_modifier(self.type)
         
-        # Archers excel in forest and hills
-        if knight_class == KnightClass.ARCHER:
-            if self.type in [TerrainType.FOREST, TerrainType.HILLS]:
-                modifier = 1.2
-        
-        # Cavalry struggles in difficult terrain
-        elif knight_class == KnightClass.CAVALRY:
-            if self.type in [TerrainType.FOREST, TerrainType.SWAMP, TerrainType.HILLS]:
-                modifier = 0.8
-            elif self.type in [TerrainType.PLAINS, TerrainType.ROAD]:
-                modifier = 1.1
-        
-        # Mages are affected by swamps
-        elif knight_class == KnightClass.MAGE:
-            if self.type == TerrainType.SWAMP:
-                modifier = 0.7
-        
-        return modifier
+        # Fallback
+        return 1.0
 
 class TerrainMap:
     def __init__(self, width, height):
@@ -181,14 +160,14 @@ class TerrainMap:
         if 0 <= x < self.width and 0 <= y < self.height:
             self.terrain_grid[y][x] = Terrain(terrain_type)
     
-    def is_passable(self, x, y, knight_class=None):
+    def is_passable(self, x, y, unit=None):
         terrain = self.get_terrain(x, y)
         if terrain is None:
             return False
         return terrain.passable
     
-    def get_movement_cost(self, x, y, knight_class):
+    def get_movement_cost(self, x, y, unit):
         terrain = self.get_terrain(x, y)
         if terrain is None:
             return float('inf')
-        return terrain.get_movement_cost_for_unit(knight_class)
+        return terrain.get_movement_cost_for_unit(unit)

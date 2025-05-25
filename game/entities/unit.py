@@ -152,8 +152,17 @@ class Unit:
     def get_behavior(self, behavior_type: str) -> Optional[Behavior]:
         """Get a behavior by its type name (e.g. 'VisionBehavior')"""
         for behavior in self.behaviors.values():
-            if type(behavior).__name__ == behavior_type or behavior_type in str(type(behavior)):
+            # Check exact match
+            if type(behavior).__name__ == behavior_type:
                 return behavior
+            # Check if it's a subclass of the requested type
+            behavior_class_name = type(behavior).__name__
+            if behavior_type in behavior_class_name or behavior_class_name.endswith(behavior_type):
+                return behavior
+            # Check inheritance hierarchy
+            for base_class in type(behavior).__mro__:
+                if base_class.__name__ == behavior_type:
+                    return behavior
         return None
     
     def get_component(self, component_name: str):

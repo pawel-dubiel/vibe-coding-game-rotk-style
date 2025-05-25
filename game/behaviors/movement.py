@@ -35,7 +35,7 @@ class MovementBehavior(Behavior):
         # Base movement cost
         terrain_cost = 1.0
         if game_state.terrain_map:
-            terrain_cost = float(game_state.terrain_map.get_movement_cost(to_pos[0], to_pos[1], unit.unit_class))
+            terrain_cost = float(game_state.terrain_map.get_movement_cost(to_pos[0], to_pos[1], unit))
         
         # Diagonal movement costs more
         dx = abs(to_pos[0] - from_pos[0])

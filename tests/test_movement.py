@@ -67,19 +67,20 @@ class MockTerrainMap:
             return self.terrain_grid.get((x, y), MockTerrain(TerrainType.PLAINS))
         return None
         
-    def is_passable(self, x, y, knight_class=None):
+    def is_passable(self, x, y, unit=None):
         """Check if position is passable"""
         terrain = self.get_terrain(x, y)
         if terrain is None:
             return False
         return terrain.passable
         
-    def get_movement_cost(self, x, y, knight_class):
+    def get_movement_cost(self, x, y, unit):
         """Get movement cost for unit at position"""
         terrain = self.get_terrain(x, y)
         if terrain is None:
             return float('inf')
-        return terrain.get_movement_cost_for_unit(knight_class)
+        # Pass unit.unit_class for compatibility with mock terrain
+        return terrain.get_movement_cost_for_unit(unit.unit_class)
 
 class MockGameState:
     """Mock game state for movement testing"""
