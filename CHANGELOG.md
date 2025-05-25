@@ -49,6 +49,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Clear turn indicators showing which human player is active
   - No AI delays in multiplayer mode
   - Visual mode indicators in UI and battle setup
+- Fog of War system with Line of Sight mechanics
+  - Each player has limited visibility based on their units' positions
+  - Visibility states: Hidden, Explored, Partial, Visible
+  - Line of Sight calculations with terrain blocking
+  - Hills block vision unless viewer is on elevated terrain
+  - Cavalry units block vision behind them (unit blocking)
+  - Terrain always visible but greyed out when not in direct sight
+  - Units at distance visible but unidentified (appear as generic markers)
+  - Unified visibility from all player's units
+  - AI operates with limited information (respects fog of war)
+  - Generals with Keen Sight ability have extended vision range
+- Height advantage system for ranged combat
+  - Archers shooting uphill receive 30% damage penalty
+  - Archers shooting downhill receive 20% damage bonus
+  - No height modifier when both units at same elevation
+- Cavalry charge restrictions on hills
+  - Cavalry cannot initiate charges when standing on hills
+  - Cavalry cannot charge at enemies positioned on hills
+  - Prevents unrealistic cavalry charges up steep terrain
 - Comprehensive test coverage for new mechanics
   - Breakaway behavior tests
   - Archer ranged attack tests
@@ -59,6 +78,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Rotation mechanics tests
   - Movement facing tests
   - Multiplayer mode tests
+  - Fog of war visibility tests
+  - Attack targeting visibility tests
+  - Cavalry charge hill restriction tests
+  - Height advantage combat tests
 
 ### Changed
 - Combat system now tracks unit engagement status

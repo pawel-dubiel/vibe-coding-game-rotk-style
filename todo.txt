@@ -9,3 +9,5 @@
 9 Cavarly is automatically distrupted when it is in the forest, or when it is in the castle or in the hill
 10 When animating movement i would like to see an arrow between each field to show choosen path
 11 Fog of war
+12 Cavarly cannot charge towards hills ( when enemy is on the hill ) and cannot charge when is on the hill itself
+13 When archer is on the hill, and enemy archer attacks not from the hill (is lower), the attack should be less effective

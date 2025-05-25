@@ -42,6 +42,18 @@ class CavalryChargeBehavior(Behavior):
         if target.player_id == unit.player_id:
             return {'success': False, 'reason': 'Cannot charge friendly units'}
             
+        # Check terrain restrictions for cavalry charges
+        if game_state.terrain_map:
+            # Cavalry cannot charge when on hills
+            cavalry_terrain = game_state.terrain_map.get_terrain(unit.x, unit.y)
+            if cavalry_terrain and cavalry_terrain.type.value.lower() == 'hills':
+                return {'success': False, 'reason': 'Cannot charge from hills'}
+            
+            # Cavalry cannot charge enemies on hills
+            target_terrain = game_state.terrain_map.get_terrain(target.x, target.y)
+            if target_terrain and target_terrain.type.value.lower() == 'hills':
+                return {'success': False, 'reason': 'Cannot charge enemies on hills'}
+            
         # Calculate push direction
         push_dir_x = target.x - unit.x
         push_dir_y = target.y - unit.y
@@ -55,7 +67,7 @@ class CavalryChargeBehavior(Behavior):
         obstacle_unit = push_result['obstacle_unit']
         
         # Calculate base damage using frontage
-        terrain = game_state.hex_grid.get_terrain(unit.x, unit.y)
+        terrain = game_state.terrain_map.get_terrain(unit.x, unit.y) if game_state.terrain_map else None
         effective_soldiers = unit.stats.get_effective_soldiers(terrain)
         base_charge_damage = int(effective_soldiers * 0.8)
         

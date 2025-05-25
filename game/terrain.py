@@ -176,6 +176,11 @@ class TerrainMap:
             return self.terrain_grid[y][x]
         return None
     
+    def set_terrain(self, x, y, terrain_type):
+        """Set terrain at specific location (for testing)"""
+        if 0 <= x < self.width and 0 <= y < self.height:
+            self.terrain_grid[y][x] = Terrain(terrain_type)
+    
     def is_passable(self, x, y, knight_class=None):
         terrain = self.get_terrain(x, y)
         if terrain is None:

@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional, Tuple
 from game.components.base import Behavior
 from game.entities.knight import KnightClass
 from game.combat_config import CombatConfig
+from game.visibility import VisibilityState
 
 class AttackBehavior(Behavior):
     """Basic attack behavior"""
@@ -102,9 +103,11 @@ class AttackBehavior(Behavior):
         attacking_soldiers = attacker.stats.get_effective_soldiers(attacker_terrain)
         base_damage = attacking_soldiers * attacker.stats.stats.attack_per_soldier
         
-        # Apply terrain combat modifier
+        # Apply terrain combat modifier (but separate from height advantage)
+        terrain_modifier = 1.0
         if attacker_terrain:
-            base_damage *= attacker_terrain.get_combat_modifier_for_unit(attacker.unit_class)
+            terrain_modifier = attacker_terrain.get_combat_modifier_for_unit(attacker.unit_class)
+            base_damage *= terrain_modifier
             
         # Apply morale modifier
         base_damage *= (attacker.morale / 100)  # Use property that includes general bonuses
@@ -122,6 +125,19 @@ class AttackBehavior(Behavior):
             attack_angle = target.facing.get_attack_angle(attacker.x, attacker.y, target.x, target.y)
             facing_modifier = target.facing.get_damage_modifier(attack_angle)
             base_damage *= facing_modifier
+            
+        # Apply height advantage/disadvantage for ranged attacks
+        if self.attack_range > 1 and attacker_terrain and target_terrain:
+            # Check if attacker is shooting from lower ground to higher ground
+            attacker_on_hills = attacker_terrain.type.value.lower() == 'hills'
+            target_on_hills = target_terrain.type.value.lower() == 'hills'
+            
+            if not attacker_on_hills and target_on_hills:
+                # Shooting uphill - 30% damage penalty
+                base_damage *= 0.7
+            elif attacker_on_hills and not target_on_hills:
+                # Shooting downhill - 20% damage bonus
+                base_damage *= 1.2
             
         # Calculate defense with general bonuses
         target_defense = target.stats.stats.base_defense
@@ -191,6 +207,15 @@ class AttackBehavior(Behavior):
         targets = []
         for other in game_state.knights:
             if other.player_id != unit.player_id:
+                # Check fog of war visibility
+                if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
+                    visibility = game_state.fog_of_war.get_visibility_state(
+                        game_state.current_player, other.x, other.y
+                    )
+                    # Only target units we can see
+                    if visibility != VisibilityState.VISIBLE:
+                        continue
+                
                 # Use Chebyshev distance to include diagonals
                 dx = abs(unit.x - other.x)
                 dy = abs(unit.y - other.y)

@@ -545,7 +545,19 @@ class Unit:
         if not (dx <= 1 and dy <= 1 and (dx + dy > 0)):
             return False, "Must be adjacent to charge"
         
-        # Charges are always possible against adjacent enemies
+        # Check terrain restrictions for cavalry charges
+        if game_state.terrain_map:
+            # Cavalry cannot charge when on hills
+            cavalry_terrain = game_state.terrain_map.get_terrain(self.x, self.y)
+            if cavalry_terrain and cavalry_terrain.type.value.lower() == 'hills':
+                return False, "Cannot charge from hills"
+            
+            # Cavalry cannot charge enemies on hills
+            target_terrain = game_state.terrain_map.get_terrain(target.x, target.y)
+            if target_terrain and target_terrain.type.value.lower() == 'hills':
+                return False, "Cannot charge enemies on hills"
+        
+        # Charges are allowed if terrain permits
         # The outcome (damage/push) depends on what's behind the target
         return True, "Can charge"
     

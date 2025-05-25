@@ -1,6 +1,7 @@
 import random
 from game.entities.knight import KnightClass
 from game.hex_utils import HexGrid
+from game.visibility import VisibilityState
 
 class AIPlayer:
     def __init__(self, player_id, difficulty='medium'):
@@ -11,7 +12,16 @@ class AIPlayer:
     def evaluate_position(self, game_state):
         score = 0
         
+        # Get fog of war system
+        fog_of_war = getattr(game_state, 'fog_of_war', None)
+        
         for knight in game_state.knights:
+            # Only evaluate units we can see
+            if fog_of_war and knight.player_id != self.player_id:
+                visibility = fog_of_war.get_visibility_state(self.player_id, knight.x, knight.y)
+                if visibility not in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]:
+                    continue  # Skip invisible units
+            
             knight_value = self._get_knight_value(knight)
             position_bonus = self._get_position_bonus(knight, game_state)
             
@@ -93,10 +103,19 @@ class AIPlayer:
         """Evaluate how well positioned unit is based on facing"""
         bonus = 0
         
+        # Get fog of war system
+        fog_of_war = getattr(game_state, 'fog_of_war', None)
+        
         # Check threats from different directions
         for enemy in game_state.knights:
             if enemy.player_id == self.player_id:
                 continue
+                
+            # Only consider visible enemies
+            if fog_of_war:
+                visibility = fog_of_war.get_visibility_state(self.player_id, enemy.x, enemy.y)
+                if visibility not in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]:
+                    continue
                 
             # Calculate distance
             dx = abs(knight.x - enemy.x)
@@ -187,9 +206,18 @@ class AIPlayer:
             if knight.can_attack():
                 attack_range = 1 if knight.knight_class != KnightClass.ARCHER else 3
                 
+                # Get fog of war system
+                fog_of_war = getattr(game_state, 'fog_of_war', None)
+                
                 for enemy in game_state.knights:
                     if enemy.player_id == self.player_id:
                         continue
+                    
+                    # Only attack visible enemies
+                    if fog_of_war:
+                        visibility = fog_of_war.get_visibility_state(self.player_id, enemy.x, enemy.y)
+                        if visibility != VisibilityState.VISIBLE:
+                            continue  # Need full visibility to attack
                     
                     distance = abs(knight.x - enemy.x) + abs(knight.y - enemy.y)
                     if distance <= attack_range:

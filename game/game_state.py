@@ -8,6 +8,7 @@ from game.animation import AnimationManager, MoveAnimation, AttackAnimation, Arr
 from game.terrain import TerrainMap
 from game.hex_utils import HexGrid, HexCoord
 from game.interfaces.game_state import IGameState
+from game.visibility import FogOfWar, VisibilityState
 
 class GameState(IGameState):
     def __init__(self, battle_config=None, vs_ai=True):
@@ -63,6 +64,9 @@ class GameState(IGameState):
         # Debug options
         self.show_coordinates = False
         
+        # Fog of War system
+        self.fog_of_war = FogOfWar(self.board_width, self.board_height, 2)  # 2 players
+        
         self._init_game()
         
         # Center camera on player 1's starting area
@@ -112,6 +116,9 @@ class GameState(IGameState):
         from game.entities.unit_helpers import check_cavalry_disruption_for_terrain
         for knight in self.knights:
             check_cavalry_disruption_for_terrain(knight, self)
+            
+        # Initialize fog of war visibility
+        self._update_all_fog_of_war()
     
     def add_message(self, message, priority=1):
         """Add a message to display. Higher priority messages display longer."""
@@ -142,6 +149,11 @@ class GameState(IGameState):
         if self.animation_manager.is_animating():
             return
         
+        # Update fog of war after animations complete
+        if hasattr(self, '_fog_update_needed'):
+            self._update_all_fog_of_war()
+            self._fog_update_needed = False
+        
         if self.vs_ai and self.current_player == 2 and not self.ai_thinking:
             self.ai_thinking = True
             self.ai_turn_delay = 0.5
@@ -154,7 +166,12 @@ class GameState(IGameState):
     
     def _cleanup_dead_knights(self):
         """Remove knights with 0 or less soldiers"""
+        had_dead_knights = any(k.soldiers <= 0 for k in self.knights)
         self.knights = [k for k in self.knights if k.soldiers > 0]
+        
+        # Update fog of war if any units were removed
+        if had_dead_knights:
+            self._update_all_fog_of_war()
     
     def set_camera_position(self, x, y):
         """Set camera position with bounds checking"""
@@ -290,6 +307,7 @@ class GameState(IGameState):
                     self.animation_manager.add_animation(anim)
                     
                     self.possible_moves = []
+                    self._fog_update_needed = True  # Update fog after movement
                     return True
             else:
                 # Fallback to direct movement if no movement behavior
@@ -299,6 +317,7 @@ class GameState(IGameState):
                 anim = MoveAnimation(self.selected_knight, start_x, start_y, tile_x, tile_y, game_state=self)
                 self.animation_manager.add_animation(anim)
                 self.possible_moves = []
+                self._fog_update_needed = True  # Update fog after movement
                 return True
         return False
     
@@ -528,6 +547,12 @@ class GameState(IGameState):
         
         for knight in self.knights:
             if knight.player_id != self.current_player:
+                # Check fog of war visibility
+                if hasattr(self, 'fog_of_war'):
+                    visibility = self.fog_of_war.get_visibility_state(self.current_player, knight.x, knight.y)
+                    if visibility != VisibilityState.VISIBLE:
+                        continue  # Skip invisible units
+                
                 target_hex = hex_grid.offset_to_axial(knight.x, knight.y)
                 distance = attacker_hex.distance_to(target_hex)
                 if distance <= attack_range:
@@ -554,6 +579,12 @@ class GameState(IGameState):
                 if (knight.player_id != self.current_player and 
                     knight.x == check_x and knight.y == check_y and 
                     not knight.is_garrisoned):
+                    # Check fog of war visibility
+                    if hasattr(self, 'fog_of_war'):
+                        visibility = self.fog_of_war.get_visibility_state(self.current_player, knight.x, knight.y)
+                        if visibility != VisibilityState.VISIBLE:
+                            continue  # Skip invisible units
+                    
                     # Check if we can actually charge this target
                     can_charge, _ = self.selected_knight.can_charge(knight, self)
                     if can_charge:
@@ -561,3 +592,21 @@ class GameState(IGameState):
                     break
         
         return targets
+    
+    def _update_all_fog_of_war(self):
+        """Update fog of war for all players"""
+        for player_id in range(self.fog_of_war.num_players):
+            self.fog_of_war.update_player_visibility(self, player_id)
+    
+    def _update_fog_of_war_for_player(self, player_id):
+        """Update fog of war for a specific player"""
+        self.fog_of_war.update_player_visibility(self, player_id)
+    
+    def get_unit_at(self, x, y):
+        """Get unit at position (needed by fog of war system)"""
+        return self.get_knight_at(x, y)
+    
+    @property
+    def units(self):
+        """Alias for knights to work with fog of war system"""
+        return self.knights

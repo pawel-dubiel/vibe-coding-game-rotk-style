@@ -28,7 +28,7 @@ def test_mock_game_state_implements_interface():
     assert mock_state.board_height == 10
     assert mock_state.current_player == 1
     assert len(mock_state.knights) == 0
-    assert len(mock_state.castles) == 0
+    assert len(mock_state.castles) == 2  # Mock creates 2 default castles
     assert mock_state.terrain_map is not None
     
     print("✓ MockGameState implements IGameState correctly")

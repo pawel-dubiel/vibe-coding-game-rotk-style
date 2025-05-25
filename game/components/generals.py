@@ -107,6 +107,21 @@ class AggressiveAbility(GeneralAbility):
             'damage_bonus': 0.15
         }
 
+class KeenSightAbility(GeneralAbility):
+    """Passive: Unit has extended vision range"""
+    
+    def __init__(self):
+        super().__init__(
+            "Keen Sight",
+            "Unit gains +1 vision range",
+            GeneralAbilityType.PASSIVE
+        )
+        
+    def apply(self, unit: 'Unit', context: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            'vision_bonus': 1
+        }
+
 # Active Abilities
 class RallyAbility(GeneralAbility):
     """Active: Restore morale and remove routing"""

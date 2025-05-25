@@ -3,6 +3,7 @@ import math
 from game.entities.knight import KnightClass
 from game.hex_utils import HexGrid, HexCoord
 from game.hex_layout import HexLayout
+from game.visibility import VisibilityState
 
 class Renderer:
     def __init__(self, screen):
@@ -86,6 +87,36 @@ class Renderer:
                 pygame.draw.polygon(self.screen, color, corners)
                 pygame.draw.polygon(self.screen, (0, 0, 0), corners, 1)  # Black outline
                 
+                # Check fog of war visibility and apply overlay
+                visibility = VisibilityState.VISIBLE  # Default for no fog
+                if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
+                    visibility = game_state.fog_of_war.get_visibility_state(game_state.current_player, col, row)
+                
+                # Apply fog overlay for non-visible hexes
+                if visibility != VisibilityState.VISIBLE:
+                    # Create a semi-transparent grey overlay
+                    fog_surface = pygame.Surface((int(self.hex_grid.hex_width), int(self.hex_grid.hex_height)), pygame.SRCALPHA)
+                    
+                    # Different alpha values for different visibility states
+                    if visibility == VisibilityState.HIDDEN:
+                        # Heavy fog for never-seen areas
+                        fog_color = (40, 40, 40, 200)  # Dark grey, very opaque
+                    elif visibility == VisibilityState.EXPLORED:
+                        # Medium fog for previously seen areas
+                        fog_color = (60, 60, 60, 150)  # Grey, semi-opaque
+                    else:  # PARTIAL
+                        # Light fog for partially visible areas
+                        fog_color = (80, 80, 80, 100)  # Light grey, less opaque
+                    
+                    # Draw fog polygon on the surface
+                    corners_relative = [(x - screen_x + self.hex_grid.hex_width/2, 
+                                       y - screen_y + self.hex_grid.hex_height/2) for x, y in corners]
+                    pygame.draw.polygon(fog_surface, fog_color, corners_relative)
+                    
+                    # Blit the fog overlay
+                    self.screen.blit(fog_surface, (screen_x - self.hex_grid.hex_width/2, 
+                                                  screen_y - self.hex_grid.hex_height/2))
+                
                 # Draw coordinate labels (optional - for debugging)
                 if game_state.show_coordinates:
                     coord_text = self.font.render(f"{col},{row}", True, (100, 100, 100))
@@ -157,6 +188,19 @@ class Renderer:
     
     def _draw_castles(self, game_state):
         for castle in game_state.castles:
+            # Check if any part of the castle is visible
+            castle_visible = False
+            if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
+                for tile_x, tile_y in castle.occupied_tiles:
+                    visibility = game_state.fog_of_war.get_visibility_state(game_state.current_player, tile_x, tile_y)
+                    if visibility in [VisibilityState.VISIBLE, VisibilityState.PARTIAL, VisibilityState.EXPLORED]:
+                        castle_visible = True
+                        break
+            else:
+                castle_visible = True  # No fog of war
+                
+            if not castle_visible:
+                continue
             # Draw all castle tiles as hexagons
             for tile_x, tile_y in castle.occupied_tiles:
                 # Use hex layout for positioning
@@ -221,6 +265,18 @@ class Renderer:
         from game.animation import MoveAnimation, PathMoveAnimation
         
         for knight in game_state.knights:
+            # Check fog of war visibility
+            is_identified = True  # Default to identified if no fog of war
+            if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
+                visibility = game_state.fog_of_war.get_visibility_state(game_state.current_player, knight.x, knight.y)
+                
+                # Don't draw units we can't see
+                if visibility not in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]:
+                    continue
+                    
+                # For partial visibility, we'll show a generic unit marker
+                is_identified = (visibility == VisibilityState.VISIBLE or 
+                               knight.player_id == game_state.current_player)
             # Use hex layout for positioning
             pixel_x, pixel_y = self.hex_layout.hex_to_pixel(knight.x, knight.y)
             
@@ -239,19 +295,26 @@ class Renderer:
             center_x = x
             center_y = y
             
-            if knight.knight_class == KnightClass.WARRIOR:
-                pygame.draw.rect(self.screen, player_color,
-                               (center_x - 20, center_y - 20, 40, 40))
-            elif knight.knight_class == KnightClass.ARCHER:
-                pygame.draw.polygon(self.screen, player_color,
-                                  [(center_x, center_y - 25),
-                                   (center_x - 20, center_y + 20),
-                                   (center_x + 20, center_y + 20)])
-            elif knight.knight_class == KnightClass.CAVALRY:
-                pygame.draw.ellipse(self.screen, player_color,
-                                  (center_x - 25, center_y - 15, 50, 30))
-            elif knight.knight_class == KnightClass.MAGE:
-                pygame.draw.circle(self.screen, player_color, (center_x, center_y), 22)
+            # Draw unit based on identification status
+            if not hasattr(game_state, 'fog_of_war') or is_identified:
+                # Full identification - draw specific unit type
+                if knight.knight_class == KnightClass.WARRIOR:
+                    pygame.draw.rect(self.screen, player_color,
+                                   (center_x - 20, center_y - 20, 40, 40))
+                elif knight.knight_class == KnightClass.ARCHER:
+                    pygame.draw.polygon(self.screen, player_color,
+                                      [(center_x, center_y - 25),
+                                       (center_x - 20, center_y + 20),
+                                       (center_x + 20, center_y + 20)])
+                elif knight.knight_class == KnightClass.CAVALRY:
+                    pygame.draw.ellipse(self.screen, player_color,
+                                      (center_x - 25, center_y - 15, 50, 30))
+                elif knight.knight_class == KnightClass.MAGE:
+                    pygame.draw.circle(self.screen, player_color, (center_x, center_y), 22)
+            else:
+                # Partial visibility - draw generic unit marker
+                pygame.draw.circle(self.screen, (150, 150, 150), (center_x, center_y), 20)
+                pygame.draw.circle(self.screen, player_color, (center_x, center_y), 20, 3)
             
             if knight.selected:
                 pygame.draw.circle(self.screen, self.colors['selected'],
