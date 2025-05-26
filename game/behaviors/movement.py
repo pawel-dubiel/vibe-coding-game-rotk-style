@@ -37,12 +37,12 @@ class MovementBehavior(Behavior):
         if game_state.terrain_map:
             terrain_cost = float(game_state.terrain_map.get_movement_cost(to_pos[0], to_pos[1], unit))
         
-        # Diagonal movement costs more
+        # Diagonal movement costs more (but only if terrain is passable)
         dx = abs(to_pos[0] - from_pos[0])
         dy = abs(to_pos[1] - from_pos[1])
         is_diagonal = dx > 0 and dy > 0
         
-        if is_diagonal:
+        if is_diagonal and terrain_cost != float('inf'):
             terrain_cost = math.ceil(terrain_cost * 1.4)  # 40% more for diagonal, always round up
             
         # Penalty for moving in enemy ZOC
@@ -52,6 +52,10 @@ class MovementBehavior(Behavior):
         # Penalty for breaking formation
         if self._would_break_formation(from_pos, to_pos, unit, game_state):
             terrain_cost += 1  # Formation breaking penalty
+            
+        # Handle impassable terrain
+        if terrain_cost == float('inf'):
+            return 999  # Very high cost to indicate impassable terrain
             
         return max(1, math.ceil(terrain_cost))  # Minimum 1 AP, always round up
         

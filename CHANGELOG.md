@@ -75,6 +75,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - WarriorTerrainBehavior: Reduced penalties in difficult terrain
   - MageTerrainBehavior: Extra penalties in swamps
   - Eliminates type checking in terrain system (Liskov Substitution Principle)
+- Enhanced terrain system with layers and realistic generation
+  - New terrain types: Light Forest, Dense Forest, High Hills, Mountains, Deep Water, Marsh, Desert, Snow
+  - Terrain features layer: Streams, rivers, roads, bridges, ruins, villages, fortifications
+  - Realistic terrain generation using Perlin noise for height and moisture maps
+  - Rivers flow naturally from high elevation to low, following terrain
+  - Roads pathfind between important locations avoiding difficult terrain
+  - Elevation system affects vision and combat
+  - Legacy terrain generation mode for backward compatibility
+  - Terrain information display: Click empty terrain to see details
+    - Shows terrain type, features, movement cost, defense bonus, elevation
+    - Displays passability and vision blocking information
+    - Helps players understand tactical terrain advantages
 - Comprehensive test coverage for new mechanics
   - Breakaway behavior tests
   - Archer ranged attack tests

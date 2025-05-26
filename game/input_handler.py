@@ -60,11 +60,37 @@ class InputHandler:
                             # Context menu uses screen coordinates
                             game_state.context_menu.show(screen_x, screen_y, knight, game_state)
                             game_state.enemy_info_unit = None
+                            game_state.terrain_info = None
                         else:
-                            # Clicked on enemy unit - show its info
-                            game_state.enemy_info_unit = knight
+                            # Check if enemy unit is visible to current player
+                            if game_state.fog_of_war.is_hex_visible(game_state.current_player, knight.x, knight.y):
+                                # Enemy is visible - show its info
+                                game_state.enemy_info_unit = knight
+                                game_state.terrain_info = None
+                            else:
+                                # Enemy is hidden by fog - show terrain info instead
+                                terrain = game_state.terrain_map.get_terrain(tile_x, tile_y)
+                                if terrain:
+                                    game_state.terrain_info = {
+                                        'terrain': terrain,
+                                        'x': tile_x,
+                                        'y': tile_y
+                                    }
+                                else:
+                                    game_state.terrain_info = None
+                                game_state.enemy_info_unit = None
                             game_state.deselect_knight()
                     else:
+                        # Clicked on empty terrain - show terrain info
+                        terrain = game_state.terrain_map.get_terrain(tile_x, tile_y)
+                        if terrain:
+                            game_state.terrain_info = {
+                                'terrain': terrain,
+                                'x': tile_x,
+                                'y': tile_y
+                            }
+                        else:
+                            game_state.terrain_info = None
                         game_state.deselect_knight()
                         game_state.enemy_info_unit = None
             
@@ -76,6 +102,7 @@ class InputHandler:
                 self.camera_drag_start_y = game_state.camera_y
                 # Deselect on right click
                 game_state.deselect_knight()
+                game_state.terrain_info = None
         
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:

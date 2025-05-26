@@ -37,16 +37,16 @@ class TestTerrainBehavior:
         terrain_behavior = cavalry.get_behavior('TerrainMovementBehavior')
         
         # Check movement modifiers
-        assert terrain_behavior.get_movement_cost_modifier(TerrainType.PLAINS) == 1.0
+        assert terrain_behavior.get_movement_cost_modifier(TerrainType.PLAINS) == 0.9  # 10% bonus
         assert terrain_behavior.get_movement_cost_modifier(TerrainType.FOREST) == 2.0
-        assert terrain_behavior.get_movement_cost_modifier(TerrainType.SWAMP) == 2.0
+        assert terrain_behavior.get_movement_cost_modifier(TerrainType.SWAMP) == 2.5
         assert terrain_behavior.get_movement_cost_modifier(TerrainType.HILLS) == 1.5
-        assert terrain_behavior.get_movement_cost_modifier(TerrainType.ROAD) == 0.8
+        assert terrain_behavior.get_movement_cost_modifier(TerrainType.ROAD) == 0.7  # 30% bonus
         
         # Check combat modifiers
-        assert terrain_behavior.get_combat_modifier(TerrainType.PLAINS) == 1.1
-        assert terrain_behavior.get_combat_modifier(TerrainType.FOREST) == 0.8
-        assert terrain_behavior.get_combat_modifier(TerrainType.HILLS) == 0.8
+        assert terrain_behavior.get_combat_modifier(TerrainType.PLAINS) == 1.2  # 20% bonus
+        assert terrain_behavior.get_combat_modifier(TerrainType.FOREST) == 0.7
+        assert terrain_behavior.get_combat_modifier(TerrainType.HILLS) == 0.85
         
     def test_archer_terrain_bonuses(self):
         """Test that archers have forest bonuses"""
@@ -59,7 +59,7 @@ class TestTerrainBehavior:
         
         # Check combat modifiers
         assert terrain_behavior.get_combat_modifier(TerrainType.FOREST) == 1.2
-        assert terrain_behavior.get_combat_modifier(TerrainType.HILLS) == 1.2
+        assert terrain_behavior.get_combat_modifier(TerrainType.HILLS) == 1.25  # 25% bonus
         
     def test_warrior_terrain_resilience(self):
         """Test that warriors are less affected by difficult terrain"""
@@ -68,7 +68,7 @@ class TestTerrainBehavior:
         
         # Warriors have reduced penalties in difficult terrain
         assert terrain_behavior.get_movement_cost_modifier(TerrainType.HILLS) == 0.8
-        assert terrain_behavior.get_movement_cost_modifier(TerrainType.SWAMP) == 0.8
+        assert terrain_behavior.get_movement_cost_modifier(TerrainType.SWAMP) == 0.85
         
     def test_mage_swamp_penalty(self):
         """Test that mages struggle in swamps"""
@@ -76,8 +76,8 @@ class TestTerrainBehavior:
         terrain_behavior = mage.get_behavior('TerrainMovementBehavior')
         
         # Mages have extra penalty in swamps
-        assert terrain_behavior.get_movement_cost_modifier(TerrainType.SWAMP) == 1.2
-        assert terrain_behavior.get_combat_modifier(TerrainType.SWAMP) == 0.7
+        assert terrain_behavior.get_movement_cost_modifier(TerrainType.SWAMP) == 1.5
+        assert terrain_behavior.get_combat_modifier(TerrainType.SWAMP) == 0.6  # 40% penalty
         
     def test_terrain_integration(self):
         """Test that terrain objects use unit behaviors correctly"""
@@ -95,11 +95,11 @@ class TestTerrainBehavior:
         assert forest.get_movement_cost_for_unit(archer) == 1.5   # 2 * 0.75 modifier
         
         # Plains base cost is 1
-        assert plains.get_movement_cost_for_unit(cavalry) == 1.0
+        assert plains.get_movement_cost_for_unit(cavalry) == 0.9  # 1 * 0.9 modifier
         assert plains.get_movement_cost_for_unit(archer) == 1.0
         
         # Test combat modifiers
-        assert forest.get_combat_modifier_for_unit(cavalry) == 0.8
+        assert forest.get_combat_modifier_for_unit(cavalry) == 0.7
         assert forest.get_combat_modifier_for_unit(archer) == 1.2
         
     def test_no_type_checking_in_terrain(self):

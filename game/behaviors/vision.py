@@ -84,8 +84,8 @@ class VisionBehavior(Behavior):
                 
         # Cavalry units are naturally elevated
         if hasattr(self.parent, 'unit_class'):
-            unit_type = str(self.parent.unit_class).split('.')[-1].lower()
-            if unit_type == 'cavalry':
+            from game.entities.knight import KnightClass
+            if self.parent.unit_class == KnightClass.CAVALRY:
                 return True
                 
         return False
@@ -97,8 +97,8 @@ class VisionBehavior(Behavior):
             
         # Cavalry blocks vision
         if hasattr(self.parent, 'unit_class'):
-            unit_type = str(self.parent.unit_class).split('.')[-1].lower()
-            return unit_type == 'cavalry'
+            from game.entities.knight import KnightClass
+            return self.parent.unit_class == KnightClass.CAVALRY
             
         return False
         

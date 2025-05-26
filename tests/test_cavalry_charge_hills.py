@@ -1,8 +1,5 @@
 """Test cavalry charge restrictions on hills"""
-import pygame
-pygame.init()
-
-from game.game_state import GameState
+from game.test_utils.mock_game_state import MockGameState
 from game.entities.unit_factory import UnitFactory
 from game.entities.knight import KnightClass
 from game.terrain import TerrainType
@@ -11,13 +8,7 @@ from game.terrain import TerrainType
 def test_cavalry_cannot_charge_from_hills():
     """Test that cavalry cannot charge when standing on hills"""
     # Create game state
-    game_state = GameState(battle_config={
-        'board_size': (10, 10),
-        'knights': 0,
-        'castles': 0
-    })
-    game_state.knights = []
-    game_state.castles = []
+    game_state = MockGameState(board_width=10, board_height=10)
     
     # Set terrain - cavalry on hills
     game_state.terrain_map.set_terrain(5, 5, TerrainType.HILLS)
@@ -31,7 +22,8 @@ def test_cavalry_cannot_charge_from_hills():
     enemy = UnitFactory.create_unit("Enemy", KnightClass.WARRIOR, 6, 5)
     enemy.player_id = 1
     
-    game_state.knights.extend([cavalry, enemy])
+    game_state.add_knight(cavalry)
+    game_state.add_knight(enemy)
     
     # Test charge
     can_charge, reason = cavalry.can_charge(enemy, game_state)
@@ -44,14 +36,10 @@ def test_cavalry_cannot_charge_from_hills():
 def test_cavalry_cannot_charge_enemy_on_hills():
     """Test that cavalry cannot charge enemies on hills"""
     # Create game state
-    game_state = GameState(battle_config={
-        'board_size': (10, 10),
-        'knights': 0,
-        'castles': 0
-    })
-    game_state.knights = []
-    game_state.castles = []
+    game_state = MockGameState(board_width=10, board_height=10)
     
+    # Ensure cavalry position is plains
+    game_state.terrain_map.set_terrain(5, 5, TerrainType.PLAINS)
     # Set terrain - enemy on hills
     game_state.terrain_map.set_terrain(6, 5, TerrainType.HILLS)
     
@@ -64,7 +52,8 @@ def test_cavalry_cannot_charge_enemy_on_hills():
     enemy = UnitFactory.create_unit("Enemy", KnightClass.WARRIOR, 6, 5)
     enemy.player_id = 1
     
-    game_state.knights.extend([cavalry, enemy])
+    game_state.add_knight(cavalry)
+    game_state.add_knight(enemy)
     
     # Test charge
     can_charge, reason = cavalry.can_charge(enemy, game_state)
@@ -77,15 +66,11 @@ def test_cavalry_cannot_charge_enemy_on_hills():
 def test_cavalry_can_charge_on_plains():
     """Test that cavalry can charge normally on plains"""
     # Create game state
-    game_state = GameState(battle_config={
-        'board_size': (10, 10),
-        'knights': 0,
-        'castles': 0
-    })
-    game_state.knights = []
-    game_state.castles = []
+    game_state = MockGameState(board_width=10, board_height=10)
     
-    # No special terrain - all plains
+    # Ensure both positions are plains
+    game_state.terrain_map.set_terrain(5, 5, TerrainType.PLAINS)
+    game_state.terrain_map.set_terrain(6, 5, TerrainType.PLAINS)
     
     # Create cavalry
     cavalry = UnitFactory.create_unit("Test Cavalry", KnightClass.CAVALRY, 5, 5)
@@ -96,7 +81,8 @@ def test_cavalry_can_charge_on_plains():
     enemy = UnitFactory.create_unit("Enemy", KnightClass.WARRIOR, 6, 5)
     enemy.player_id = 1
     
-    game_state.knights.extend([cavalry, enemy])
+    game_state.add_knight(cavalry)
+    game_state.add_knight(enemy)
     
     # Test charge
     can_charge, reason = cavalry.can_charge(enemy, game_state)
@@ -111,16 +97,11 @@ def test_cavalry_charge_behavior_respects_hills():
     from game.behaviors.special_abilities import CavalryChargeBehavior
     
     # Create game state
-    game_state = GameState(battle_config={
-        'board_size': (10, 10),
-        'knights': 0,
-        'castles': 0
-    })
-    game_state.knights = []
-    game_state.castles = []
+    game_state = MockGameState(board_width=10, board_height=10)
     
-    # Set terrain - cavalry on hills
+    # Set terrain - cavalry on hills, enemy on plains
     game_state.terrain_map.set_terrain(5, 5, TerrainType.HILLS)
+    game_state.terrain_map.set_terrain(6, 5, TerrainType.PLAINS)
     
     # Create cavalry with charge behavior
     cavalry = UnitFactory.create_unit("Test Cavalry", KnightClass.CAVALRY, 5, 5)
@@ -133,7 +114,8 @@ def test_cavalry_charge_behavior_respects_hills():
     enemy = UnitFactory.create_unit("Enemy", KnightClass.WARRIOR, 6, 5)
     enemy.player_id = 1
     
-    game_state.knights.extend([cavalry, enemy])
+    game_state.add_knight(cavalry)
+    game_state.add_knight(enemy)
     
     # Test charge through behavior
     result = cavalry.behaviors['charge'].execute(cavalry, game_state, enemy)

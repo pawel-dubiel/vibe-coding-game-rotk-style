@@ -3,20 +3,13 @@ import unittest
 from game.entities.unit_factory import UnitFactory
 from game.entities.knight import KnightClass
 from game.terrain import TerrainMap, TerrainType, Terrain
-
-class MockGameState:
-    def __init__(self):
-        self.board_width = 10
-        self.board_height = 10
-        self.knights = []
-        self.castles = []
-        self.terrain_map = TerrainMap(10, 10)
+from game.test_utils.mock_game_state import MockGameState
 
 class TestAPSystem(unittest.TestCase):
     """Test Action Point system for movement, combat, and abilities"""
     
     def setUp(self):
-        self.game_state = MockGameState()
+        self.game_state = MockGameState(board_width=20, board_height=20, create_terrain=True)
         
     def test_unit_starting_ap(self):
         """Test units start with appropriate AP"""
@@ -34,7 +27,7 @@ class TestAPSystem(unittest.TestCase):
         """Test movement costs AP based on terrain"""
         unit = UnitFactory.create_warrior("Test", 5, 5)
         unit.player_id = 1
-        self.game_state.knights = [unit]
+        self.game_state.add_knight(unit)
         
         move_behavior = unit.behaviors['move']
         
@@ -60,7 +53,7 @@ class TestAPSystem(unittest.TestCase):
         """Test that executing movement actually costs AP"""
         unit = UnitFactory.create_warrior("Test", 5, 5)
         unit.player_id = 1
-        self.game_state.knights = [unit]
+        self.game_state.add_knight(unit)
         
         initial_ap = unit.action_points
         
@@ -91,7 +84,8 @@ class TestAPSystem(unittest.TestCase):
         target = UnitFactory.create_warrior("Target", 6, 5)
         target.player_id = 2
         
-        self.game_state.knights = [attacker, target]
+        self.game_state.add_knight(attacker)
+        self.game_state.add_knight(target)
         
         initial_ap = attacker.action_points
         
@@ -109,7 +103,8 @@ class TestAPSystem(unittest.TestCase):
         target = UnitFactory.create_archer("Target", 6, 5)
         target.player_id = 2
         
-        self.game_state.knights = [cavalry, target]
+        self.game_state.add_knight(cavalry)
+        self.game_state.add_knight(target)
         
         # Check charge AP cost
         charge_behavior = cavalry.behaviors['cavalry_charge']
@@ -138,19 +133,27 @@ class TestAPSystem(unittest.TestCase):
         
     def test_multiple_actions_per_turn(self):
         """Test units can perform multiple actions if they have AP"""
+        # Create a completely fresh game state for this test
+        from game.test_utils.mock_game_state import MockGameState
+        fresh_game_state = MockGameState(board_width=20, board_height=20, create_terrain=True)
+        
+        # Create units with fresh state
         cavalry = UnitFactory.create_cavalry("Cavalry", 5, 5)  # Starts with 10 AP
         cavalry.player_id = 1
         
         enemy = UnitFactory.create_archer("Enemy", 7, 5)
         enemy.player_id = 2
         
-        self.game_state.knights = [cavalry, enemy]
+        # Add units using the proper method
+        fresh_game_state.add_knight(cavalry)
+        fresh_game_state.add_knight(enemy)
         
         initial_ap = cavalry.action_points
+        self.assertEqual(initial_ap, 10)  # Verify starting AP
         
         # Move once
-        result1 = cavalry.execute_behavior('move', self.game_state, target_x=6, target_y=5)
-        self.assertTrue(result1['success'])
+        result1 = cavalry.execute_behavior('move', fresh_game_state, target_x=6, target_y=5)
+        self.assertTrue(result1['success'], f"First move failed: {result1}")
         self.assertLess(cavalry.action_points, initial_ap)
         
         ap_after_move = cavalry.action_points
@@ -163,15 +166,24 @@ class TestAPSystem(unittest.TestCase):
         cavalry.has_moved = False
         
         # Move again (to a different position since enemy is at 7,5)
-        result2 = cavalry.execute_behavior('move', self.game_state, target_x=7, target_y=6)
-        self.assertTrue(result2['success'])
+        result2 = cavalry.execute_behavior('move', fresh_game_state, target_x=7, target_y=6)
+        if not result2['success']:
+            print(f"Second move failed: {result2}")
+            print(f"Cavalry AP: {cavalry.action_points}, has_moved: {cavalry.has_moved}")
+            print(f"Cavalry position: ({cavalry.x}, {cavalry.y})")
+            print(f"Target position: (7, 6)")
+        self.assertTrue(result2['success'], f"Second move failed: {result2}")
         self.assertLess(cavalry.action_points, ap_after_move)
         
         ap_after_second_move = cavalry.action_points
         
+        # Update position again
+        cavalry.x = 7
+        cavalry.y = 6
+        
         # Attack if we have enough AP
-        if cavalry.can_execute_behavior('attack', self.game_state):
-            result3 = cavalry.execute_behavior('attack', self.game_state, target=enemy)
+        if cavalry.can_execute_behavior('attack', fresh_game_state):
+            result3 = cavalry.execute_behavior('attack', fresh_game_state, target=enemy)
             self.assertTrue(result3['success'])
             self.assertLess(cavalry.action_points, ap_after_second_move)
         
@@ -183,7 +195,8 @@ class TestAPSystem(unittest.TestCase):
         enemy = UnitFactory.create_warrior("Enemy", 6, 6)
         enemy.player_id = 2
         
-        self.game_state.knights = [unit, enemy]
+        self.game_state.add_knight(unit)
+        self.game_state.add_knight(enemy)
         
         move_behavior = unit.behaviors['move']
         
@@ -201,7 +214,7 @@ class TestAPSystem(unittest.TestCase):
         """Test roads reduce movement AP cost"""
         unit = UnitFactory.create_warrior("Unit", 5, 5)
         unit.player_id = 1
-        self.game_state.knights = [unit]
+        self.game_state.add_knight(unit)
         
         # Set road terrain
         road_terrain = Terrain(TerrainType.ROAD)

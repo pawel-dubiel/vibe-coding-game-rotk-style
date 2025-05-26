@@ -47,6 +47,7 @@ class GameState(IGameState):
         self.current_action = None
         self.attack_targets = []
         self.enemy_info_unit = None  # Track enemy unit to display info
+        self.terrain_info = None  # Track terrain info to display
         
         self.animation_manager = AnimationManager()
         self.pending_positions = {}  # Track where knights are moving to

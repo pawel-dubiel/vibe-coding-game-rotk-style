@@ -545,6 +545,42 @@ class Renderer:
                 )
                 self.screen.blit(enemy_generals_text, (20, ui_y + 75))
         
+        # Show terrain info if clicked on empty terrain
+        elif game_state.terrain_info:
+            terrain_data = game_state.terrain_info
+            terrain = terrain_data['terrain']
+            x, y = terrain_data['x'], terrain_data['y']
+            
+            # Get terrain type and feature
+            terrain_type = terrain.type.value
+            feature_str = f" - Feature: {terrain.feature.value}" if terrain.feature.value != "None" else ""
+            
+            # Get terrain properties
+            movement_cost = terrain.movement_cost
+            defense_bonus = terrain.defense_bonus
+            elevation = terrain.elevation
+            passable = "Yes" if terrain.passable else "No"
+            blocks_vision = "Yes" if terrain.blocks_vision else "No"
+            
+            # Format movement cost
+            if movement_cost == float('inf'):
+                movement_str = "Impassable"
+            else:
+                movement_str = f"{movement_cost:.1f}"
+            
+            terrain_info_text = self.font.render(
+                f"Terrain: {terrain_type} at ({x}, {y}){feature_str}",
+                True, (200, 200, 255)  # Light blue color for terrain
+            )
+            self.screen.blit(terrain_info_text, (20, ui_y + 50))
+            
+            terrain_details_text = self.font.render(
+                f"Movement Cost: {movement_str} - Defense: {defense_bonus:+d} - "
+                f"Elevation: {elevation} - Passable: {passable} - Blocks Vision: {blocks_vision}",
+                True, (180, 180, 235)  # Slightly darker blue
+            )
+            self.screen.blit(terrain_details_text, (20, ui_y + 75))
+        
         # Show castle status
         player_castle = game_state.castles[0] if game_state.current_player == 1 else game_state.castles[1]
         enemies_near = len(player_castle.get_enemies_in_range(game_state.knights))
@@ -556,7 +592,7 @@ class Renderer:
             f"{garrison_info} - Archers: {archer_count} - Enemies in range: {enemies_near}",
             True, self.colors['text']
         )
-        castle_y = ui_y + 100 if game_state.selected_knight or game_state.enemy_info_unit else ui_y + 75
+        castle_y = ui_y + 100 if game_state.selected_knight or game_state.enemy_info_unit or game_state.terrain_info else ui_y + 75
         self.screen.blit(castle_text, (20, castle_y))
         
         end_turn_rect = pygame.Rect(self.screen.get_width() - 140, ui_y + 20, 120, 40)

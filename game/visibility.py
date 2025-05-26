@@ -202,7 +202,9 @@ class FogOfWar:
             # Hills block unless viewer is elevated or on a hill
             if terrain and terrain.type.value.lower() == 'hills':
                 origin_terrain = game_state.terrain_map.get_terrain(origin[0], origin[1])
-                if not is_elevated and (not origin_terrain or origin_terrain.type.value.lower() != 'hills'):
+                # If viewer is on hills or is elevated (cavalry), they can see over hills
+                viewer_on_hills = origin_terrain and origin_terrain.type.value.lower() == 'hills'
+                if not is_elevated and not viewer_on_hills:
                     return False
                     
             # Check unit blocking
@@ -211,11 +213,20 @@ class FogOfWar:
                 # Check if unit blocks vision using its behavior
                 vision_behavior = blocking_unit.get_behavior('VisionBehavior') if hasattr(blocking_unit, 'get_behavior') else None
                 if vision_behavior and vision_behavior.blocks_vision():
-                    # Unit blocks view unless viewer is elevated
-                    if not is_elevated:
-                        # Check if target is directly behind the blocking unit
-                        if self._is_behind_blocker(origin, (hex_x, hex_y), target):
-                            return False
+                    # Check if blocker is also elevated
+                    blocker_elevated = vision_behavior.is_elevated() if hasattr(vision_behavior, 'is_elevated') else False
+                    
+                    # Elevated viewers can see over non-elevated blockers
+                    if is_elevated and not blocker_elevated:
+                        continue
+                        
+                    # If both are elevated (e.g., cavalry viewing past cavalry), no blocking
+                    if is_elevated and blocker_elevated:
+                        continue
+                        
+                    # Otherwise check if target is behind the blocker
+                    if self._is_behind_blocker(origin, (hex_x, hex_y), target):
+                        return False
                         
         return True
         

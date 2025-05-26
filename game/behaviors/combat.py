@@ -133,11 +133,11 @@ class AttackBehavior(Behavior):
             target_on_hills = target_terrain.type.value.lower() == 'hills'
             
             if not attacker_on_hills and target_on_hills:
-                # Shooting uphill - 30% damage penalty
-                base_damage *= 0.7
+                # Shooting uphill - 50% damage penalty
+                base_damage = int(base_damage * 0.5)
             elif attacker_on_hills and not target_on_hills:
-                # Shooting downhill - 20% damage bonus
-                base_damage *= 1.2
+                # Shooting downhill - 50% damage bonus
+                base_damage = int(base_damage * 1.5)
             
         # Calculate defense with general bonuses
         target_defense = target.stats.stats.base_defense

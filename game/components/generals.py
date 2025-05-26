@@ -233,7 +233,8 @@ class General:
             'damage_bonus': 0,
             'damage_reduction': 0,
             'attack_bonus': 0,
-            'defense_bonus': 0
+            'defense_bonus': 0,
+            'vision_bonus': 0
         }
         
         for ability in self.abilities:
@@ -242,6 +243,8 @@ class General:
                 for key, value in result.items():
                     if key in bonuses:
                         bonuses[key] += value
+                    else:
+                        bonuses[key] = value
                         
         # Level bonuses
         bonuses['morale_bonus'] += self.level * 2
@@ -307,13 +310,17 @@ class GeneralRoster:
             'damage_bonus': 0,
             'damage_reduction': 0,
             'attack_bonus': 0,
-            'defense_bonus': 0
+            'defense_bonus': 0,
+            'vision_bonus': 0
         }
         
         for general in self.generals:
             bonuses = general.get_passive_bonuses(unit)
             for key, value in bonuses.items():
-                combined[key] += value
+                if key in combined:
+                    combined[key] += value
+                else:
+                    combined[key] = value
                 
         return combined
         
