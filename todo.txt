@@ -1,3 +1,4 @@
+# TODO
 1 done I want to see in info panel what generals are attached to a unit
 2 done I want to ensure that frontage is in use so we not calculating strength during combat just from unit soldiers but we take frontage into account
 3 Maybe we should try to simulate a single battle between units, in rounds we need some good algorithm used from real war simulators, but still simple
@@ -13,56 +14,51 @@
 13 When archer is on the hill, and enemy archer attacks not from the hill (is lower), the attack should be less effective
 
 
-fix
+# Failing tests
 
-⏺ List of Failing Tests (19 total)
+ AP System (1 test)
 
-  AP System (1 test)
+  - test_ap_system.py::TestAPSystem::test_charge_ap_cost
 
-  - tests/test_ap_system.py::TestAPSystem::test_multiple_actions_per_turn
+  Fog of War/Attack Targeting (1 test)
 
-  Cavalry Charge Hills (4 tests)
-
-  - tests/test_cavalry_charge_hills.py::test_cavalry_cannot_charge_from_hills
-  - tests/test_cavalry_charge_hills.py::test_cavalry_cannot_charge_enemy_on_hills
-  - tests/test_cavalry_charge_hills.py::test_cavalry_can_charge_on_plains
-  - tests/test_cavalry_charge_hills.py::test_cavalry_charge_behavior_respects_hills
-
-  Facing Mechanics (1 test)
-
-  - tests/test_facing_mechanics.py::TestFacingMechanics::test_cavalry_charge_rear_bonus
-
-  Fog of War (3 tests)
-
-  - tests/test_fog_of_war.py::TestFogOfWar::test_terrain_blocking_hills
-  - tests/test_fog_of_war.py::TestFogOfWar::test_visibility_state_transitions
-  - tests/test_fog_of_war.py::TestFogOfWar::test_general_keen_sight_ability
+  - test_fog_attack_targeting.py::test_charge_targeting_respects_fog
 
   Height Advantage (1 test)
 
-  - tests/test_height_advantage.py::test_archer_shooting_downhill_bonus
+  - test_height_advantage.py::test_archer_shooting_downhill_bonus
 
-  Movement Facing (1 test)
+  Movement Facing (4 tests)
 
-  - tests/test_movement_facing.py::TestMovementFacing::test_simple_move_updates_facing
+  - test_movement_facing.py::TestMovementFacing::test_auto_face_nearest_of_multiple_enemies
+  - test_movement_facing.py::TestMovementFacing::test_manual_facing_selection
+  - test_movement_facing.py::TestMovementFacing::test_no_auto_face_far_enemy
+  - test_movement_facing.py::TestMovementFacing::test_simple_move_updates_facing
 
-  Movement Pathfinding (2 tests)
+  Movement Pathfinding (3 tests)
 
-  - tests/test_movement_pathfinding.py::TestMovementPathfinding::test_movement_with_dijkstra_pathfinder
-  - tests/test_movement_pathfinding.py::TestMovementPathfinding::test_movement_with_astar_pathfinder
+  - test_movement_pathfinding.py::TestMovementPathfinding::test_different_pathfinders_same_result
+  - test_movement_pathfinding.py::TestMovementPathfinding::test_movement_with_astar_pathfinder
+  - test_movement_pathfinding.py::TestMovementPathfinding::test_movement_with_dijkstra_pathfinder
 
   Pathfinding (3 tests)
 
-  - tests/test_pathfinding.py::TestPathfinding::test_astar_finds_direct_path
-  - tests/test_pathfinding.py::TestPathfinding::test_pathfinder_hex_movement
-  - tests/test_pathfinding_simple.py::TestPathfindingSimple::test_astar_basic_path
+  - test_pathfinding.py::TestPathfinding::test_astar_avoids_enemy_units
+  - test_pathfinding.py::TestPathfinding::test_astar_finds_direct_path
+  - test_pathfinding.py::TestPathfinding::test_pathfinder_hex_movement
 
-  Rotation Mechanics (2 tests)
+  Pathfinding Simple (1 test)
 
-  - tests/test_rotation_mechanics.py::TestRotationMechanics::test_basic_rotation
-  - tests/test_rotation_mechanics.py::TestRotationMechanics::test_rotation_ap_cost
+  - test_pathfinding_simple.py::TestPathfindingSimple::test_dijkstra_basic_path
+
+  Rotation Mechanics (1 test)
+
+  - test_rotation_mechanics.py::TestRotationMechanics::test_rotation_ap_cost
 
   Terrain Behavior (1 test)
 
-  - tests/test_terrain_behavior.py::TestTerrainBehavior::test_cavalry_terrain_penalties
+  - test_terrain_behavior.py::TestTerrainBehavior::test_cavalry_terrain_penalties
+
+  The majority of failures are in the movement and pathfinding systems (10 out of 16 tests).
+
 

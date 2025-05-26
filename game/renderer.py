@@ -4,6 +4,7 @@ from game.entities.knight import KnightClass
 from game.hex_utils import HexGrid, HexCoord
 from game.hex_layout import HexLayout
 from game.visibility import VisibilityState
+from game.terrain import TerrainType
 
 class Renderer:
     def __init__(self, screen):
@@ -35,7 +36,16 @@ class Renderer:
             'water': (64, 164, 223),
             'bridge': (139, 69, 19),
             'swamp': (47, 79, 47),
-            'road': (169, 169, 169)
+            'road': (169, 169, 169),
+            # New terrain type colors
+            'light_forest': (85, 170, 85),      # Lighter green than forest
+            'dense_forest': (0, 100, 0),        # Darker green than forest
+            'high_hills': (160, 82, 45),        # Darker brown than hills
+            'mountains': (105, 105, 105),       # Dark grey
+            'deep_water': (0, 0, 139),          # Dark blue
+            'marsh': (107, 142, 35),            # Olive/yellowish green
+            'desert': (238, 203, 173),          # Sandy beige
+            'snow': (255, 250, 250)
         }
     
     def render(self, game_state):
@@ -76,7 +86,16 @@ class Renderer:
                         TerrainType.WATER: self.colors['water'],
                         TerrainType.BRIDGE: self.colors['bridge'],
                         TerrainType.SWAMP: self.colors['swamp'],
-                        TerrainType.ROAD: self.colors['road']
+                        TerrainType.ROAD: self.colors['road'],
+                        # New terrain types
+                        TerrainType.LIGHT_FOREST: self.colors['light_forest'],
+                        TerrainType.DENSE_FOREST: self.colors['dense_forest'],
+                        TerrainType.HIGH_HILLS: self.colors['high_hills'],
+                        TerrainType.MOUNTAINS: self.colors['mountains'],
+                        TerrainType.DEEP_WATER: self.colors['deep_water'],
+                        TerrainType.MARSH: self.colors['marsh'],
+                        TerrainType.DESERT: self.colors['desert'],
+                        TerrainType.SNOW: self.colors['snow']
                     }
                     color = terrain_colors.get(terrain.type, self.colors['plains'])
                 else:
