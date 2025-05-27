@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import heapq
 import math
 from game.hex_utils import HexCoord, HexGrid
+from functools import lru_cache
 
 
 @dataclass
@@ -52,7 +53,7 @@ class PathFinder(ABC):
         terrain_cost = 1.0
         if game_state.terrain_map and unit:
             terrain_cost = float(game_state.terrain_map.get_movement_cost(
-                to_pos[0], to_pos[1], unit.unit_class
+                to_pos[0], to_pos[1], unit
             ))
         
         # Hex-based movement - check if diagonal in offset coords
@@ -74,12 +75,16 @@ class PathFinder(ABC):
         
         # Check terrain passability
         if game_state.terrain_map and unit:
-            if not game_state.terrain_map.is_passable(x, y, unit.unit_class):
+            if not game_state.terrain_map.is_passable(x, y, unit):
                 return False
         
-        # Check for enemy units blocking
+        # Check for enemy units blocking (but allow own position)
         if unit:
             for other in game_state.knights:
+                # Skip if it's the same unit (allow own position)
+                if other == unit:
+                    continue
+                # Block if enemy unit at this position
                 if other.player_id != unit.player_id and other.x == x and other.y == y:
                     return False
         
@@ -87,6 +92,15 @@ class PathFinder(ABC):
     
     def _get_hex_neighbors(self, pos: Tuple[int, int], game_state) -> List[Tuple[int, int]]:
         """Get valid neighboring positions in hex grid"""
+        # Use cached hex grid if available in pathfinder instance
+        if hasattr(self, '_cached_hex_grid'):
+            if self._cached_hex_grid is None or \
+               self._cached_hex_grid.width != game_state.board_width or \
+               self._cached_hex_grid.height != game_state.board_height:
+                self._cached_hex_grid = CachedHexGrid(game_state.board_width, game_state.board_height)
+            return self._cached_hex_grid.get_neighbors(pos[0], pos[1])
+        
+        # Fallback to original implementation
         hex_grid = HexGrid()
         hex_coord = hex_grid.offset_to_axial(pos[0], pos[1])
         neighbors = []
@@ -113,9 +127,21 @@ class PathFinder(ABC):
 class AStarPathFinder(PathFinder):
     """A* pathfinding implementation for hex grid"""
     
+    def __init__(self):
+        self._path_cache = {}  # Cache for computed paths
+        self._cache_generation = 0  # Invalidate cache when game state changes
+        self._cached_hex_grid = None  # Lazy-initialized
+    
     def find_path(self, start: Tuple[int, int], end: Tuple[int, int], 
                   game_state, unit=None, max_cost: Optional[float] = None) -> Optional[List[Tuple[int, int]]]:
         """Find optimal path using A* algorithm"""
+        
+        # Check cache first
+        cache_key = (start, end, unit.unit_class if unit else None, max_cost)
+        if hasattr(self, '_path_cache') and cache_key in self._path_cache:
+            cached_path, cached_generation = self._path_cache[cache_key]
+            if cached_generation == self._cache_generation:
+                return cached_path
         
         # Check if start and end are valid
         if not self._is_position_valid(end, game_state, unit):
@@ -147,7 +173,10 @@ class AStarPathFinder(PathFinder):
             
             # Found the goal
             if current.position == end:
-                return self._reconstruct_path(current)
+                path = self._reconstruct_path(current)
+                if hasattr(self, '_path_cache'):
+                    self._path_cache[cache_key] = (path, self._cache_generation)
+                return path
             
             # Skip if already processed
             if current.position in closed_set:
@@ -193,11 +222,52 @@ class AStarPathFinder(PathFinder):
                 heapq.heappush(open_set, neighbor_node)
         
         # No path found
+        if hasattr(self, '_path_cache'):
+            self._path_cache[cache_key] = (None, self._cache_generation)
         return None
+
+
+    def invalidate_cache(self):
+        """Invalidate the path cache when game state changes"""
+        self._cache_generation += 1
+        # Optionally clear old cache entries to save memory
+        if len(self._path_cache) > 1000:
+            self._path_cache.clear()
+
+
+class CachedHexGrid:
+    """Cached hex grid operations for performance"""
+    
+    def __init__(self, width: int, height: int):
+        self.width = width
+        self.height = height
+        self._neighbor_cache = {}
+        self._hex_grid = HexGrid()
+        self._precompute_neighbors()
+    
+    def _precompute_neighbors(self):
+        """Pre-compute all hex neighbors for the grid"""
+        for y in range(self.height):
+            for x in range(self.width):
+                hex_coord = self._hex_grid.offset_to_axial(x, y)
+                neighbors = []
+                for neighbor_hex in hex_coord.get_neighbors():
+                    offset_pos = self._hex_grid.axial_to_offset(neighbor_hex)
+                    if (0 <= offset_pos[0] < self.width and 
+                        0 <= offset_pos[1] < self.height):
+                        neighbors.append(offset_pos)
+                self._neighbor_cache[(x, y)] = neighbors
+    
+    def get_neighbors(self, x: int, y: int) -> List[Tuple[int, int]]:
+        """Get cached neighbors for a position"""
+        return self._neighbor_cache.get((x, y), [])
 
 
 class DijkstraPathFinder(PathFinder):
     """Dijkstra's pathfinding implementation for hex grid"""
+    
+    def __init__(self):
+        self._cached_hex_grid = None  # For performance optimization
     
     def find_path(self, start: Tuple[int, int], end: Tuple[int, int], 
                   game_state, unit=None, max_cost: Optional[float] = None) -> Optional[List[Tuple[int, int]]]:

@@ -1,4 +1,5 @@
 import pygame
+from typing import Optional
 from game.entities.knight import KnightClass
 from game.entities.unit_factory import UnitFactory
 from game.entities.castle import Castle
@@ -99,6 +100,14 @@ class GameState(IGameState):
         for i in range(self.knights_per_player):
             y_pos = knight_spacing * (i + 1)
             x_pos = 4 if i % 2 == 0 else 5
+            
+            # Find valid position if terrain is impassable
+            valid_pos = self._find_valid_position_near(x_pos, y_pos, max_distance=3)
+            if valid_pos is None:
+                print(f"Warning: Could not find valid position for player 1 knight {i}")
+                continue
+            
+            x_pos, y_pos = valid_pos
             knight_class = knight_classes[i % len(knight_classes)]
             knight = UnitFactory.create_unit(knight_names_p1[i % len(knight_names_p1)], knight_class, x_pos, y_pos)
             knight.player_id = 1
@@ -108,6 +117,14 @@ class GameState(IGameState):
         for i in range(self.knights_per_player):
             y_pos = knight_spacing * (i + 1)
             x_pos = self.board_width - 5 if i % 2 == 0 else self.board_width - 6
+            
+            # Find valid position if terrain is impassable
+            valid_pos = self._find_valid_position_near(x_pos, y_pos, max_distance=3)
+            if valid_pos is None:
+                print(f"Warning: Could not find valid position for player 2 knight {i}")
+                continue
+            
+            x_pos, y_pos = valid_pos
             knight_class = knight_classes[i % len(knight_classes)]
             knight = UnitFactory.create_unit(knight_names_p2[i % len(knight_names_p2)], knight_class, x_pos, y_pos)
             knight.player_id = 2
@@ -120,6 +137,70 @@ class GameState(IGameState):
             
         # Initialize fog of war visibility
         self._update_all_fog_of_war()
+    
+    def _find_valid_position_near(self, x: int, y: int, max_distance: int = 3) -> Optional[tuple[int, int]]:
+        """Find a valid position near the given position where terrain is passable.
+        
+        Returns a tuple (x, y) of a valid position, or None if no valid position found.
+        """
+        # First check if the original position is valid
+        if self._is_position_valid_for_placement(x, y):
+            return (x, y)
+            
+        # Search in expanding rectangles for simplicity
+        for distance in range(1, max_distance + 1):
+            # Check positions in a square around the original position
+            positions_to_check = []
+            
+            # Top and bottom rows
+            for dx in range(-distance, distance + 1):
+                positions_to_check.append((x + dx, y - distance))
+                positions_to_check.append((x + dx, y + distance))
+            
+            # Left and right columns (excluding corners already checked)
+            for dy in range(-distance + 1, distance):
+                positions_to_check.append((x - distance, y + dy))
+                positions_to_check.append((x + distance, y + dy))
+            
+            # Check each position
+            for new_x, new_y in positions_to_check:
+                if (0 <= new_x < self.board_width and 
+                    0 <= new_y < self.board_height and
+                    self._is_position_valid_for_placement(new_x, new_y)):
+                    return (new_x, new_y)
+                    
+        return None
+    
+    def _is_position_valid_for_placement(self, x: int, y: int) -> bool:
+        """Check if a position is valid for placing a unit.
+        
+        Position is valid if:
+        - Within board bounds
+        - Terrain is passable
+        - No other unit at this position
+        - Not on a castle
+        """
+        # Check bounds
+        if not (0 <= x < self.board_width and 0 <= y < self.board_height):
+            return False
+            
+        # Check terrain
+        if self.terrain_map:
+            terrain = self.terrain_map.get_terrain(x, y)
+            if terrain and not terrain.passable:
+                return False
+        
+        # Check for other units
+        for knight in self.knights:
+            if knight.x == x and knight.y == y:
+                return False
+                
+        # Check for castles
+        for castle in self.castles:
+            if hasattr(castle, 'contains_position') and castle.contains_position(x, y):
+                return False
+                
+        return True
     
     def add_message(self, message, priority=1):
         """Add a message to display. Higher priority messages display longer."""
