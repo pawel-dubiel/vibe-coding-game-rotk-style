@@ -399,17 +399,27 @@ class AIPlayer:
             
             if move_type == 'move':
                 if knight.can_move():
-                    start_x, start_y = knight.x, knight.y
-                    knight.consume_move_ap()
+                    # Select the knight and use the game state's movement method to track paths
+                    game_state.selected_knight = knight
+                    game_state.possible_moves = knight.get_possible_moves(
+                        game_state.board_width, game_state.board_height, 
+                        game_state.terrain_map, game_state
+                    )
                     
-                    # Track pending position
-                    game_state.pending_positions[id(knight)] = (action[2], action[3])
+                    # Use the proper movement method that tracks paths
+                    target_x, target_y = action[2], action[3]
+                    success = game_state.move_selected_knight(target_x * 64, target_y * 64)
                     
-                    # Add animation - animation will update position when complete
-                    anim = MoveAnimation(knight, start_x, start_y, action[2], action[3], game_state=game_state)
-                    game_state.animation_manager.add_animation(anim)
-                    
-                    actions_taken.append(f"{knight.name} moved to ({action[2]}, {action[3]})")
+                    if success:
+                        actions_taken.append(f"{knight.name} moved to ({target_x}, {target_y})")
+                    else:
+                        # Fallback to direct movement if the proper method fails
+                        start_x, start_y = knight.x, knight.y
+                        knight.consume_move_ap()
+                        game_state.pending_positions[id(knight)] = (target_x, target_y)
+                        anim = MoveAnimation(knight, start_x, start_y, target_x, target_y, game_state=game_state)
+                        game_state.animation_manager.add_animation(anim)
+                        actions_taken.append(f"{knight.name} moved to ({target_x}, {target_y})")
             
             elif move_type == 'attack':
                 if knight.can_attack():

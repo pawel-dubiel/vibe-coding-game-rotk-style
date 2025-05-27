@@ -149,3 +149,10 @@ class InputHandler:
             # Toggle coordinate display
             elif event.key == pygame.K_c:
                 game_state.show_coordinates = not game_state.show_coordinates
+            # Toggle enemy movement paths
+            elif event.key == pygame.K_p:
+                game_state.show_enemy_paths = not game_state.show_enemy_paths
+                if game_state.show_enemy_paths:
+                    game_state.add_message("Enemy movement paths: ON")
+                else:
+                    game_state.add_message("Enemy movement paths: OFF")

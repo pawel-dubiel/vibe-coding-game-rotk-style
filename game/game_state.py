@@ -65,6 +65,10 @@ class GameState(IGameState):
         
         # Debug options
         self.show_coordinates = False
+        self.show_enemy_paths = True  # Toggle for showing enemy movement paths
+        
+        # Movement history tracking - stores paths taken by units this turn
+        self.movement_history = {}  # key: unit_id, value: list of (x,y) positions
         
         # Fog of War system
         self.fog_of_war = FogOfWar(self.board_width, self.board_height, 2)  # 2 players
@@ -384,6 +388,10 @@ class GameState(IGameState):
                     # Track pending position
                     self.pending_positions[id(self.selected_knight)] = (tile_x, tile_y)
                     
+                    # Store movement history (include starting position)
+                    full_path = [(self.selected_knight.x, self.selected_knight.y)] + path
+                    self.movement_history[id(self.selected_knight)] = full_path
+                    
                     # Create path animation - shows the optimal route
                     anim = PathMoveAnimation(self.selected_knight, path, step_duration=0.25, game_state=self)
                     self.animation_manager.add_animation(anim)
@@ -396,6 +404,10 @@ class GameState(IGameState):
                 self.selected_knight.consume_move_ap()
                 self.pending_positions[id(self.selected_knight)] = (tile_x, tile_y)
                 start_x, start_y = self.selected_knight.x, self.selected_knight.y
+                
+                # Store simple movement history for direct movement
+                self.movement_history[id(self.selected_knight)] = [(start_x, start_y), (tile_x, tile_y)]
+                
                 anim = MoveAnimation(self.selected_knight, start_x, start_y, tile_x, tile_y, game_state=self)
                 self.animation_manager.add_animation(anim)
                 self.possible_moves = []
@@ -529,6 +541,28 @@ class GameState(IGameState):
                         # Add message for castle archer volleys
                         total_damage = sum(d[1] for d in damages)
                         self.add_message(f"Castle archers fire! {total_damage} total damage dealt.")
+        
+        # Before switching players, clear OLD enemy paths (from 2 turns ago)
+        # but keep current player's paths so next player can see them
+        next_player = 2 if self.current_player == 1 else 1
+        new_movement_history = {}
+        
+        for unit_id, path in self.movement_history.items():
+            # Find the unit
+            unit = None
+            for knight in self.knights:
+                if id(knight) == unit_id:
+                    unit = knight
+                    break
+            
+            # Keep paths from the current turn (current player who just moved)
+            # Clear paths from the next player (their old paths from last turn)
+            if unit and unit.player_id == self.current_player:
+                new_movement_history[unit_id] = path
+            elif unit and unit.player_id == next_player:
+                pass  # Clear old paths
+        
+        self.movement_history = new_movement_history
         
         self.current_player = 2 if self.current_player == 1 else 1
         if self.current_player == 1:

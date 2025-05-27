@@ -48,6 +48,46 @@ class Renderer:
             'snow': (255, 250, 250)
         }
     
+    def _draw_dotted_line(self, surface, start_pos, end_pos, color, width=1, dash_length=5):
+        """Draw a dotted line between two points"""
+        x1, y1 = start_pos
+        x2, y2 = end_pos
+        
+        # Calculate distance and direction
+        dx = x2 - x1
+        dy = y2 - y1
+        distance = math.sqrt(dx**2 + dy**2)
+        
+        if distance == 0:
+            return
+            
+        # Normalize direction
+        dx /= distance
+        dy /= distance
+        
+        # Draw dashes
+        drawn = 0
+        draw_dash = True
+        
+        while drawn < distance:
+            if draw_dash:
+                # Calculate dash end point
+                dash_end = min(drawn + dash_length, distance)
+                
+                # Draw the dash
+                start_x = x1 + dx * drawn
+                start_y = y1 + dy * drawn
+                end_x = x1 + dx * dash_end
+                end_y = y1 + dy * dash_end
+                
+                pygame.draw.line(surface, color, 
+                               (int(start_x), int(start_y)), 
+                               (int(end_x), int(end_y)), 
+                               width)
+            
+            drawn += dash_length
+            draw_dash = not draw_dash
+    
     def render(self, game_state):
         self.screen.fill(self.colors['background'])
         
@@ -204,6 +244,53 @@ class Renderer:
                 pygame.draw.polygon(self.screen, (255, 200, 0), corners, 4)  # Golden color
             else:
                 pygame.draw.polygon(self.screen, self.colors['attack_target'], corners, 3)
+        
+        # Draw enemy movement paths (if enabled)
+        if game_state.show_enemy_paths and hasattr(game_state, 'movement_history'):
+            for unit_id, path in game_state.movement_history.items():
+                # Find the unit to check if it's an enemy
+                unit = None
+                for knight in game_state.knights:
+                    if id(knight) == unit_id:
+                        unit = knight
+                        break
+                
+                # Only draw enemy paths
+                if unit and unit.player_id != game_state.current_player and len(path) > 1:
+                    # Draw dotted lines between consecutive positions
+                    for i in range(len(path) - 1):
+                        start_pos = path[i]
+                        end_pos = path[i + 1]
+                        
+                        # Check if both positions are visible (not in fog of war)
+                        start_visible = True
+                        end_visible = True
+                        
+                        if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
+                            start_vis = game_state.fog_of_war.get_visibility_state(
+                                game_state.current_player, start_pos[0], start_pos[1])
+                            end_vis = game_state.fog_of_war.get_visibility_state(
+                                game_state.current_player, end_pos[0], end_pos[1])
+                            
+                            # Draw if both positions are at least explored (not completely hidden)
+                            # This allows seeing paths in previously explored areas
+                            start_visible = start_vis in [VisibilityState.VISIBLE, VisibilityState.PARTIAL, VisibilityState.EXPLORED]
+                            end_visible = end_vis in [VisibilityState.VISIBLE, VisibilityState.PARTIAL, VisibilityState.EXPLORED]
+                        
+                        if start_visible and end_visible:
+                            # Convert hex positions to screen coordinates
+                            start_pixel_x, start_pixel_y = self.hex_layout.hex_to_pixel(start_pos[0], start_pos[1])
+                            start_screen_x, start_screen_y = game_state.world_to_screen(start_pixel_x, start_pixel_y)
+                            
+                            end_pixel_x, end_pixel_y = self.hex_layout.hex_to_pixel(end_pos[0], end_pos[1])
+                            end_screen_x, end_screen_y = game_state.world_to_screen(end_pixel_x, end_pixel_y)
+                            
+                            # Draw dotted line
+                            self._draw_dotted_line(self.screen, 
+                                                 (start_screen_x, start_screen_y),
+                                                 (end_screen_x, end_screen_y),
+                                                 (255, 255, 0),  # Yellow color for enemy paths
+                                                 3, 8)  # width=3, dash_length=8
     
     def _draw_castles(self, game_state):
         for castle in game_state.castles:
