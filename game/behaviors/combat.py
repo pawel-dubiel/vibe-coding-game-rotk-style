@@ -1,9 +1,17 @@
 """Combat behaviors for units"""
 from typing import Dict, Any, Optional, Tuple
+from enum import Enum
 from game.components.base import Behavior
 from game.entities.knight import KnightClass
 from game.combat_config import CombatConfig
 from game.visibility import VisibilityState
+
+class CombatMode(Enum):
+    """Different modes of combat engagement"""
+    RANGED = "ranged"      # Attacker shoots from distance (no counter-attack)
+    MELEE = "melee"        # Close combat (both sides can attack)
+    SKIRMISH = "skirmish"  # Hit-and-run tactics (reduced counter-attack)
+    CHARGE = "charge"      # Cavalry charge (bonus damage, but vulnerable to counter)
 
 class AttackBehavior(Behavior):
     """Basic attack behavior"""
@@ -33,6 +41,24 @@ class AttackBehavior(Behavior):
                 
         return base_cost
         
+    def determine_combat_mode(self, attacker, target, distance: int) -> CombatMode:
+        """Determine the combat mode based on units and distance"""
+        # Ranged combat when attacking from distance
+        if distance > 1:
+            return CombatMode.RANGED
+            
+        # Melee combat at close range
+        if distance == 1:
+            # Special case: cavalry charging (could be expanded with charge mechanic)
+            if attacker.unit_class == KnightClass.CAVALRY and not hasattr(attacker, 'has_charged'):
+                return CombatMode.CHARGE
+                
+            # Standard melee combat
+            return CombatMode.MELEE
+            
+        # Should not reach here, but default to melee
+        return CombatMode.MELEE
+        
     def execute(self, unit, game_state, target) -> Dict[str, Any]:
         """Execute attack against target"""
         if not self.can_execute(unit, game_state):
@@ -50,17 +76,28 @@ class AttackBehavior(Behavior):
         if target.player_id == unit.player_id:
             return {'success': False, 'reason': 'Cannot attack friendly units'}
             
+        # Determine combat mode
+        combat_mode = self.determine_combat_mode(unit, target, distance)
+        
         # Get terrain modifiers
         attacker_terrain = game_state.terrain_map.get_terrain(unit.x, unit.y)
         target_terrain = game_state.terrain_map.get_terrain(target.x, target.y)
         
-        # Calculate damage
-        damage = self.calculate_damage(unit, target, attacker_terrain, target_terrain)
+        # Calculate damage based on combat mode
+        damage = self.calculate_damage(unit, target, attacker_terrain, target_terrain, combat_mode)
         
-        # Calculate counter damage for melee
+        # Calculate counter damage based on combat mode
         counter_damage = 0
-        if distance == 1:  # Melee range (adjacent including diagonals)
+        if combat_mode == CombatMode.MELEE:
+            # Full counter-attack in melee
             counter_damage = self.calculate_counter_damage(target, unit, target_terrain, attacker_terrain)
+        elif combat_mode == CombatMode.SKIRMISH:
+            # Reduced counter-attack for skirmish
+            counter_damage = int(self.calculate_counter_damage(target, unit, target_terrain, attacker_terrain) * 0.5)
+        elif combat_mode == CombatMode.CHARGE:
+            # Cavalry charges can receive counter-attack but at reduced effectiveness
+            counter_damage = int(self.calculate_counter_damage(target, unit, target_terrain, attacker_terrain) * 0.75)
+        # RANGED mode has no counter-attack (counter_damage remains 0)
             
         # Consume AP
         ap_cost = self.get_ap_cost(unit, target)
@@ -94,17 +131,27 @@ class AttackBehavior(Behavior):
             'target': target,
             'attack_angle': attack_angle,
             'extra_morale_penalty': extra_morale_penalty,
-            'should_check_routing': should_check_routing
+            'should_check_routing': should_check_routing,
+            'combat_mode': combat_mode
         }
         
-    def calculate_damage(self, attacker, target, attacker_terrain=None, target_terrain=None) -> int:
-        """Calculate damage to target"""
+    def calculate_damage(self, attacker, target, attacker_terrain=None, target_terrain=None, combat_mode=None) -> int:
+        """Calculate damage to target based on combat mode"""
         # Get effective soldiers
         attacking_soldiers = attacker.stats.get_effective_soldiers(attacker_terrain)
         base_damage = attacking_soldiers * attacker.stats.stats.attack_per_soldier
         
+        # Apply combat mode modifiers
+        if combat_mode:
+            if combat_mode == CombatMode.CHARGE:
+                # Cavalry charges deal bonus damage
+                base_damage *= 1.3
+            elif combat_mode == CombatMode.SKIRMISH:
+                # Skirmish attacks deal reduced damage
+                base_damage *= 0.8
+            # RANGED and MELEE use normal damage
+        
         # Apply terrain combat modifier (but separate from height advantage)
-        terrain_modifier = 1.0
         if attacker_terrain:
             terrain_modifier = attacker_terrain.get_combat_modifier_for_unit(attacker.unit_class)
             base_damage *= terrain_modifier

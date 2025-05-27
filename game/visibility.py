@@ -48,7 +48,8 @@ class FogOfWar:
         self.visibility_maps: Dict[int, Dict[Tuple[int, int], VisibilityState]] = {}
         
         # Initialize all hexes as hidden for each player
-        for player_id in range(num_players):
+        # Player IDs are 1-based (1, 2, etc.)
+        for player_id in range(1, num_players + 1):
             self.visibility_maps[player_id] = {}
             for x in range(board_width):
                 for y in range(board_height):

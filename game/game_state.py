@@ -35,6 +35,7 @@ class GameState(IGameState):
         self.castles = []
         self.knights = []
         self.current_player = 1
+        self.player_count = 2  # Default to 2 players
         self.selected_knight = None
         self.possible_moves = []
         self.turn_number = 1
@@ -570,6 +571,9 @@ class GameState(IGameState):
         
         self.deselect_knight()
         
+        # Update fog of war for the new current player
+        self._update_all_fog_of_war()
+        
         for castle in self.castles:
             if castle.player_id == self.current_player:
                 castle.end_turn()
@@ -578,10 +582,21 @@ class GameState(IGameState):
         player1_knights = [k for k in self.knights if k.player_id == 1]
         player2_knights = [k for k in self.knights if k.player_id == 2]
         
-        if not player1_knights or self.castles[0].is_destroyed():
+        # Check if all units of one player are eliminated
+        if not player1_knights:
             return 2
-        elif not player2_knights or self.castles[1].is_destroyed():
+        elif not player2_knights:
             return 1
+            
+        # Check castle destruction if castles exist
+        if self.castles:
+            player1_castles = [c for c in self.castles if c.player_id == 1]
+            player2_castles = [c for c in self.castles if c.player_id == 2]
+            
+            if player1_castles and all(c.is_destroyed() for c in player1_castles):
+                return 2
+            elif player2_castles and all(c.is_destroyed() for c in player2_castles):
+                return 1
         
         return None
     
@@ -711,12 +726,9 @@ class GameState(IGameState):
     
     def _update_all_fog_of_war(self):
         """Update fog of war for all players"""
-        for player_id in range(self.fog_of_war.num_players):
+        # Player IDs are 1-based, not 0-based
+        for player_id in range(1, self.fog_of_war.num_players + 1):
             self.fog_of_war.update_player_visibility(self, player_id)
-    
-    def _update_fog_of_war_for_player(self, player_id):
-        """Update fog of war for a specific player"""
-        self.fog_of_war.update_player_visibility(self, player_id)
     
     def get_unit_at(self, x, y):
         """Get unit at position (needed by fog of war system)"""

@@ -687,19 +687,26 @@ class Renderer:
             )
             self.screen.blit(terrain_details_text, (20, ui_y + 75))
         
-        # Show castle status
-        player_castle = game_state.castles[0] if game_state.current_player == 1 else game_state.castles[1]
-        enemies_near = len(player_castle.get_enemies_in_range(game_state.knights))
-        archer_count = player_castle.get_total_archer_soldiers()
-        garrison_info = f"Garrison: {len(player_castle.garrisoned_units)}/{player_castle.garrison_slots}"
-        
-        castle_text = self.font.render(
-            f"Castle - HP: {player_castle.health}/{player_castle.max_health} - "
-            f"{garrison_info} - Archers: {archer_count} - Enemies in range: {enemies_near}",
-            True, self.colors['text']
-        )
-        castle_y = ui_y + 100 if game_state.selected_knight or game_state.enemy_info_unit or game_state.terrain_info else ui_y + 75
-        self.screen.blit(castle_text, (20, castle_y))
+        # Show castle status (only if castles exist)
+        if game_state.castles:
+            player_castle = None
+            for castle in game_state.castles:
+                if castle.player_id == game_state.current_player:
+                    player_castle = castle
+                    break
+                    
+            if player_castle:
+                enemies_near = len(player_castle.get_enemies_in_range(game_state.knights))
+                archer_count = player_castle.get_total_archer_soldiers()
+                garrison_info = f"Garrison: {len(player_castle.garrisoned_units)}/{player_castle.garrison_slots}"
+                
+                castle_text = self.font.render(
+                    f"Castle - HP: {player_castle.health}/{player_castle.max_health} - "
+                    f"{garrison_info} - Archers: {archer_count} - Enemies in range: {enemies_near}",
+                    True, self.colors['text']
+                )
+                castle_y = ui_y + 100 if game_state.selected_knight or game_state.enemy_info_unit or game_state.terrain_info else ui_y + 75
+                self.screen.blit(castle_text, (20, castle_y))
         
         end_turn_rect = pygame.Rect(self.screen.get_width() - 140, ui_y + 20, 120, 40)
         pygame.draw.rect(self.screen, (100, 100, 100), end_turn_rect)

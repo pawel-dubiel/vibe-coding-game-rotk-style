@@ -9,6 +9,7 @@ class MenuOption(Enum):
     SAVE_GAME = "save_game"
     OPTIONS = "options"
     RESUME = "resume"
+    TEST_SCENARIOS = "test_scenarios"
     QUIT = "quit"
 
 
@@ -37,6 +38,7 @@ class MainMenu:
             MenuOption.SAVE_GAME: False,  # Disabled in main menu
             MenuOption.OPTIONS: True,
             MenuOption.RESUME: False,  # Only available in pause menu
+            MenuOption.TEST_SCENARIOS: True,
             MenuOption.QUIT: True
         }
         
@@ -52,6 +54,7 @@ class MainMenu:
         menu_options = [
             MenuOption.NEW_GAME,
             MenuOption.LOAD_GAME,
+            MenuOption.TEST_SCENARIOS,
             MenuOption.OPTIONS,
             MenuOption.QUIT
         ]
@@ -126,6 +129,7 @@ class MainMenu:
             MenuOption.SAVE_GAME: "Save Game",
             MenuOption.OPTIONS: "Options",
             MenuOption.RESUME: "Resume",
+            MenuOption.TEST_SCENARIOS: "Test Scenarios",
             MenuOption.QUIT: "Quit"
         }
         return text_map[option]

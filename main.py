@@ -6,6 +6,8 @@ from game.input_handler import InputHandler
 from game.ui.battle_setup import BattleSetupScreen
 from game.ui.game_mode_select import GameModeSelectScreen
 from game.ui.main_menu import MainMenu, PauseMenu, MenuOption
+from game.ui.test_scenario_menu import TestScenarioMenu
+from game.test_scenarios import TestScenarios
 
 class Game:
     def __init__(self):
@@ -20,6 +22,7 @@ class Game:
         self.in_mode_select = False
         self.in_setup = False
         self.in_game = False
+        self.in_test_scenarios = False
         self.paused = False
         
         # UI screens
@@ -27,6 +30,7 @@ class Game:
         self.pause_menu = PauseMenu(self.screen)
         self.game_mode_screen = GameModeSelectScreen(self.screen)
         self.battle_setup_screen = BattleSetupScreen(self.screen)
+        self.test_scenario_menu = TestScenarioMenu(self.screen)
         
         # Game configuration
         self.vs_ai = True  # Default to single player
@@ -45,6 +49,8 @@ class Game:
                 self._handle_mode_select()
             elif self.in_setup:
                 self._handle_battle_setup()
+            elif self.in_test_scenarios:
+                self._handle_test_scenarios()
             elif self.in_game:
                 self._handle_game(dt)
             
@@ -68,6 +74,10 @@ class Game:
                 elif option == MenuOption.OPTIONS:
                     # Placeholder for options menu
                     print("Options - Not implemented yet")
+                elif option == MenuOption.TEST_SCENARIOS:
+                    self.in_main_menu = False
+                    self.in_test_scenarios = True
+                    self.test_scenario_menu.show()
                 elif option == MenuOption.QUIT:
                     self.running = False
         
@@ -161,6 +171,44 @@ class Game:
         
         if self.paused:
             self.pause_menu.draw()
+    
+    def _handle_test_scenarios(self):
+        """Handle test scenario selection screen"""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            else:
+                scenario_type = self.test_scenario_menu.handle_event(event)
+                if scenario_type:
+                    # Load the selected scenario
+                    test_scenarios = TestScenarios()
+                    scenario = test_scenarios.get_scenario(scenario_type)
+                    
+                    # Create a simple battle config for the scenario
+                    battle_config = {
+                        'board_size': (20, 20),
+                        'knights': 0,  # We'll add units manually via scenario
+                        'castles': 0
+                    }
+                    
+                    # Create game state
+                    self.game_state = GameState(battle_config, vs_ai=False)
+                    
+                    # Setup the scenario
+                    scenario.setup(self.game_state)
+                    
+                    # Start the game
+                    self.in_test_scenarios = False
+                    self.in_game = True
+                    self.test_scenario_menu.hide()
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    # Go back to main menu
+                    self.in_test_scenarios = False
+                    self.in_main_menu = True
+                    self.test_scenario_menu.hide()
+        
+        self.screen.fill((0, 0, 0))
+        self.test_scenario_menu.draw()
 
 if __name__ == "__main__":
     game = Game()

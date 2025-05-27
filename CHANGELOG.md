@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-01-27
+
 ### Added
 - Light/Heavy unit classification system
   - Heavy units: Warrior, Cavalry (cannot break away from combat)
@@ -48,6 +50,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Both players control units on same computer
   - Clear turn indicators showing which human player is active
   - No AI delays in multiplayer mode
+- Combat Mode System
+  - RANGED: Attacks from distance (>1 hex) receive no counter-attack
+  - MELEE: Close combat (1 hex) with full counter-attacks
+  - CHARGE: Cavalry charges get +30% damage bonus but 75% counter-damage
+  - SKIRMISH: Future mode for hit-and-run tactics (50% counter-damage)
+  - Archers no longer counter-attack in melee combat
+- Test Scenarios System
+  - New "Test Scenarios" option in main menu
+  - Pre-configured battlefield setups for testing specific mechanics
+  - Scenarios include: Archer Attack, Cavalry Charge, Combat Modes, Terrain Effects, Flanking Attack, Movement & Terrain
+  - Deterministic terrain (always starts as flat plains with specific modifications)
+  - Both players are human-controlled for testing mechanics
+  - Clear instructions displayed when each scenario starts
   - Visual mode indicators in UI and battle setup
 - Fog of War system with Line of Sight mechanics
   - Each player has limited visibility based on their units' positions
@@ -102,6 +117,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Cavalry charge hill restriction tests
   - Height advantage combat tests
   - Terrain behavior abstraction tests
+
+### Fixed
+- Fog of war player ID mismatch
+  - Fixed initialization using 0-based indexing while game uses 1-based player IDs
+  - Fog of war now properly updates when switching between players
+  - Each player correctly sees only their units and what's in vision range
+- Castle status display in renderer
+  - Fixed crash when no castles exist in test scenarios
+  - Castle UI only displays when castles are present
 
 ### Changed
 - Combat system now tracks unit engagement status
