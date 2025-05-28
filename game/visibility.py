@@ -316,7 +316,8 @@ class FogOfWar:
         """Get list of units visible to a player."""
         visible_units = []
         
-        for unit in game_state.units:
+        # Use knights instead of units
+        for unit in game_state.knights:
             visibility = self.get_visibility_state(player_id, unit.x, unit.y)
             if visibility in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]:
                 visible_units.append(unit)
@@ -330,7 +331,8 @@ class FogOfWar:
         """
         known_units = {}
         
-        for unit in game_state.units:
+        # Use knights instead of units
+        for unit in game_state.knights:
             visibility = self.get_visibility_state(player_id, unit.x, unit.y)
             
             if visibility == VisibilityState.VISIBLE:

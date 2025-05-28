@@ -1,0 +1,77 @@
+{
+  "name": "Fog of War Test",
+  "description": "Test visibility mechanics with terrain and unit positioning",
+  "board_size": [25, 20],
+  "terrain": {
+    "base": "plains",
+    "tiles": [
+      {"x": 10, "y": 9, "type": "hills"},
+      {"x": 10, "y": 10, "type": "hills"},
+      {"x": 10, "y": 11, "type": "hills"},
+      {"x": 11, "y": 10, "type": "mountains"},
+      {"x": 15, "y": 8, "type": "forest"},
+      {"x": 15, "y": 9, "type": "forest"},
+      {"x": 15, "y": 10, "type": "forest"},
+      {"x": 15, "y": 11, "type": "forest"},
+      {"x": 15, "y": 12, "type": "forest"},
+      {"x": 16, "y": 9, "type": "forest"},
+      {"x": 16, "y": 10, "type": "forest"},
+      {"x": 16, "y": 11, "type": "forest"}
+    ]
+  },
+  "units": [
+    {
+      "name": "Player Scout",
+      "type": "cavalry",
+      "x": 5,
+      "y": 10,
+      "player": 1,
+      "facing": "EAST"
+    },
+    {
+      "name": "Player Archer",
+      "type": "archer",
+      "x": 7,
+      "y": 10,
+      "player": 1,
+      "facing": "EAST"
+    },
+    {
+      "name": "Hidden Enemy 1",
+      "type": "warrior",
+      "x": 12,
+      "y": 10,
+      "player": 2,
+      "facing": "WEST"
+    },
+    {
+      "name": "Hidden Enemy 2",
+      "type": "archer",
+      "x": 17,
+      "y": 10,
+      "player": 2,
+      "facing": "WEST"
+    },
+    {
+      "name": "Visible Enemy",
+      "type": "warrior",
+      "x": 8,
+      "y": 12,
+      "player": 2,
+      "facing": "NORTH"
+    },
+    {
+      "name": "Far Enemy",
+      "type": "cavalry",
+      "x": 20,
+      "y": 10,
+      "player": 2,
+      "facing": "WEST"
+    }
+  ],
+  "castles": [],
+  "victory_conditions": {
+    "type": "custom",
+    "description": "Explore the map and test visibility mechanics"
+  }
+}

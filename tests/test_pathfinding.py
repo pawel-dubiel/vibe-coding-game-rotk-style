@@ -14,8 +14,8 @@ class TestPathfinding(unittest.TestCase):
         """Set up test fixtures"""
         self.game_state = MockGameState(board_width=10, board_height=10)
         
-        # Create test unit
-        self.unit = Unit(name="Test Unit", unit_class=KnightClass.WARRIOR, x=0, y=0)
+        # Create test unit at center of board
+        self.unit = Unit(name="Test Unit", unit_class=KnightClass.WARRIOR, x=5, y=5)
         self.unit.player_id = 1
         self.unit.action_points = 10
         
@@ -23,37 +23,37 @@ class TestPathfinding(unittest.TestCase):
         """Test A* finds direct path on clear terrain"""
         pathfinder = AStarPathFinder()
         
-        # Find path from (0,0) to (3,0)
+        # Find path from (5,5) to (8,5)
         path = pathfinder.find_path(
-            start=(0, 0),
-            end=(3, 0),
+            start=(5, 5),
+            end=(8, 5),
             game_state=self.game_state,
             unit=self.unit
         )
         
         self.assertIsNotNone(path)
         self.assertEqual(len(path), 3)  # Three steps in hex grid
-        self.assertEqual(path[-1], (3, 0))
+        self.assertEqual(path[-1], (8, 5))
         
     def test_astar_avoids_obstacles(self):
         """Test A* pathfinding around impassable terrain"""
         pathfinder = AStarPathFinder()
         
-        # Create obstacle at (1,0)
+        # Create obstacle at (6,5)
         from game.terrain import Terrain
-        self.game_state.terrain_map.terrain_grid[0][1] = Terrain(TerrainType.WATER)
+        self.game_state.terrain_map.terrain_grid[5][6] = Terrain(TerrainType.WATER)
         
-        # Find path from (0,0) to (2,0)
+        # Find path from (5,5) to (7,5)
         path = pathfinder.find_path(
-            start=(0, 0),
-            end=(2, 0),
+            start=(5, 5),
+            end=(7, 5),
             game_state=self.game_state,
             unit=self.unit
         )
         
         assert path is not None
-        assert (1, 0) not in path  # Should avoid mountain
-        assert path[-1] == (2, 0)
+        assert (6, 5) not in path  # Should avoid water
+        assert path[-1] == (7, 5)
         
     def test_astar_respects_max_cost(self):
         """Test A* respects maximum cost limit"""
@@ -67,11 +67,11 @@ class TestPathfinding(unittest.TestCase):
         
         # Try to find path with limited cost
         path = pathfinder.find_path(
-            start=(0, 0),
-            end=(5, 0),
+            start=(5, 5),
+            end=(9, 5),
             game_state=self.game_state,
             unit=self.unit,
-            max_cost=5  # Not enough to reach (5,0) through forest
+            max_cost=5  # Not enough to reach (9,5) through forest
         )
         
         assert path is None  # Should not find path within cost limit
@@ -80,22 +80,22 @@ class TestPathfinding(unittest.TestCase):
         """Test A* avoids enemy units"""
         pathfinder = AStarPathFinder()
         
-        # Place enemy unit at (1,0)
-        enemy = Unit(name="Enemy", unit_class=KnightClass.WARRIOR, x=1, y=0)
+        # Place enemy unit at (6,5)
+        enemy = Unit(name="Enemy", unit_class=KnightClass.WARRIOR, x=6, y=5)
         enemy.player_id = 2
         self.game_state.add_knight(self.unit)
         self.game_state.add_knight(enemy)
         
-        # Find path from (0,0) to (2,0)
+        # Find path from (5,5) to (7,5)
         path = pathfinder.find_path(
-            start=(0, 0),
-            end=(2, 0),
+            start=(5, 5),
+            end=(7, 5),
             game_state=self.game_state,
             unit=self.unit
         )
         
         assert path is not None
-        assert (1, 0) not in path  # Should avoid enemy position
+        assert (6, 5) not in path  # Should avoid enemy position
         
     def test_dijkstra_finds_all_reachable(self):
         """Test Dijkstra finds all reachable positions"""
@@ -144,15 +144,15 @@ class TestPathfinding(unittest.TestCase):
         
         # Find paths with both algorithms
         astar_path = astar.find_path(
-            start=(0, 0),
-            end=(5, 3),
+            start=(5, 5),
+            end=(8, 7),
             game_state=self.game_state,
             unit=self.unit
         )
         
         dijkstra_path = dijkstra.find_path(
-            start=(0, 0),
-            end=(5, 3),
+            start=(5, 5),
+            end=(8, 7),
             game_state=self.game_state,
             unit=self.unit
         )
@@ -163,7 +163,7 @@ class TestPathfinding(unittest.TestCase):
         # Calculate total costs for comparison
         def calc_path_cost(path):
             cost = 0
-            positions = [(0, 0)] + list(path)
+            positions = [(5, 5)] + list(path)
             for i in range(1, len(positions)):
                 cost += astar._get_movement_cost(
                     positions[i-1], positions[i], 
@@ -181,8 +181,8 @@ class TestPathfinding(unittest.TestCase):
         # In hex grid, diagonal moves are actually valid hex neighbors
         # Test movement in hex grid pattern
         path = pathfinder.find_path(
-            start=(0, 0),
-            end=(2, 1),  # This is a valid hex neighbor path
+            start=(5, 5),
+            end=(7, 6),  # This is a valid hex neighbor path
             game_state=self.game_state,
             unit=self.unit
         )
@@ -192,8 +192,8 @@ class TestPathfinding(unittest.TestCase):
         # Let's check the actual hex distance
         from game.hex_utils import HexGrid
         hex_grid = HexGrid()
-        start_hex = hex_grid.offset_to_axial(0, 0)
-        end_hex = hex_grid.offset_to_axial(2, 1)
+        start_hex = hex_grid.offset_to_axial(5, 5)
+        end_hex = hex_grid.offset_to_axial(7, 6)
         hex_distance = start_hex.distance_to(end_hex)
         
         # The path length should match the hex distance
@@ -210,7 +210,7 @@ class TestPathfinding(unittest.TestCase):
         self.game_state.add_knight(enemy)
         
         path = pathfinder.find_path(
-            start=(0, 0),
+            start=(5, 5),
             end=(3, 3),
             game_state=self.game_state,
             unit=self.unit
@@ -227,10 +227,10 @@ class TestPathfinding(unittest.TestCase):
         self.game_state.terrain_map.terrain_grid[3][3] = Terrain(TerrainType.WATER)
         
         path = pathfinder.find_path(
-            start=(0, 0),
+            start=(5, 5),
             end=(3, 3),
             game_state=self.game_state,
             unit=self.unit
         )
         
-        assert path is None  # Can't reach mountain square
+        assert path is None  # Can't reach water square

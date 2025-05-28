@@ -1,0 +1,119 @@
+{
+  "name": "Terrain Types Showcase",
+  "description": "Demonstrates all terrain types and their effects on movement and combat",
+  "board_size": [30, 20],
+  "terrain": {
+    "base": "grassland",
+    "tiles": [
+      {"x": 5, "y": 5, "type": "plains"},
+      {"x": 6, "y": 5, "type": "plains"},
+      {"x": 7, "y": 5, "type": "plains"},
+      {"x": 8, "y": 5, "type": "plains"},
+      
+      {"x": 5, "y": 7, "type": "hills"},
+      {"x": 6, "y": 7, "type": "hills"},
+      {"x": 7, "y": 7, "type": "hills"},
+      {"x": 8, "y": 7, "type": "hills"},
+      
+      {"x": 5, "y": 9, "type": "forest"},
+      {"x": 6, "y": 9, "type": "forest"},
+      {"x": 7, "y": 9, "type": "forest"},
+      {"x": 8, "y": 9, "type": "forest"},
+      
+      {"x": 5, "y": 11, "type": "water"},
+      {"x": 6, "y": 11, "type": "water"},
+      {"x": 7, "y": 11, "type": "water"},
+      {"x": 8, "y": 11, "type": "water"},
+      
+      {"x": 5, "y": 13, "type": "mountains"},
+      {"x": 6, "y": 13, "type": "mountains"},
+      {"x": 7, "y": 13, "type": "mountains"},
+      {"x": 8, "y": 13, "type": "mountains"},
+      
+      {"x": 15, "y": 5, "type": "swamp"},
+      {"x": 16, "y": 5, "type": "swamp"},
+      {"x": 17, "y": 5, "type": "swamp"},
+      {"x": 18, "y": 5, "type": "swamp"},
+      
+      {"x": 15, "y": 7, "type": "desert"},
+      {"x": 16, "y": 7, "type": "desert"},
+      {"x": 17, "y": 7, "type": "desert"},
+      {"x": 18, "y": 7, "type": "desert"},
+      
+      {"x": 15, "y": 9, "type": "snow"},
+      {"x": 16, "y": 9, "type": "snow"},
+      {"x": 17, "y": 9, "type": "snow"},
+      {"x": 18, "y": 9, "type": "snow"},
+      
+      {"x": 10, "y": 10, "type": "water"},
+      {"x": 11, "y": 10, "type": "water"},
+      {"x": 12, "y": 10, "type": "water"},
+      {"x": 13, "y": 10, "type": "water"},
+      {"x": 14, "y": 10, "type": "water"},
+      {"x": 15, "y": 10, "type": "water"},
+      {"x": 16, "y": 10, "type": "water"},
+      {"x": 17, "y": 10, "type": "water"},
+      {"x": 18, "y": 10, "type": "water"},
+      {"x": 19, "y": 10, "type": "water"},
+      {"x": 20, "y": 10, "type": "water"}
+    ]
+  },
+  "units": [
+    {
+      "name": "Test Warrior",
+      "type": "warrior",
+      "x": 2,
+      "y": 5,
+      "player": 1,
+      "facing": "EAST"
+    },
+    {
+      "name": "Test Cavalry",
+      "type": "cavalry",
+      "x": 2,
+      "y": 7,
+      "player": 1,
+      "facing": "EAST"
+    },
+    {
+      "name": "Test Archer",
+      "type": "archer",
+      "x": 2,
+      "y": 9,
+      "player": 1,
+      "facing": "EAST"
+    },
+    {
+      "name": "Target Dummy 1",
+      "type": "warrior",
+      "x": 10,
+      "y": 5,
+      "player": 2,
+      "facing": "WEST",
+      "health": 50
+    },
+    {
+      "name": "Target Dummy 2",
+      "type": "warrior",
+      "x": 10,
+      "y": 7,
+      "player": 2,
+      "facing": "WEST",
+      "health": 50
+    },
+    {
+      "name": "Target Dummy 3",
+      "type": "warrior",
+      "x": 10,
+      "y": 13,
+      "player": 2,
+      "facing": "WEST",
+      "health": 50
+    }
+  ],
+  "castles": [],
+  "victory_conditions": {
+    "type": "custom",
+    "description": "Test movement and combat on different terrain types:\n• Plains: Normal movement (1 AP)\n• Hills: +50% damage from above, -50% from below, blocks vision\n• Forest: Slows movement (2 AP), provides defense bonus\n• Water: Impassable to most units\n• Mountains: Impassable, blocks vision\n• Swamp: Very slow movement (3 AP)\n• Desert/Snow: Slightly slower movement (1.5 AP)"
+  }
+}

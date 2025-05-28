@@ -4,6 +4,7 @@ from enum import Enum
 from game.entities.unit_factory import UnitFactory
 from game.entities.knight import KnightClass
 from game.terrain import TerrainType
+from game.test_scenario_loader import TestScenarioLoader, ScenarioDefinition
 
 class ScenarioType(Enum):
     """Different test scenario types"""
@@ -16,6 +17,12 @@ class ScenarioType(Enum):
     FOG_OF_WAR = "Fog of War Demo"
     DISRUPTION_MECHANICS = "Disruption Mechanics Demo"
     MOVEMENT_TERRAIN = "Movement & Terrain Demo"
+    SIEGE_WARFARE = "Siege Warfare Demo"
+    MORALE_SYSTEM = "Morale System Demo"
+    # JSON-based scenarios
+    JSON_ARCHER_MECHANICS = "JSON: Archer Mechanics Test"
+    JSON_CAVALRY_CHARGE = "JSON: Cavalry Charge Test"
+    JSON_FOG_OF_WAR = "JSON: Fog of War Test"
 
 class TestScenario:
     """Base class for test scenarios
@@ -300,6 +307,26 @@ class TestScenarios:
         scenario.add_instruction("All terrain is predictable - move units to test different paths")
         self.scenarios[ScenarioType.MOVEMENT_TERRAIN] = scenario
         
+        # Load JSON-based scenarios
+        self._load_json_scenarios()
+        
+    def _load_json_scenarios(self):
+        """Load scenarios from JSON files"""
+        # Map ScenarioType to JSON filename
+        json_scenarios = {
+            ScenarioType.JSON_ARCHER_MECHANICS: 'archer_mechanics.json',
+            ScenarioType.JSON_CAVALRY_CHARGE: 'cavalry_charge.json',
+            ScenarioType.JSON_FOG_OF_WAR: 'fog_of_war.json'
+        }
+        
+        for scenario_type, filename in json_scenarios.items():
+            try:
+                # Create a wrapper scenario that loads from JSON
+                json_scenario = JsonTestScenario(filename)
+                self.scenarios[scenario_type] = json_scenario
+            except Exception as e:
+                print(f"Warning: Could not load JSON scenario {filename}: {e}")
+        
     def get_scenario(self, scenario_type: ScenarioType) -> TestScenario:
         """Get a specific scenario"""
         return self.scenarios.get(scenario_type)
@@ -307,3 +334,63 @@ class TestScenarios:
     def get_all_scenarios(self) -> List[Tuple[ScenarioType, TestScenario]]:
         """Get all available scenarios"""
         return list(self.scenarios.items())
+        
+    def get_available_json_scenarios(self) -> List[str]:
+        """Get list of available JSON scenario files"""
+        return TestScenarioLoader.list_scenarios()
+
+
+class JsonTestScenario(TestScenario):
+    """Test scenario that loads from a JSON file"""
+    
+    def __init__(self, filename: str):
+        self.filename = filename
+        self.scenario_def: Optional[ScenarioDefinition] = None
+        
+        # Load the scenario definition
+        try:
+            self.scenario_def = TestScenarioLoader.load_scenario(filename)
+            super().__init__(self.scenario_def.name, self.scenario_def.description)
+            
+            # Add instructions based on victory conditions
+            if self.scenario_def.victory_conditions:
+                vc = self.scenario_def.victory_conditions
+                if 'description' in vc:
+                    self.add_instruction(vc['description'])
+                    
+        except Exception as e:
+            super().__init__(f"Error: {filename}", f"Failed to load: {str(e)}")
+            self.add_instruction(f"Error loading scenario: {str(e)}")
+    
+    def setup(self, game_state):
+        """Setup the scenario from JSON definition"""
+        if self.scenario_def:
+            # Clear existing units
+            game_state.knights.clear()
+            
+            # Apply the scenario using the loader
+            TestScenarioLoader.apply_to_game_state(self.scenario_def, game_state)
+            
+            # Set camera position if specified
+            if hasattr(self.scenario_def, 'camera_position') and self.scenario_def.camera_position:
+                self.set_camera(*self.scenario_def.camera_position)
+                super().setup(game_state)  # This will handle camera positioning
+            else:
+                # Default camera to center of board
+                self.set_camera(
+                    self.scenario_def.board_size[0] // 2,
+                    self.scenario_def.board_size[1] // 2
+                )
+                
+            # Show instructions
+            if self.instructions:
+                print("\n" + "="*50)
+                print(f"Scenario: {self.name}")
+                print("="*50)
+                print("IMPORTANT: Both players are human-controlled!")
+                print("Player 1 (Blue) goes first, then Player 2 (Red)")
+                print("Fog of War works normally - each player sees their own units")
+                print("-"*50)
+                for instruction in self.instructions:
+                    print(f"• {instruction}")
+                print("="*50 + "\n")

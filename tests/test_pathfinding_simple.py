@@ -14,8 +14,8 @@ class TestPathfindingSimple(unittest.TestCase):
         """Set up test fixtures"""
         self.game_state = MockGameState(board_width=10, board_height=10)
         
-        # Create test unit
-        self.unit = Unit(name="Test Warrior", unit_class=KnightClass.WARRIOR, x=0, y=0)
+        # Create test unit at center of board
+        self.unit = Unit(name="Test Warrior", unit_class=KnightClass.WARRIOR, x=5, y=5)
         self.unit.player_id = 1
         self.unit.action_points = 10
         
@@ -23,33 +23,33 @@ class TestPathfindingSimple(unittest.TestCase):
         """Test A* finds basic path"""
         pathfinder = AStarPathFinder()
         
-        # Find path from (0,0) to (2,0)
+        # Find path from (5,5) to (7,5)
         path = pathfinder.find_path(
-            start=(0, 0),
-            end=(2, 0),
+            start=(5, 5),
+            end=(7, 5),
             game_state=self.game_state,
             unit=self.unit
         )
         
         self.assertIsNotNone(path)
         self.assertGreater(len(path), 0)
-        self.assertEqual(path[-1], (2, 0))
+        self.assertEqual(path[-1], (7, 5))
         
     def test_dijkstra_basic_path(self):
         """Test Dijkstra finds basic path"""
         pathfinder = DijkstraPathFinder()
         
-        # Find path from (0,0) to (2,0)
+        # Find path from (5,5) to (7,5)
         path = pathfinder.find_path(
-            start=(0, 0),
-            end=(2, 0),
+            start=(5, 5),
+            end=(7, 5),
             game_state=self.game_state,
             unit=self.unit
         )
         
         self.assertIsNotNone(path)
         self.assertGreater(len(path), 0)
-        self.assertEqual(path[-1], (2, 0))
+        self.assertEqual(path[-1], (7, 5))
         
     def test_dijkstra_find_all_reachable(self):
         """Test Dijkstra finds reachable positions"""

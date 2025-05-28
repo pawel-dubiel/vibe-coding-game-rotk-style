@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Test Scenario Schema",
+  "description": "Schema for defining test scenarios in the game",
+  "type": "object",
+  "required": ["name", "description", "board_size", "terrain", "units"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the test scenario"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of what this scenario tests"
+    },
+    "board_size": {
+      "type": "array",
+      "items": {"type": "integer"},
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "Board dimensions [width, height]"
+    },
+    "terrain": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string",
+          "enum": ["plains", "grassland", "hills", "forest", "light_forest", "dense_forest", "high_hills", "water", "deep_water", "mountains", "swamp", "marsh", "desert", "snow", "bridge", "road"],
+          "description": "Base terrain type for the entire map"
+        },
+        "tiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["x", "y", "type"],
+            "properties": {
+              "x": {"type": "integer"},
+              "y": {"type": "integer"},
+              "type": {
+                "type": "string",
+                "enum": ["plains", "grassland", "hills", "forest", "light_forest", "dense_forest", "high_hills", "water", "deep_water", "mountains", "swamp", "marsh", "desert", "snow", "bridge", "road"]
+              }
+            }
+          },
+          "description": "Specific terrain overrides for individual tiles"
+        }
+      }
+    },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "x", "y", "player"],
+        "properties": {
+          "name": {"type": "string"},
+          "type": {
+            "type": "string",
+            "enum": ["warrior", "archer", "cavalry", "mage", "pikeman"]
+          },
+          "x": {"type": "integer"},
+          "y": {"type": "integer"},
+          "player": {"type": "integer", "minimum": 1, "maximum": 2},
+          "facing": {
+            "type": "string",
+            "enum": ["NORTH_EAST", "EAST", "SOUTH_EAST", "SOUTH_WEST", "WEST", "NORTH_WEST"],
+            "description": "Optional initial facing direction"
+          },
+          "health": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Optional health percentage (default 100)"
+          },
+          "morale": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Optional morale value (default 100)"
+          }
+        }
+      }
+    },
+    "castles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["x", "y", "player"],
+        "properties": {
+          "x": {"type": "integer"},
+          "y": {"type": "integer"},
+          "player": {"type": "integer", "minimum": 1, "maximum": 2}
+        }
+      },
+      "description": "Optional castle positions"
+    },
+    "victory_conditions": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["elimination", "capture", "survival", "custom"],
+          "description": "Victory condition type"
+        },
+        "turns": {
+          "type": "integer",
+          "description": "Number of turns for survival scenarios"
+        },
+        "description": {
+          "type": "string",
+          "description": "Custom victory condition description"
+        }
+      }
+    }
+  }
+}

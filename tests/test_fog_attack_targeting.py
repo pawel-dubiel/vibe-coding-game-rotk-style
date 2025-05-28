@@ -20,26 +20,26 @@ def test_attack_targeting_respects_fog():
     
     # Create archer for player 1
     archer = UnitFactory.create_unit("Archer", KnightClass.ARCHER, 5, 5)
-    archer.player_id = 0
+    archer.player_id = 1
     
     # Create enemies at different distances
     # Visible enemy (within vision range)
     visible_enemy = UnitFactory.create_unit("Visible", KnightClass.WARRIOR, 7, 5)
-    visible_enemy.player_id = 1
+    visible_enemy.player_id = 2
     
     # Invisible enemy (outside vision range)
     invisible_enemy = UnitFactory.create_unit("Invisible", KnightClass.WARRIOR, 10, 5)
-    invisible_enemy.player_id = 1
+    invisible_enemy.player_id = 2
     
     game_state.knights.extend([archer, visible_enemy, invisible_enemy])
-    game_state.current_player = 0
+    game_state.current_player = 1
     
     # Update fog of war
     game_state._update_all_fog_of_war()
     
     # Check visibility
-    assert game_state.fog_of_war.get_visibility_state(0, 7, 5).value >= 2  # At least PARTIAL
-    assert game_state.fog_of_war.get_visibility_state(0, 10, 5).value == 0  # HIDDEN
+    assert game_state.fog_of_war.get_visibility_state(1, 7, 5).value >= 2  # At least PARTIAL
+    assert game_state.fog_of_war.get_visibility_state(1, 10, 5).value == 0  # HIDDEN
     
     # Get attack targets through behavior
     attack_targets = archer.behaviors['attack'].get_valid_targets(archer, game_state)
@@ -76,23 +76,23 @@ def test_charge_targeting_respects_fog():
     
     # Create cavalry for player 1
     cavalry = UnitFactory.create_unit("Cavalry", KnightClass.CAVALRY, 5, 5)
-    cavalry.player_id = 0
+    cavalry.player_id = 1
     
     # Create adjacent enemies
     # Visible enemy (within vision range)
     visible_enemy = UnitFactory.create_unit("Visible", KnightClass.WARRIOR, 6, 5)
-    visible_enemy.player_id = 1
+    visible_enemy.player_id = 2
     
     # Create another cavalry unit far away to block vision to an enemy behind it
     blocking_cavalry = UnitFactory.create_unit("Blocker", KnightClass.CAVALRY, 8, 5)
-    blocking_cavalry.player_id = 1
+    blocking_cavalry.player_id = 2
     
     # Enemy behind the cavalry (should be invisible due to cavalry blocking)
     hidden_enemy = UnitFactory.create_unit("Hidden", KnightClass.WARRIOR, 9, 5)
-    hidden_enemy.player_id = 1
+    hidden_enemy.player_id = 2
     
     game_state.knights.extend([cavalry, visible_enemy, blocking_cavalry, hidden_enemy])
-    game_state.current_player = 0
+    game_state.current_player = 1
     
     # Update fog of war
     game_state._update_all_fog_of_war()
@@ -121,21 +121,21 @@ def test_partially_visible_units_not_targetable():
     
     # Create archer
     archer = UnitFactory.create_unit("Archer", KnightClass.ARCHER, 5, 5)
-    archer.player_id = 0
+    archer.player_id = 1
     
     # Create enemy at edge of vision (should be PARTIAL)
     # Vision range is 3 for warriors, identification range is 2
     partial_enemy = UnitFactory.create_unit("Partial", KnightClass.WARRIOR, 8, 5)
-    partial_enemy.player_id = 1
+    partial_enemy.player_id = 2
     
     game_state.knights.extend([archer, partial_enemy])
-    game_state.current_player = 0
+    game_state.current_player = 1
     
     # Update fog of war
     game_state._update_all_fog_of_war()
     
     # Check that enemy is partially visible
-    visibility = game_state.fog_of_war.get_visibility_state(0, 8, 5)
+    visibility = game_state.fog_of_war.get_visibility_state(1, 8, 5)
     print(f"Enemy visibility: {visibility.name}")
     
     # Even if within attack range, partially visible units shouldn't be targetable

@@ -94,34 +94,34 @@ class TestVisionBehavior:
         game_state.hex_grid = HexGrid()
         
         warrior = UnitFactory.create_warrior("Test Warrior", 5, 5)
-        warrior.player_id = 0
+        warrior.player_id = 1
         archer = UnitFactory.create_archer("Test Archer", 7, 5)
-        archer.player_id = 0
+        archer.player_id = 1
         
         game_state.add_knight(warrior)
         game_state.add_knight(archer)
         
         # Create fog of war
         fog = FogOfWar(10, 10, 2)
-        fog.update_player_visibility(game_state, 0)
+        fog.update_player_visibility(game_state, 1)
         
         # Check that units can see around themselves
-        assert fog.get_visibility_state(0, 5, 5) == VisibilityState.VISIBLE
-        assert fog.get_visibility_state(0, 7, 5) == VisibilityState.VISIBLE
+        assert fog.get_visibility_state(1, 5, 5) == VisibilityState.VISIBLE
+        assert fog.get_visibility_state(1, 7, 5) == VisibilityState.VISIBLE
         
         # Check warrior vision range (3 hexes)
         # In hex grid, distance is calculated differently than row distance
         # Check positions that are actually within 3 hex distance
-        assert fog.is_hex_visible(0, 4, 5)  # 1 hex away (left)
-        assert fog.is_hex_visible(0, 6, 5)  # 1 hex away (right)
-        assert fog.is_hex_visible(0, 5, 4)  # 1 hex away (up)
-        assert fog.is_hex_visible(0, 5, 6)  # 1 hex away (down)
+        assert fog.is_hex_visible(1, 4, 5)  # 1 hex away (left)
+        assert fog.is_hex_visible(1, 6, 5)  # 1 hex away (right)
+        assert fog.is_hex_visible(1, 5, 4)  # 1 hex away (up)
+        assert fog.is_hex_visible(1, 5, 6)  # 1 hex away (down)
         
         # Check that visibility system is working
         visible_count = 0
         for x in range(10):
             for y in range(10):
-                if fog.get_visibility_state(0, x, y) in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]:
+                if fog.get_visibility_state(1, x, y) in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]:
                     visible_count += 1
         
         # Should see a reasonable number of hexes from both units combined

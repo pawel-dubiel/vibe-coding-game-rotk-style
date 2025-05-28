@@ -1,0 +1,83 @@
+{
+  "name": "Cavalry Charge Test",
+  "description": "Test cavalry charge mechanics on different terrain",
+  "board_size": [20, 15],
+  "terrain": {
+    "base": "grassland",
+    "tiles": [
+      {"x": 10, "y": 6, "type": "hills"},
+      {"x": 10, "y": 7, "type": "hills"},
+      {"x": 10, "y": 8, "type": "hills"},
+      {"x": 10, "y": 9, "type": "hills"},
+      {"x": 15, "y": 5, "type": "forest"},
+      {"x": 15, "y": 6, "type": "forest"},
+      {"x": 15, "y": 7, "type": "forest"},
+      {"x": 15, "y": 8, "type": "forest"},
+      {"x": 15, "y": 9, "type": "forest"},
+      {"x": 15, "y": 10, "type": "forest"}
+    ]
+  },
+  "units": [
+    {
+      "name": "Player Cavalry 1",
+      "type": "cavalry",
+      "x": 3,
+      "y": 7,
+      "player": 1,
+      "facing": "EAST"
+    },
+    {
+      "name": "Player Cavalry 2",
+      "type": "cavalry",
+      "x": 3,
+      "y": 8,
+      "player": 1,
+      "facing": "EAST"
+    },
+    {
+      "name": "Player Cavalry 3",
+      "type": "cavalry",
+      "x": 3,
+      "y": 9,
+      "player": 1,
+      "facing": "EAST"
+    },
+    {
+      "name": "Enemy Infantry 1",
+      "type": "warrior",
+      "x": 8,
+      "y": 7,
+      "player": 2,
+      "facing": "WEST"
+    },
+    {
+      "name": "Enemy Infantry 2",
+      "type": "warrior",
+      "x": 8,
+      "y": 8,
+      "player": 2,
+      "facing": "WEST"
+    },
+    {
+      "name": "Enemy Pikeman",
+      "type": "warrior",
+      "x": 12,
+      "y": 7,
+      "player": 2,
+      "facing": "WEST"
+    },
+    {
+      "name": "Enemy Archer",
+      "type": "archer",
+      "x": 17,
+      "y": 7,
+      "player": 2,
+      "facing": "WEST"
+    }
+  ],
+  "castles": [],
+  "victory_conditions": {
+    "type": "elimination",
+    "description": "Test cavalry charges against different unit types and terrain"
+  }
+}

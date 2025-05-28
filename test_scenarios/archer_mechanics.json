@@ -1,0 +1,60 @@
+{
+  "name": "Archer Mechanics Test",
+  "description": "Test archer ranged attacks and positioning",
+  "board_size": [20, 15],
+  "terrain": {
+    "base": "plains",
+    "tiles": [
+      {"x": 10, "y": 7, "type": "hills"},
+      {"x": 11, "y": 7, "type": "hills"},
+      {"x": 12, "y": 7, "type": "hills"}
+    ]
+  },
+  "units": [
+    {
+      "name": "Player Archer 1",
+      "type": "archer",
+      "x": 5,
+      "y": 7,
+      "player": 1,
+      "facing": "EAST"
+    },
+    {
+      "name": "Player Archer 2",
+      "type": "archer",
+      "x": 5,
+      "y": 9,
+      "player": 1,
+      "facing": "EAST"
+    },
+    {
+      "name": "Enemy Warrior 1",
+      "type": "warrior",
+      "x": 8,
+      "y": 7,
+      "player": 2,
+      "facing": "WEST"
+    },
+    {
+      "name": "Enemy Warrior 2",
+      "type": "warrior",
+      "x": 9,
+      "y": 8,
+      "player": 2,
+      "facing": "WEST"
+    },
+    {
+      "name": "Enemy Archer",
+      "type": "archer",
+      "x": 15,
+      "y": 7,
+      "player": 2,
+      "facing": "WEST"
+    }
+  ],
+  "castles": [],
+  "victory_conditions": {
+    "type": "elimination",
+    "description": "Defeat all enemy units"
+  }
+}
