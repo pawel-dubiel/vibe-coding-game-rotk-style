@@ -13,6 +13,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Draggable scrollbar handle
   - Keyboard navigation with automatic scrolling
   - Supports unlimited number of test scenarios
+- Save and Load game system with multiple slots
+  - 10 save slots available for different game progress
+  - Save metadata includes turn number, player count, unit count, and timestamp
+  - Custom save names with optional text input
+  - Visual save/load menu accessible from main menu and pause menu
+  - Scrollbar support for save slot navigation
+    - Mouse wheel scrolling through save slots
+    - Draggable scrollbar handle
+    - Shows 6 slots at a time with smooth scrolling
+  - Overwrite confirmation dialog for existing saves
+  - Delete functionality for managing save files
+  - Dedicated saves directory for organization
+  - Comprehensive state persistence including:
+    - All unit positions, stats, and action states
+    - Castle health and garrison status
+    - Terrain configuration
+    - Fog of war visibility states
+    - Camera position
+    - Turn and player information
+    - Movement history
+  - Error handling with informative messages
+  - Save files use Python pickle format for serialization
+  - Metadata stored in JSON for quick access
+- Game invariants documentation (GAME_INVARIANTS.md)
+  - Comprehensive list of rules that must always be true
+  - Covers board positions, units, movement, combat, turns, visibility, terrain, castles, abilities, victory conditions, data structures, and scenario loading
+  - Serves as reference for maintaining game consistency
+- Test scenario loader improvements
+  - Fixed property access for unit soldiers count
+  - Added explicit tuple conversion for board_size
+  - Improved error handling in scenario loading
 
 ## [0.5.0] - 2025-01-27
 

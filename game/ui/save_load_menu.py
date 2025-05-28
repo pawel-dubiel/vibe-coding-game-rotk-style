@@ -30,6 +30,12 @@ class SaveLoadMenu:
         self.save_name_input = ""
         self.input_active = False
         
+        # Scrolling
+        self.scroll_offset = 0
+        self.max_visible_slots = 6  # Show 6 slots at a time
+        self.dragging_scrollbar = False
+        self.drag_offset = 0
+        
         self.colors = {
             'background': (30, 30, 30),
             'slot': (60, 60, 60),
@@ -43,7 +49,9 @@ class SaveLoadMenu:
             'confirm': (100, 50, 50),
             'cancel': (50, 100, 50),
             'input_bg': (50, 50, 50),
-            'input_active': (70, 70, 70)
+            'input_active': (70, 70, 70),
+            'scrollbar_bg': (40, 40, 40),
+            'scrollbar': (80, 80, 80)
         }
         
         self.slot_rects = []
@@ -55,17 +63,30 @@ class SaveLoadMenu:
         screen_width, screen_height = self.screen.get_size()
         
         # Save slots layout
-        slot_width = 600
-        slot_height = 60
-        slot_spacing = 10
-        start_y = 150
+        self.slot_width = 600
+        self.slot_height = 60
+        self.slot_spacing = 10
+        self.start_y = 150
         
-        self.slot_rects = []
-        for i in range(10):
-            x = (screen_width - slot_width) // 2
-            y = start_y + i * (slot_height + slot_spacing)
-            self.slot_rects.append(pygame.Rect(x, y, slot_width, slot_height))
-            
+        # Calculate dimensions
+        self.list_x = (screen_width - self.slot_width) // 2
+        self.list_y = self.start_y
+        self.list_height = self.max_visible_slots * (self.slot_height + self.slot_spacing)
+        
+        # Scrollbar
+        self.scrollbar_width = 20
+        self.scrollbar_x = self.list_x + self.slot_width + 10
+        self.scrollbar_y = self.list_y
+        self.scrollbar_height = self.list_height
+        
+        # Create clipping rectangle for slot list
+        self.clip_rect = pygame.Rect(
+            self.list_x - 10,
+            self.list_y - 10,
+            self.slot_width + 40,
+            self.list_height + 20
+        )
+        
         # Buttons
         button_width = 120
         button_height = 40
@@ -84,6 +105,48 @@ class SaveLoadMenu:
             40
         )
         
+    def _is_scrollbar_visible(self) -> bool:
+        """Check if scrollbar should be visible"""
+        return 10 > self.max_visible_slots  # We have 10 total slots
+        
+    def _get_max_scroll(self) -> int:
+        """Get maximum scroll offset"""
+        total_height = 10 * (self.slot_height + self.slot_spacing)
+        visible_height = self.max_visible_slots * (self.slot_height + self.slot_spacing)
+        return max(0, total_height - visible_height)
+        
+    def _get_scrollbar_rect(self) -> pygame.Rect:
+        """Calculate scrollbar handle rectangle"""
+        if not self._is_scrollbar_visible():
+            return pygame.Rect(0, 0, 0, 0)
+            
+        # Calculate handle size and position
+        max_scroll = self._get_max_scroll()
+        if max_scroll == 0:
+            handle_height = self.scrollbar_height
+            handle_y = self.scrollbar_y
+        else:
+            visible_ratio = self.list_height / (10 * (self.slot_height + self.slot_spacing))
+            handle_height = int(self.scrollbar_height * visible_ratio)
+            handle_height = max(30, handle_height)  # Minimum handle size
+            
+            scroll_ratio = self.scroll_offset / max_scroll
+            available_space = self.scrollbar_height - handle_height
+            handle_y = self.scrollbar_y + int(available_space * scroll_ratio)
+            
+        return pygame.Rect(self.scrollbar_x, handle_y, self.scrollbar_width, handle_height)
+        
+    def _scroll_to_position(self, y: int):
+        """Scroll to a specific Y position based on scrollbar"""
+        relative_y = y - self.scrollbar_y
+        available_space = self.scrollbar_height - self._get_scrollbar_rect().height
+        
+        if available_space > 0:
+            scroll_ratio = relative_y / available_space
+            max_scroll = self._get_max_scroll()
+            self.scroll_offset = int(max_scroll * scroll_ratio)
+            self.scroll_offset = max(0, min(self.scroll_offset, max_scroll))
+        
     def show(self, action: SaveLoadAction):
         """Show the menu with specified action"""
         self.visible = True
@@ -93,6 +156,8 @@ class SaveLoadMenu:
         self.confirm_delete = False
         self.save_name_input = ""
         self.input_active = False
+        self.scroll_offset = 0
+        self.dragging_scrollbar = False
         
     def hide(self):
         """Hide the menu"""
@@ -118,20 +183,36 @@ class SaveLoadMenu:
                     if event.unicode.isprintable():
                         self.save_name_input += event.unicode
                         
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
             
-            # Check slot clicks
-            for i, rect in enumerate(self.slot_rects):
-                if rect.collidepoint(mouse_pos):
-                    self.selected_slot = i + 1
+            if event.button == 1:  # Left click
+                # Check slot clicks
+                if self.clip_rect.collidepoint(mouse_pos):
+                    relative_y = mouse_pos[1] - self.list_y + self.scroll_offset
+                    slot_index = relative_y // (self.slot_height + self.slot_spacing)
                     
-                    # For save action, check if slot is occupied
-                    if self.action == SaveLoadAction.SAVE:
-                        slots = self.save_manager.get_save_slots()
-                        if slots[i] is not None:
-                            self.confirm_overwrite = True
-                    break
+                    if 0 <= slot_index < 10:
+                        self.selected_slot = slot_index + 1
+                        
+                        # For save action, check if slot is occupied
+                        if self.action == SaveLoadAction.SAVE:
+                            slots = self.save_manager.get_save_slots()
+                            if slots[slot_index] is not None:
+                                self.confirm_overwrite = True
+                                
+                # Check scrollbar
+                if self._is_scrollbar_visible():
+                    scrollbar_rect = self._get_scrollbar_rect()
+                    if scrollbar_rect.collidepoint(mouse_pos):
+                        self.dragging_scrollbar = True
+                        self.drag_offset = mouse_pos[1] - scrollbar_rect.y
+                        
+            elif event.button == 4:  # Mouse wheel up
+                self.scroll_offset = max(0, self.scroll_offset - (self.slot_height + self.slot_spacing))
+            elif event.button == 5:  # Mouse wheel down
+                max_scroll = self._get_max_scroll()
+                self.scroll_offset = min(max_scroll, self.scroll_offset + (self.slot_height + self.slot_spacing))
                     
             # Check input field click (save mode only)
             if self.action == SaveLoadAction.SAVE and self.input_rect.collidepoint(mouse_pos):
@@ -182,6 +263,16 @@ class SaveLoadMenu:
                     self.hide()
                     return {'action': 'cancel'}
                     
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1:
+                self.dragging_scrollbar = False
+                
+        elif event.type == pygame.MOUSEMOTION:
+            if self.dragging_scrollbar:
+                mouse_pos = pygame.mouse.get_pos()
+                new_y = mouse_pos[1] - self.drag_offset
+                self._scroll_to_position(new_y)
+                    
         return None
         
     def draw(self):
@@ -206,17 +297,29 @@ class SaveLoadMenu:
         title_rect = title_surface.get_rect(center=(self.screen.get_width() // 2, 80))
         self.screen.blit(title_surface, title_rect)
         
+        # Set clipping for save slot list
+        self.screen.set_clip(self.clip_rect)
+        
         # Draw save slots
         slots = self.save_manager.get_save_slots()
         mouse_pos = pygame.mouse.get_pos()
         
-        for i, (rect, slot_data) in enumerate(zip(self.slot_rects, slots)):
+        for i, slot_data in enumerate(slots):
             slot_num = i + 1
+            
+            # Calculate position with scroll offset
+            slot_y = self.list_y + i * (self.slot_height + self.slot_spacing) - self.scroll_offset
+            
+            # Skip if outside visible area
+            if slot_y + self.slot_height < self.list_y or slot_y > self.list_y + self.list_height:
+                continue
+                
+            rect = pygame.Rect(self.list_x, slot_y, self.slot_width, self.slot_height)
             
             # Determine slot color
             if self.selected_slot == slot_num:
                 color = self.colors['slot_selected']
-            elif rect.collidepoint(mouse_pos):
+            elif rect.collidepoint(mouse_pos) and self.clip_rect.collidepoint(mouse_pos):
                 color = self.colors['slot_hover']
             elif slot_data is None:
                 color = self.colors['empty_slot']
@@ -244,6 +347,21 @@ class SaveLoadMenu:
             else:
                 empty_text = self.small_font.render("Empty", True, self.colors['text_dim'])
                 self.screen.blit(empty_text, (rect.x + 120, rect.y + 20))
+                
+        # Remove clipping
+        self.screen.set_clip(None)
+        
+        # Draw scrollbar if needed
+        if self._is_scrollbar_visible():
+            # Scrollbar background
+            scrollbar_bg_rect = pygame.Rect(self.scrollbar_x, self.scrollbar_y, 
+                                           self.scrollbar_width, self.scrollbar_height)
+            pygame.draw.rect(self.screen, self.colors['scrollbar_bg'], scrollbar_bg_rect)
+            
+            # Scrollbar handle
+            handle_rect = self._get_scrollbar_rect()
+            pygame.draw.rect(self.screen, self.colors['scrollbar'], handle_rect)
+            pygame.draw.rect(self.screen, self.colors['text'], handle_rect, 1)
                 
         # Draw save name input (save mode only)
         if self.action == SaveLoadAction.SAVE:
