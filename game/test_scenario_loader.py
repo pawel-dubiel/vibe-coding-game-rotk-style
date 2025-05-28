@@ -149,7 +149,7 @@ class TestScenarioLoader:
             
             if 'health' in unit_def:
                 health_percent = unit_def['health'] / 100.0
-                unit.soldiers = int(unit.max_soldiers * health_percent)
+                unit.stats.stats.current_soldiers = int(unit.max_soldiers * health_percent)
             
             if 'morale' in unit_def:
                 unit.morale = unit_def['morale']

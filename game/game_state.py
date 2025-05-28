@@ -738,3 +738,170 @@ class GameState(IGameState):
     def units(self):
         """Alias for knights to work with fog of war system"""
         return self.knights
+    
+    def prepare_for_save(self):
+        """Prepare game state for saving (clean up non-serializable objects)"""
+        # Clear any animations
+        if hasattr(self, 'animation_manager'):
+            self.animation_manager.animations.clear()
+            
+    def restore_after_load(self, save_data):
+        """Restore game state from loaded save data"""
+        from game.entities.unit_factory import UnitFactory
+        from game.entities.castle import Castle
+        from game.entities.knight import KnightClass
+        from game.components.facing import FacingDirection
+        from game.terrain import TerrainType, TerrainMap
+        from game.visibility import FogOfWar, VisibilityState
+        from game.ai.ai_player import AIPlayer
+        
+        # Restore basic properties
+        self.board_width = save_data['board_width']
+        self.board_height = save_data['board_height']
+        self.tile_size = save_data['tile_size']
+        self.current_player = save_data['current_player']
+        self.turn_number = save_data['turn_number']
+        self.vs_ai = save_data['vs_ai']
+        
+        # Restore AI player if needed
+        if self.vs_ai and save_data['ai_difficulty']:
+            self.ai_player = AIPlayer(2, save_data['ai_difficulty'])
+        else:
+            self.ai_player = None
+            
+        # Restore camera position
+        self.camera_x = save_data['camera_x']
+        self.camera_y = save_data['camera_y']
+        
+        # Restore messages
+        self.messages = save_data['messages']
+        
+        # Restore movement history
+        self.movement_history = save_data['movement_history']
+        
+        # Clear existing units and castles
+        self.knights.clear()
+        self.castles.clear()
+        
+        # Restore knights
+        for knight_data in save_data['knights']:
+            # Create unit with proper class
+            unit_class = KnightClass(knight_data['unit_class'])
+            knight = UnitFactory.create_unit(
+                knight_data['name'],
+                unit_class,
+                knight_data['x'],
+                knight_data['y']
+            )
+            
+            # Restore properties
+            knight.player_id = knight_data['player_id']
+            knight.has_moved = knight_data['has_moved']
+            knight.has_acted = knight_data['has_acted']
+            knight.has_used_special = knight_data['has_used_special']
+            knight.max_action_points = knight_data['max_action_points']
+            knight.action_points = knight_data['action_points']
+            
+            # Restore stats
+            knight.stats.stats.current_soldiers = knight_data['current_soldiers']
+            knight.stats.stats.max_soldiers = knight_data['max_soldiers']
+            knight.stats.stats.morale = knight_data['morale']
+            knight.stats.stats.will = knight_data['will']
+            knight.stats.stats.max_will = knight_data['max_will']
+            
+            # Restore state flags
+            knight.is_garrisoned = knight_data['is_garrisoned']
+            knight.is_disrupted = knight_data['is_disrupted']
+            knight.is_routing = knight_data['is_routing']
+            knight.in_enemy_zoc = knight_data['in_enemy_zoc']
+            knight.is_engaged_in_combat = knight_data['is_engaged_in_combat']
+            
+            # Restore facing
+            if knight_data['facing'] and hasattr(knight, 'facing'):
+                knight.facing.facing = FacingDirection(knight_data['facing'])
+                
+            # Restore generals
+            if 'generals' in knight_data and hasattr(knight, 'generals'):
+                for general_data in knight_data['generals']:
+                    # Create a basic general with the saved data
+                    from game.components.generals import General
+                    
+                    # Map ability names to ability instances
+                    abilities = []
+                    for ability_class_name in general_data['abilities']:
+                        # Try to recreate abilities based on class name
+                        # For now, we'll create empty ability list
+                        # In a full implementation, we'd map class names to instances
+                        pass
+                    
+                    general = General(
+                        name=general_data['name'],
+                        title=general_data['title'],
+                        abilities=abilities,  # Empty for now
+                        level=general_data['level'],
+                        experience=general_data['experience']
+                    )
+                    
+                    knight.generals.add_general(general)
+                    
+            self.knights.append(knight)
+            
+        # Restore castles
+        for castle_data in save_data['castles']:
+            castle = Castle(
+                castle_data['center_x'],
+                castle_data['center_y'],
+                castle_data['player_id']
+            )
+            castle.max_health = castle_data['max_health']
+            castle.health = castle_data['health']
+            castle.defense = castle_data['defense']
+            castle.arrow_damage_per_archer = castle_data['arrow_damage_per_archer']
+            castle.arrow_range = castle_data['arrow_range']
+            castle.garrison_slots = castle_data['garrison_slots']
+            
+            # Note: Garrisoned units will need to be linked after all units are created
+            self.castles.append(castle)
+            
+        # Link garrisoned units to castles
+        for castle, castle_data in zip(self.castles, save_data['castles']):
+            for unit_name in castle_data['garrisoned_units']:
+                for knight in self.knights:
+                    if knight.name == unit_name:
+                        castle.garrisoned_units.append(knight)
+                        knight.garrison_location = castle
+                        break
+                        
+        # Restore terrain map
+        if save_data['terrain_map']:
+            self.terrain_map = TerrainMap(self.board_width, self.board_height)
+            for terrain_data in save_data['terrain_map']:
+                terrain_type = TerrainType(terrain_data['type'])
+                self.terrain_map.set_terrain(
+                    terrain_data['x'],
+                    terrain_data['y'],
+                    terrain_type
+                )
+        else:
+            self.terrain_map = TerrainMap(self.board_width, self.board_height)
+            
+        # Restore fog of war
+        if save_data['fog_of_war']:
+            fog_data = save_data['fog_of_war']
+            self.fog_of_war = FogOfWar(
+                fog_data['width'],
+                fog_data['height'],
+                fog_data['num_players']
+            )
+            
+            # Restore visibility states
+            for player_id_str, vis_map in fog_data['visibility_maps'].items():
+                player_id = int(player_id_str)
+                for coord_str, state_value in vis_map.items():
+                    x, y = map(int, coord_str.split(','))
+                    self.fog_of_war.visibility_maps[player_id][(x, y)] = VisibilityState(state_value)
+        else:
+            self.fog_of_war = FogOfWar(self.board_width, self.board_height, 2)
+            
+        # Re-update fog of war to ensure consistency
+        self._update_all_fog_of_war()

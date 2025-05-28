@@ -165,3 +165,7 @@ Desktop.ini
 .Trash-*
 .nfs*
 .aider*
+
+# Game saves
+saves/
+*.pkl
