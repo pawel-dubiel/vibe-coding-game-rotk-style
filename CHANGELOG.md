@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PNG asset support for terrain rendering
   - AssetManager class for loading and caching image assets
   - Automatic scaling of terrain images to match zoom level
-  - Support for water.png and plain.png terrain textures
+  - Support for water.png, deep-water.png, plain.png, hills.png, high-hills.png, light-forrest.png, forrest.png, dense-forrest.png, swamp.png, mountains.png, snow.png, and desert.png terrain textures
   - Graceful fallback to procedural rendering when assets unavailable
   - Assets stored in `/assets/` directory with organized structure
 - Zoom-aware coordinate system

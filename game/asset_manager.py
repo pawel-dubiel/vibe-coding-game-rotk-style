@@ -39,9 +39,14 @@ class AssetManager:
             else:
                 image = image.convert()
             
-            # Scale if requested
+            # Scale if requested using high-quality smoothscale
             if scale_size:
-                image = pygame.transform.scale(image, scale_size)
+                try:
+                    # Use smoothscale for better quality (bilinear filtering)
+                    image = pygame.transform.smoothscale(image, scale_size)
+                except pygame.error:
+                    # Fallback to regular scale if smoothscale fails
+                    image = pygame.transform.scale(image, scale_size)
             
             # Cache and return
             self.image_cache[cache_key] = image
@@ -63,8 +68,17 @@ class AssetManager:
             Scaled pygame.Surface or None if not found
         """
         filename = f"{terrain_name}.png"
-        # Scale to roughly fit within hex bounds
-        scale_size = (int(hex_size * 1.8), int(hex_size * 1.8))
+        # Calculate proper hex dimensions
+        import math
+        hex_width = int(math.sqrt(3) * hex_size)
+        hex_height = int(2 * hex_size)
+        
+        # Scale to fit properly within hex boundaries 
+        # Use the inscribed circle diameter (hex_size * 2 * 0.866) for best fit
+        inscribed_diameter = int(hex_size * 1.732)  # sqrt(3) ≈ 1.732
+        target_size = min(inscribed_diameter, 96)  # Conservative size for clean borders
+        scale_size = (target_size, target_size)
+        
         return self.load_image(filename, scale_size)
     
     def clear_cache(self):

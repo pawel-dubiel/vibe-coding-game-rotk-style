@@ -158,8 +158,28 @@ class Renderer:
                 if terrain:
                     if terrain.type == TerrainType.WATER:
                         terrain_image = self.asset_manager.get_terrain_image("water", self.hex_grid.hex_size)
+                    elif terrain.type == TerrainType.DEEP_WATER:
+                        terrain_image = self.asset_manager.get_terrain_image("deep-water", self.hex_grid.hex_size)
                     elif terrain.type == TerrainType.PLAINS:
                         terrain_image = self.asset_manager.get_terrain_image("plain", self.hex_grid.hex_size)
+                    elif terrain.type == TerrainType.HILLS:
+                        terrain_image = self.asset_manager.get_terrain_image("hills", self.hex_grid.hex_size)
+                    elif terrain.type == TerrainType.LIGHT_FOREST:
+                        terrain_image = self.asset_manager.get_terrain_image("light-forrest", self.hex_grid.hex_size)
+                    elif terrain.type == TerrainType.FOREST:
+                        terrain_image = self.asset_manager.get_terrain_image("forrest", self.hex_grid.hex_size)
+                    elif terrain.type == TerrainType.DENSE_FOREST:
+                        terrain_image = self.asset_manager.get_terrain_image("dense-forrest", self.hex_grid.hex_size)
+                    elif terrain.type == TerrainType.SWAMP:
+                        terrain_image = self.asset_manager.get_terrain_image("swamp", self.hex_grid.hex_size)
+                    elif terrain.type == TerrainType.MOUNTAINS:
+                        terrain_image = self.asset_manager.get_terrain_image("mountains", self.hex_grid.hex_size)
+                    elif terrain.type == TerrainType.HIGH_HILLS:
+                        terrain_image = self.asset_manager.get_terrain_image("high-hills", self.hex_grid.hex_size)
+                    elif terrain.type == TerrainType.SNOW:
+                        terrain_image = self.asset_manager.get_terrain_image("snow", self.hex_grid.hex_size)
+                    elif terrain.type == TerrainType.DESERT:
+                        terrain_image = self.asset_manager.get_terrain_image("desert", self.hex_grid.hex_size)
                     has_asset = terrain_image is not None
                 
                 if terrain_image:
