@@ -65,6 +65,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed fog of war updating for all players instead of just active player
   - Reduced AI turn delay from 0.5s to 0.1s for snappier gameplay
   - Eliminated unnecessary visibility recalculations during turn changes
+- Battle-optimized terrain generation for more realistic battlefields
+  - Maps consist of mixed terrain with ~50% grassland/plains for tactical maneuvering
+  - Increased forest variety: more light forests, regular forests, and dense forest clusters
+  - Natural water features appear as streams rather than blocking rivers
+  - Hills appear in realistic clusters with occasional high hills at centers
+  - Forest progression: light forest on edges, regular forest inside, dense forest at centers
+  - Additional terrain features: more forest clusters and hill formations
+  - Enhanced stream generation for natural battlefield water features
+  - Stream features cross plains without blocking movement (small movement penalty)
 - Improved line-of-sight algorithm using shadow casting
   - Implemented SimpleShadowcaster for efficient field of view calculations
   - Sector-based approach adapted for hexagonal grids

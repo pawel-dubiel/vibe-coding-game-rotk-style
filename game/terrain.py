@@ -305,58 +305,60 @@ class TerrainGenerator:
         
     @staticmethod
     def classify_terrain(height: float, moisture: float) -> TerrainType:
-        """Classify terrain based on height and moisture"""
-        # Water bodies
-        if height < 0.15:
-            return TerrainType.DEEP_WATER
-        elif height < 0.25:
+        """Classify terrain for battle-appropriate maps (mostly grassland with natural features)"""
+        # Water bodies - only for streams/rivers, very rare
+        if height < 0.05:
             return TerrainType.WATER
             
-        # Low elevation (0.25 - 0.5)
-        elif height < 0.5:
-            if moisture < 0.2:
-                return TerrainType.DESERT
-            elif moisture < 0.4:
+        # Low elevation - mixed terrain with plains base (0.05 - 0.6)
+        elif height < 0.6:
+            if moisture < 0.15:
                 return TerrainType.PLAINS
-            elif moisture < 0.6:
-                return TerrainType.LIGHT_FOREST
+            elif moisture < 0.45:
+                return TerrainType.PLAINS  # Still majority plains
+            elif moisture < 0.65:
+                return TerrainType.LIGHT_FOREST  # More light forest
             elif moisture < 0.8:
-                return TerrainType.FOREST
+                return TerrainType.FOREST  # Regular forest areas
             else:
-                return TerrainType.SWAMP
+                return TerrainType.SWAMP  # Swamps in very wet areas
                 
-        # Medium elevation (0.5 - 0.7)
-        elif height < 0.7:
-            if moisture < 0.3:
+        # Medium elevation - mixed terrain (0.6 - 0.75)
+        elif height < 0.75:
+            if moisture < 0.25:
                 return TerrainType.PLAINS
             elif moisture < 0.5:
                 return TerrainType.HILLS
-            elif moisture < 0.7:
+            elif moisture < 0.75:
                 return TerrainType.LIGHT_FOREST
             else:
                 return TerrainType.FOREST
                 
-        # High elevation (0.7 - 0.85)
-        elif height < 0.85:
-            if moisture < 0.4:
-                return TerrainType.HIGH_HILLS
-            elif moisture < 0.7:
+        # Medium-high elevation - hills (0.75 - 0.9)
+        elif height < 0.9:
+            if moisture < 0.3:
+                return TerrainType.HILLS
+            elif moisture < 0.6:
                 return TerrainType.HILLS
             else:
-                return TerrainType.SNOW
+                return TerrainType.LIGHT_FOREST  # Forested hills
                 
-        # Very high elevation
+        # High elevation - rare high features (0.9+)
         else:
-            return TerrainType.MOUNTAINS
+            if moisture < 0.5:
+                return TerrainType.HIGH_HILLS
+            else:
+                return TerrainType.HILLS
             
     def generate_rivers(self, terrain_grid: List[List[Terrain]], 
                        height_map: List[List[float]]) -> None:
         """Generate rivers that flow from high to low elevation"""
-        # Find potential river sources (high elevation with some moisture)
+        # Find potential stream sources (moderate elevation)
         sources = []
         for y in range(self.height):
             for x in range(self.width):
-                if height_map[y][x] > 0.7 and random.random() < 0.02:
+                # Look for moderate elevation areas for stream sources (less extreme than rivers)
+                if 0.5 < height_map[y][x] < 0.8 and random.random() < 0.03:  # Increased chance for more streams
                     sources.append((x, y))
                     
         # Flow rivers downhill
@@ -393,10 +395,8 @@ class TerrainGenerator:
                     
                 x, y = lowest
                 
-                # Add river feature if terrain supports it
-                if terrain_grid[y][x].can_support_feature(TerrainFeature.RIVER):
-                    terrain_grid[y][x].feature = TerrainFeature.RIVER
-                elif terrain_grid[y][x].can_support_feature(TerrainFeature.STREAM):
+                # Add stream feature for battle-appropriate water (avoid blocking rivers)
+                if terrain_grid[y][x].can_support_feature(TerrainFeature.STREAM):
                     terrain_grid[y][x].feature = TerrainFeature.STREAM
                     
     def generate_roads(self, terrain_grid: List[List[Terrain]], 
@@ -476,6 +476,114 @@ class TerrainGenerator:
                         g_score[neighbor] = tentative_g
                         f_score = tentative_g + abs(end[0] - nx) + abs(end[1] - ny)
                         heappush(open_set, (f_score, neighbor))
+    
+    def generate_forest_clusters(self, terrain_grid: List[List[Terrain]]) -> None:
+        """Generate realistic forest clusters with light -> forest -> dense progression"""
+        # Find existing light forest areas to expand into clusters
+        light_forest_seeds = []
+        for y in range(self.height):
+            for x in range(self.width):
+                if terrain_grid[y][x].type == TerrainType.LIGHT_FOREST:
+                    light_forest_seeds.append((x, y))
+        
+        # Create forest clusters from each seed
+        for seed_x, seed_y in light_forest_seeds:
+            if random.random() < 0.6:  # More forests become clusters
+                self._create_forest_cluster(terrain_grid, seed_x, seed_y)
+        
+        # Also create some additional forest clusters in plain areas
+        num_extra_forests = random.randint(1, 3)
+        for _ in range(num_extra_forests):
+            x = random.randint(2, self.width - 3)
+            y = random.randint(2, self.height - 3)
+            if terrain_grid[y][x].type == TerrainType.PLAINS:
+                self._create_forest_cluster(terrain_grid, x, y)
+    
+    def _create_forest_cluster(self, terrain_grid: List[List[Terrain]], center_x: int, center_y: int) -> None:
+        """Create a forest cluster with realistic progression from light to dense"""
+        cluster_size = random.randint(2, 4)  # Smaller, more realistic clusters
+        
+        # Create concentric rings: light forest -> forest -> dense forest
+        for radius in range(cluster_size + 1):
+            for dy in range(-radius, radius + 1):
+                for dx in range(-radius, radius + 1):
+                    distance = abs(dx) + abs(dy)  # Manhattan distance
+                    if distance <= radius:
+                        x, y = center_x + dx, center_y + dy
+                        if 0 <= x < self.width and 0 <= y < self.height:
+                            current_terrain = terrain_grid[y][x]
+                            
+                            # Only convert plains or existing light forest
+                            if current_terrain.type in [TerrainType.PLAINS, TerrainType.LIGHT_FOREST]:
+                                # Determine forest type based on distance from center
+                                if distance == 0:
+                                    # Center: dense forest
+                                    terrain_grid[y][x] = Terrain(TerrainType.DENSE_FOREST)
+                                elif distance <= 1:
+                                    # Inner ring: regular forest
+                                    terrain_grid[y][x] = Terrain(TerrainType.FOREST)
+                                elif distance <= 2:
+                                    # Outer ring: light forest
+                                    terrain_grid[y][x] = Terrain(TerrainType.LIGHT_FOREST)
+    
+    def generate_streams(self, terrain_grid: List[List[Terrain]]) -> None:
+        """Convert some water terrain to streams for more natural battlefield water features"""
+        for y in range(self.height):
+            for x in range(self.width):
+                if terrain_grid[y][x].type == TerrainType.WATER:
+                    # Convert isolated water tiles to streams (passable with movement penalty)
+                    water_neighbors = 0
+                    for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                        nx, ny = x + dx, y + dy
+                        if 0 <= nx < self.width and 0 <= ny < self.height:
+                            if terrain_grid[ny][nx].type == TerrainType.WATER:
+                                water_neighbors += 1
+                    
+                    # If water has 2 or fewer water neighbors, make it a stream
+                    if water_neighbors <= 2:
+                        terrain_grid[y][x] = Terrain(TerrainType.PLAINS, TerrainFeature.STREAM)
+    
+    def generate_hill_clusters(self, terrain_grid: List[List[Terrain]]) -> None:
+        """Generate additional hill clusters for more varied terrain"""
+        # Find existing hills to potentially expand
+        hill_seeds = []
+        for y in range(self.height):
+            for x in range(self.width):
+                if terrain_grid[y][x].type == TerrainType.HILLS:
+                    hill_seeds.append((x, y))
+        
+        # Expand some existing hills
+        for seed_x, seed_y in hill_seeds:
+            if random.random() < 0.4:  # Expand some hills
+                self._create_hill_cluster(terrain_grid, seed_x, seed_y)
+        
+        # Create new hill clusters in plains
+        num_hill_clusters = random.randint(1, 2)
+        for _ in range(num_hill_clusters):
+            x = random.randint(2, self.width - 3)
+            y = random.randint(2, self.height - 3)
+            if terrain_grid[y][x].type == TerrainType.PLAINS:
+                self._create_hill_cluster(terrain_grid, x, y)
+    
+    def _create_hill_cluster(self, terrain_grid: List[List[Terrain]], center_x: int, center_y: int) -> None:
+        """Create a hill cluster"""
+        cluster_size = random.randint(1, 3)  # Smaller hill clusters
+        
+        for dy in range(-cluster_size, cluster_size + 1):
+            for dx in range(-cluster_size, cluster_size + 1):
+                distance = abs(dx) + abs(dy)
+                if distance <= cluster_size:
+                    x, y = center_x + dx, center_y + dy
+                    if 0 <= x < self.width and 0 <= y < self.height:
+                        current_terrain = terrain_grid[y][x]
+                        
+                        # Only convert plains
+                        if current_terrain.type == TerrainType.PLAINS:
+                            if distance == 0 and random.random() < 0.3:
+                                # Chance for high hills at center
+                                terrain_grid[y][x] = Terrain(TerrainType.HIGH_HILLS)
+                            else:
+                                terrain_grid[y][x] = Terrain(TerrainType.HILLS)
                         
 
 class TerrainMap:
@@ -496,9 +604,10 @@ class TerrainMap:
         """Generate realistic terrain"""
         generator = TerrainGenerator(self.width, self.height, seed)
         
-        # Generate base maps
-        height_map = generator.generate_height_map(scale=0.05)
-        moisture_map = generator.generate_moisture_map(scale=0.08)
+        # Generate base maps optimized for battle terrain
+        # Use larger scale for fewer, more distinct terrain features
+        height_map = generator.generate_height_map(scale=0.02, octaves=3)  # Smoother, larger features
+        moisture_map = generator.generate_moisture_map(scale=0.03)  # Less variation in moisture
         
         # Create terrain grid
         self.terrain_grid = []
@@ -529,6 +638,15 @@ class TerrainMap:
                 if pos[0] < self.width and pos[1] < self.height
             ]
             generator.generate_roads(self.terrain_grid, valid_positions[:2])
+        
+        # Add realistic forest clusters
+        generator.generate_forest_clusters(self.terrain_grid)
+        
+        # Add stream features to water terrain
+        generator.generate_streams(self.terrain_grid)
+        
+        # Add additional hill clusters
+        generator.generate_hill_clusters(self.terrain_grid)
             
     def _generate_legacy_terrain(self):
         """Legacy terrain generation for compatibility"""
