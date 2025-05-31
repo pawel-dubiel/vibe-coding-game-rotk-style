@@ -4,7 +4,7 @@ from game.hex_utils import HexGrid
 from game.visibility import VisibilityState
 
 class AIPlayer:
-    def __init__(self, player_id, difficulty='medium'):
+    def __init__(self, player_id, difficulty='easy'):
         self.player_id = player_id
         self.difficulty = difficulty
         self.thinking_time = 0.5
@@ -360,7 +360,7 @@ class AIPlayer:
         return state_copy
     
     def choose_action(self, game_state):
-        depth = {'easy': 1, 'medium': 2, 'hard': 3}.get(self.difficulty, 2)
+        depth = {'easy': 1, 'medium': 2, 'hard': 3}.get(self.difficulty, 1)
         
         _, best_move = self.minimax(game_state, depth, float('-inf'), float('inf'), True)
         

@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
   
 ### Added
+- Zoom functionality with trackpad and keyboard support
+  - Two-finger trackpad scrolling for zoom in/out on macOS
+  - Mouse wheel zoom support for all platforms
+  - Keyboard shortcuts: `+`/`=` to zoom in, `-` to zoom out
+  - Zoom range: 0.5x to 3.0x with smooth 1.2x increments
+  - Dynamic hex grid scaling that maintains accurate coordinates at all zoom levels
+- PNG asset support for terrain rendering
+  - AssetManager class for loading and caching image assets
+  - Automatic scaling of terrain images to match zoom level
+  - Support for water.png and plain.png terrain textures
+  - Graceful fallback to procedural rendering when assets unavailable
+  - Assets stored in `/assets/` directory with organized structure
+- Zoom-aware coordinate system
+  - Fixed mouse coordinate conversion to work correctly at all zoom levels
+  - Hex-based movement actions bypass pixel-to-hex conversion issues
+  - Improved camera bounds for better navigation when zoomed in
+  - Movement accuracy maintained regardless of zoom level or starting position
 - Scrollbar support for Test Scenarios menu
   - Mouse wheel scrolling
   - Draggable scrollbar handle
@@ -44,6 +61,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed property access for unit soldiers count
   - Added explicit tuple conversion for board_size
   - Improved error handling in scenario loading
+- Performance optimizations for turn transitions
+  - Fixed fog of war updating for all players instead of just active player
+  - Reduced AI turn delay from 0.5s to 0.1s for snappier gameplay
+  - Eliminated unnecessary visibility recalculations during turn changes
+- Improved line-of-sight algorithm using shadow casting
+  - Implemented SimpleShadowcaster for efficient field of view calculations
+  - Sector-based approach adapted for hexagonal grids
+  - Significant performance improvement over checking every hex individually
+  - Accurate terrain and unit blocking mechanics
+  - Proper handling of elevation (cavalry, hills) for vision calculations
+  - Tests updated to validate new shadow casting behavior
+  - Turn transitions are now significantly faster
 
 ## [0.5.0] - 2025-01-27
 
@@ -63,6 +92,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pathfinding abstraction layer
   - PathFinder abstract base class for different algorithms
   - AStarPathFinder implementation for optimal pathfinding
+    - Uses proper A* search with hex distance heuristic
+    - Includes path caching for performance
+    - Pre-computed neighbor cache (CachedHexGrid)
   - DijkstraPathFinder implementation with find_all_reachable support
   - Movement behaviors now use configurable pathfinding strategies
 - Unit facing system with directional combat modifiers
@@ -106,6 +138,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Each player has limited visibility based on their units' positions
   - Visibility states: Hidden, Explored, Partial, Visible
   - Line of Sight calculations with terrain blocking
+    - Uses hexagonal grid-adapted line drawing algorithm
+    - Linear interpolation in cube coordinates for accurate hex traversal
+    - Not Bresenham's algorithm but similar "supercover" approach for hexes
   - Hills block vision unless viewer is on elevated terrain
   - Cavalry units block vision behind them (unit blocking)
   - Terrain always visible but greyed out when not in direct sight

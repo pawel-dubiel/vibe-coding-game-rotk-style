@@ -243,7 +243,7 @@ class GameState(IGameState):
         
         if self.vs_ai and self.current_player == 2 and not self.ai_thinking:
             self.ai_thinking = True
-            self.ai_turn_delay = 0.5
+            self.ai_turn_delay = 0.1  # Reduced from 0.5 for faster gameplay
         
         if self.ai_thinking:
             self.ai_turn_delay -= dt
@@ -263,11 +263,13 @@ class GameState(IGameState):
     def set_camera_position(self, x, y):
         """Set camera position with bounds checking"""
         # Calculate max camera positions to keep board in view
-        max_camera_x = max(0, self.board_width * self.tile_size - self.screen_width)
-        max_camera_y = max(0, self.board_height * self.tile_size - self.screen_height)
+        # Use a more generous bounds calculation for zoom
+        effective_tile_size = self.tile_size * 2  # Allow more movement at high zoom
+        max_camera_x = max(0, self.board_width * effective_tile_size - self.screen_width)
+        max_camera_y = max(0, self.board_height * effective_tile_size - self.screen_height)
         
-        self.camera_x = max(0, min(x, max_camera_x))
-        self.camera_y = max(0, min(y, max_camera_y))
+        self.camera_x = max(-self.screen_width, min(x, max_camera_x))
+        self.camera_y = max(-self.screen_height, min(y, max_camera_y))
     
     def move_camera(self, dx, dy):
         """Move camera by delta amount"""
@@ -413,6 +415,133 @@ class GameState(IGameState):
                 self.animation_manager.add_animation(anim)
                 self.possible_moves = []
                 self._fog_update_needed = True  # Update fog after movement
+                return True
+        return False
+    
+    def move_selected_knight_hex(self, tile_x, tile_y):
+        """Move selected knight to hex coordinates (zoom-aware)"""
+        if not self.selected_knight:
+            return False
+        
+        if (tile_x, tile_y) in self.possible_moves:
+            # Use the movement behavior to get the optimal path
+            move_behavior = self.selected_knight.behaviors.get('move')
+            if move_behavior:
+                path = move_behavior.get_path_to(self.selected_knight, self, tile_x, tile_y)
+                
+                if path:
+                    # Calculate total AP cost for the path
+                    total_ap_cost = 0
+                    current_pos = (self.selected_knight.x, self.selected_knight.y)
+                    for next_pos in path:
+                        step_cost = move_behavior.get_ap_cost(current_pos, next_pos, self.selected_knight, self)
+                        total_ap_cost += step_cost
+                        current_pos = next_pos
+                    
+                    # Consume AP and mark as moved
+                    self.selected_knight.action_points -= total_ap_cost
+                    self.selected_knight.has_moved = True
+                    
+                    # Track pending position
+                    self.pending_positions[id(self.selected_knight)] = (tile_x, tile_y)
+                    
+                    # Store movement history (include starting position)
+                    full_path = [(self.selected_knight.x, self.selected_knight.y)] + path
+                    self.movement_history[id(self.selected_knight)] = full_path
+                    
+                    # Create path animation - shows the optimal route
+                    anim = PathMoveAnimation(self.selected_knight, path, step_duration=0.25, game_state=self)
+                    self.animation_manager.add_animation(anim)
+                    
+                    self.possible_moves = []
+                    self._fog_update_needed = True  # Update fog after movement
+                    return True
+            else:
+                # Fallback to direct movement if no movement behavior
+                self.selected_knight.consume_move_ap()
+                self.pending_positions[id(self.selected_knight)] = (tile_x, tile_y)
+                start_x, start_y = self.selected_knight.x, self.selected_knight.y
+                
+                # Store simple movement history for direct movement
+                self.movement_history[id(self.selected_knight)] = [(start_x, start_y), (tile_x, tile_y)]
+                
+                anim = MoveAnimation(self.selected_knight, start_x, start_y, tile_x, tile_y, game_state=self)
+                self.animation_manager.add_animation(anim)
+                self.possible_moves = []
+                self._fog_update_needed = True  # Update fog after movement
+                return True
+        return False
+    
+    def attack_with_selected_knight_hex(self, tile_x, tile_y):
+        """Attack with selected knight using hex coordinates (zoom-aware)"""
+        if not self.selected_knight or not self.selected_knight.can_attack():
+            return False
+        
+        # Calculate hex distance for attack range
+        hex_grid = HexGrid()
+        attacker_hex = hex_grid.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
+        target_hex = hex_grid.offset_to_axial(tile_x, tile_y)
+        distance = attacker_hex.distance_to(target_hex)
+        attack_range = 1 if self.selected_knight.knight_class != KnightClass.ARCHER else 3
+        
+        if distance <= attack_range:
+            target = self.get_knight_at(tile_x, tile_y)
+            if target and target.player_id != self.current_player:
+                # Proceed with attack
+                self.selected_knight.has_attacked = True
+                
+                # Get combat behavior for damage calculation
+                combat_behavior = self.selected_knight.behaviors.get('combat')
+                if combat_behavior:
+                    damage = combat_behavior.calculate_damage(self.selected_knight, target, self)
+                else:
+                    damage = max(1, self.selected_knight.soldiers // 10)  # Fallback damage
+                
+                # Apply damage
+                target.take_damage(damage)
+                
+                # Consume action point
+                self.selected_knight.action_points -= 1
+                
+                # Create attack animation
+                anim = AttackAnimation(self.selected_knight, target, damage)
+                self.animation_manager.add_animation(anim)
+                
+                self.attack_targets = []
+                return True
+        return False
+    
+    def charge_with_selected_knight_hex(self, tile_x, tile_y):
+        """Charge with selected knight using hex coordinates (zoom-aware)"""
+        if not self.selected_knight or self.selected_knight.knight_class != KnightClass.CAVALRY:
+            return False
+        
+        # Calculate distance for charge
+        hex_grid = HexGrid()
+        attacker_hex = hex_grid.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
+        target_hex = hex_grid.offset_to_axial(tile_x, tile_y)
+        distance = attacker_hex.distance_to(target_hex)
+        
+        # Charge range is typically 2-4 hexes
+        if 2 <= distance <= 4:
+            target = self.get_knight_at(tile_x, tile_y)
+            if target and target.player_id != self.current_player:
+                # Proceed with charge
+                self.selected_knight.has_attacked = True
+                self.selected_knight.action_points -= 2  # Charges cost more AP
+                
+                # Charge does extra damage
+                base_damage = max(1, self.selected_knight.soldiers // 8)
+                charge_damage = int(base_damage * 1.5)  # 50% bonus
+                
+                # Apply damage
+                target.take_damage(charge_damage)
+                
+                # Create attack animation
+                anim = AttackAnimation(self.selected_knight, target, charge_damage)
+                self.animation_manager.add_animation(anim)
+                
+                self.attack_targets = []
                 return True
         return False
     
@@ -571,8 +700,8 @@ class GameState(IGameState):
         
         self.deselect_knight()
         
-        # Update fog of war for the new current player
-        self._update_all_fog_of_war()
+        # Update fog of war ONLY for the new current player
+        self.fog_of_war.update_player_visibility(self, self.current_player)
         
         for castle in self.castles:
             if castle.player_id == self.current_player:

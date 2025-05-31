@@ -14,6 +14,7 @@ import math
 from dataclasses import dataclass
 
 from game.hex_utils import HexCoord, HexGrid
+from game.shadowcasting import SimpleShadowcaster
 
 
 class VisibilityState(Enum):
@@ -57,6 +58,9 @@ class FogOfWar:
                     
         self.vision_config = VisionRange()
         self._cached_game_state = None  # Initialize in __init__
+        
+        # Initialize shadow caster for efficient LOS calculations
+        self.shadowcaster = SimpleShadowcaster()
         
     def update_player_visibility(self, game_state, player_id: int):
         """Update visibility map for a specific player based on their units."""
@@ -154,32 +158,24 @@ class FogOfWar:
     def _calculate_los_from_position(self, game_state, origin: Tuple[int, int], 
                                    max_range: int, is_elevated: bool = False) -> Dict[Tuple[int, int], int]:
         """
-        Calculate line of sight from a position.
+        Calculate line of sight from a position using shadow casting.
         Returns dict of visible hex coordinates -> distance.
         """
-        visible_hexes = {}
-        hex_grid = HexGrid()
-        origin_hex = hex_grid.offset_to_axial(origin[0], origin[1])
+        # Use the shadow caster for efficient visibility calculation
+        visible_hexes = self.shadowcaster.calculate_visible_hexes(
+            game_state, origin, max_range, is_elevated
+        )
         
-        # Always see your own position
-        visible_hexes[origin] = 0
-        
-        # Check all hexes within range using a simple approach
-        for y in range(max(0, origin[1] - max_range), min(game_state.board_height, origin[1] + max_range + 1)):
-            for x in range(max(0, origin[0] - max_range), min(game_state.board_width, origin[0] + max_range + 1)):
-                if (x, y) == origin:
-                    continue
-                    
-                # Calculate hex distance
-                target_hex = hex_grid.offset_to_axial(x, y)
-                distance = origin_hex.distance_to(target_hex)
-                
-                if 0 < distance <= max_range:
-                    # Check if we have line of sight to this hex
-                    if self._has_line_of_sight(game_state, origin, (x, y), is_elevated):
-                        visible_hexes[(x, y)] = distance
-                        
-        return visible_hexes
+        # Additional filtering: verify line of sight for edge cases
+        # The shadow caster gives us a good approximation, but we might want
+        # to double-check certain hexes, especially those partially in shadow
+        verified_hexes = {}
+        for hex_pos, distance in visible_hexes.items():
+            # For now, trust the shadow caster completely
+            # In a more complex implementation, we might verify edge cases
+            verified_hexes[hex_pos] = distance
+            
+        return verified_hexes
         
     def _has_line_of_sight(self, game_state, origin: Tuple[int, int], 
                           target: Tuple[int, int], is_elevated: bool) -> bool:
@@ -347,3 +343,76 @@ class FogOfWar:
                 known_units[(unit.x, unit.y)] = None
                 
         return known_units
+        
+    def update_player_visibility_incremental(self, game_state, player_id: int, 
+                                           changed_positions: Optional[List[Tuple[int, int]]] = None):
+        """
+        Incrementally update visibility for positions that might have changed.
+        More efficient than full recalculation.
+        
+        Args:
+            game_state: Current game state
+            player_id: Player to update visibility for
+            changed_positions: List of positions where units moved to/from
+        """
+        if changed_positions is None:
+            # Fall back to full update
+            self.update_player_visibility(game_state, player_id)
+            return
+            
+        # Cache game_state
+        self._cached_game_state = game_state
+        
+        # For each changed position, update visibility in that area
+        updated_hexes = set()
+        max_vision_range = 5  # Maximum possible vision range
+        
+        for pos in changed_positions:
+            # Get hexes that might be affected by change at this position
+            hex_grid = HexGrid()
+            center_hex = hex_grid.offset_to_axial(pos[0], pos[1])
+            
+            # Check all hexes within max vision range
+            for y in range(max(0, pos[1] - max_vision_range), 
+                          min(self.height, pos[1] + max_vision_range + 1)):
+                for x in range(max(0, pos[0] - max_vision_range), 
+                              min(self.width, pos[0] + max_vision_range + 1)):
+                    target_hex = hex_grid.offset_to_axial(x, y)
+                    if center_hex.distance_to(target_hex) <= max_vision_range:
+                        updated_hexes.add((x, y))
+                        
+        # Now recalculate visibility only for affected hexes
+        # First downgrade existing visibility in affected areas
+        for hex_pos in updated_hexes:
+            if hex_pos in self.visibility_maps[player_id]:
+                current = self.visibility_maps[player_id][hex_pos]
+                if current in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]:
+                    self.visibility_maps[player_id][hex_pos] = VisibilityState.EXPLORED
+                    
+        # Then calculate new visibility from player's units
+        for unit in game_state.units:
+            if unit.player_id == player_id:
+                vision_range = self._get_unit_vision_range(unit)
+                vision_behavior = unit.get_behavior('VisionBehavior') if hasattr(unit, 'get_behavior') else None
+                is_elevated = vision_behavior.is_elevated() if vision_behavior else False
+                
+                # Only check visibility for affected hexes within this unit's range
+                for hex_pos in updated_hexes:
+                    hex_grid = HexGrid()
+                    unit_hex = hex_grid.offset_to_axial(unit.x, unit.y)
+                    target_hex = hex_grid.offset_to_axial(hex_pos[0], hex_pos[1])
+                    distance = unit_hex.distance_to(target_hex)
+                    
+                    if distance <= vision_range:
+                        if self._has_line_of_sight(game_state, (unit.x, unit.y), hex_pos, is_elevated):
+                            # Update visibility state based on distance
+                            if distance <= self.vision_config.full_id_range:
+                                new_state = VisibilityState.VISIBLE
+                            elif distance <= self.vision_config.partial_id_range:
+                                new_state = VisibilityState.PARTIAL
+                            else:
+                                new_state = VisibilityState.EXPLORED
+                                
+                            current_state = self.visibility_maps[player_id].get(hex_pos, VisibilityState.HIDDEN)
+                            if new_state.value > current_state.value:
+                                self.visibility_maps[player_id][hex_pos] = new_state

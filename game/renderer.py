@@ -5,6 +5,7 @@ from game.hex_utils import HexGrid, HexCoord
 from game.hex_layout import HexLayout
 from game.visibility import VisibilityState
 from game.terrain import TerrainType
+from game.asset_manager import AssetManager
 
 class Renderer:
     def __init__(self, screen):
@@ -14,6 +15,8 @@ class Renderer:
         self.hex_layout = HexLayout(hex_size=36, orientation='flat')  # For positioning
         self.font = pygame.font.Font(None, 24)
         self.ui_font = pygame.font.Font(None, 32)
+        self.asset_manager = AssetManager()
+        self.input_handler = None  # Will be set by main.py
         
         self.colors = {
             'background': (50, 50, 50),
@@ -91,6 +94,11 @@ class Renderer:
     def render(self, game_state):
         self.screen.fill(self.colors['background'])
         
+        # Update zoom settings if input handler is available
+        if self.input_handler:
+            self.hex_grid = self.input_handler.hex_grid
+            self.hex_layout = self.input_handler.hex_layout
+        
         self._draw_board(game_state)
         self._draw_castles(game_state)
         self._draw_knights(game_state)
@@ -143,8 +151,26 @@ class Renderer:
                 
                 # Get hex corners and draw the hexagon
                 corners = self.hex_layout.get_hex_corners(screen_x, screen_y)
-                pygame.draw.polygon(self.screen, color, corners)
-                pygame.draw.polygon(self.screen, (0, 0, 0), corners, 1)  # Black outline
+                
+                # Check if we have an image asset for this terrain
+                terrain_image = None
+                has_asset = False
+                if terrain:
+                    if terrain.type == TerrainType.WATER:
+                        terrain_image = self.asset_manager.get_terrain_image("water", self.hex_grid.hex_size)
+                    elif terrain.type == TerrainType.PLAINS:
+                        terrain_image = self.asset_manager.get_terrain_image("plain", self.hex_grid.hex_size)
+                    has_asset = terrain_image is not None
+                
+                if terrain_image:
+                    # Calculate position to center the image in the hex
+                    image_rect = terrain_image.get_rect(center=(int(screen_x), int(screen_y)))
+                    self.screen.blit(terrain_image, image_rect)
+                    pygame.draw.polygon(self.screen, (0, 0, 0), corners, 1)  # Black outline
+                else:
+                    # Fallback to colored polygon
+                    pygame.draw.polygon(self.screen, color, corners)
+                    pygame.draw.polygon(self.screen, (0, 0, 0), corners, 1)  # Black outline
                 
                 # Check fog of war visibility and apply overlay
                 visibility = VisibilityState.VISIBLE  # Default for no fog
@@ -182,8 +208,8 @@ class Renderer:
                     text_rect = coord_text.get_rect(center=(int(screen_x), int(screen_y)))
                     self.screen.blit(coord_text, text_rect)
                 
-                # Add texture patterns for different terrains inside hexes
-                if terrain:
+                # Add texture patterns for different terrains inside hexes (only if no asset image)
+                if terrain and not has_asset:
                     if terrain.type == TerrainType.FOREST:
                         # Draw small trees inside hex
                         for i in range(2):

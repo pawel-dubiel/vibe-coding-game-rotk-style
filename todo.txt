@@ -62,3 +62,41 @@
   The majority of failures are in the movement and pathfinding systems (10 out of 16 tests).
 
 
+1. Field of View / Shadow Casting
+
+  Currently uses simple line-of-sight checks. Could implement:
+  - Shadow casting algorithm for more realistic vision
+  - Recursive shadowcasting for better performance
+  - Would give more natural vision blocking
+
+  2. Hex Grid Storage
+
+  Currently uses 2D array with offset coordinates. Could consider:
+  - Sparse storage for larger maps
+  - Chunk-based storage for infinite maps
+
+  3. Movement Range Display
+
+  Could add Dijkstra's algorithm to show all reachable hexes:
+  - Already have DijkstraPathFinder but could use it for movement preview
+  - Flood fill algorithm for showing movement range
+
+  4. Hex Grid Rendering
+
+  Currently renders as squares visually. Could improve:
+  - Actual hexagonal tile rendering
+  - Proper hex grid lines
+  - Better visual feedback
+
+  5. Rotation Systems
+
+  Has 6-direction facing but could add:
+  - Fractional rotations for smoother animations
+  - Rotation interpolation for visual effects
+
+  6. Range Templates
+
+  For area effects could implement:
+  - Hex range shapes (circle, cone, line)
+  - Range finding with obstacles
+

@@ -38,6 +38,12 @@ class TestFogOfWar:
         # Clear default units and castles
         self.game_state.knights = []
         self.game_state.castles = []
+        
+        # Clear all terrain to plains by default to avoid random blocking
+        for x in range(10):
+            for y in range(10):
+                self.game_state.terrain_map.set_terrain(x, y, TerrainType.PLAINS)
+        
         # Re-initialize fog of war without castles
         self.game_state._update_all_fog_of_war()
         
@@ -166,7 +172,7 @@ class TestFogOfWar:
         assert fog.get_visibility_state(1, 4, 6) == VisibilityState.VISIBLE
         
     def test_elevated_cavalry_vision(self):
-        """Test that cavalry (elevated) can see over other cavalry"""
+        """Test that cavalry (elevated) blocks other cavalry at same elevation"""
         # Add cavalry viewing unit
         cavalry1 = UnitFactory.create_unit("Test Cavalry", KnightClass.CAVALRY, 2, 5)
         cavalry1.player_id = 1
@@ -179,12 +185,32 @@ class TestFogOfWar:
         self.game_state._update_all_fog_of_war()
         fog = self.game_state.fog_of_war
         
-        # Cavalry can see over other cavalry
+        # Can see the enemy cavalry
         assert fog.get_visibility_state(1, 4, 5) == VisibilityState.VISIBLE  # Distance 2
-        assert fog.get_visibility_state(1, 5, 5) == VisibilityState.PARTIAL  # Past the cavalry (distance 3)
-        # Distance 4 - out of range (might be EXPLORED due to terrain)
-        state = fog.get_visibility_state(1, 6, 5)
-        assert state in [VisibilityState.HIDDEN, VisibilityState.EXPLORED]
+        
+        # Cannot see past the cavalry (both are elevated, so they block each other)
+        assert fog.get_visibility_state(1, 5, 5) == VisibilityState.HIDDEN  # Blocked by cavalry
+        assert fog.get_visibility_state(1, 6, 5) == VisibilityState.HIDDEN  # Also blocked
+        
+    def test_elevated_sees_over_hills(self):
+        """Test that elevated units can see over hills"""
+        # Add cavalry viewing unit (elevated)
+        cavalry = UnitFactory.create_unit("Test Cavalry", KnightClass.CAVALRY, 2, 5)
+        cavalry.player_id = 1
+        
+        # Add hill in the way
+        self.game_state.terrain_map.set_terrain(4, 5, TerrainType.HILLS)
+        
+        self.game_state.knights.append(cavalry)
+        self.game_state._update_all_fog_of_war()
+        fog = self.game_state.fog_of_war
+        
+        # Can see the hill
+        assert fog.get_visibility_state(1, 4, 5) == VisibilityState.VISIBLE  # Distance 2
+        
+        # CAN see past the hill (cavalry is elevated)
+        assert fog.get_visibility_state(1, 5, 5) == VisibilityState.PARTIAL  # Distance 3
+        assert fog.get_visibility_state(1, 6, 5) != VisibilityState.HIDDEN  # Distance 4, should be visible/partial
         
     def test_unit_identification_distance(self):
         """Test unit identification at different distances"""

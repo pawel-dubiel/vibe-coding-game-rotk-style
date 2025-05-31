@@ -117,3 +117,47 @@ class HexGrid:
         col = hex_coord.q + (hex_coord.r - (hex_coord.r & 1)) // 2
         row = hex_coord.r
         return (col, row)
+    
+    @staticmethod
+    def get_line(start: HexCoord, end: HexCoord) -> List[HexCoord]:
+        """Get a line of hexes between two points (from Red Blob Games)"""
+        distance = start.distance_to(end)
+        results = []
+        
+        if distance == 0:
+            return [start]
+            
+        # Linear interpolation in cube coordinates
+        for i in range(distance + 1):
+            t = i / distance
+            
+            # Convert to cube coordinates
+            start_cube = start.to_cube()
+            end_cube = end.to_cube()
+            
+            # Interpolate
+            x = start_cube[0] + (end_cube[0] - start_cube[0]) * t
+            y = start_cube[1] + (end_cube[1] - start_cube[1]) * t
+            z = start_cube[2] + (end_cube[2] - start_cube[2]) * t
+            
+            # Round to nearest hex
+            rx = round(x)
+            ry = round(y)
+            rz = round(z)
+            
+            # Fix rounding errors
+            x_diff = abs(rx - x)
+            y_diff = abs(ry - y)
+            z_diff = abs(rz - z)
+            
+            if x_diff > y_diff and x_diff > z_diff:
+                rx = -ry - rz
+            elif y_diff > z_diff:
+                ry = -rx - rz
+            else:
+                rz = -rx - ry
+                
+            # Convert back to axial
+            results.append(HexCoord(rx, rz))
+            
+        return results

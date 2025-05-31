@@ -45,6 +45,9 @@ class Game:
         self.renderer = Renderer(self.screen)
         self.input_handler = InputHandler()
         
+        # Connect input handler and renderer for zoom functionality
+        self.renderer.input_handler = self.input_handler
+        
     def run(self):
         while self.running:
             dt = self.clock.tick(60) / 1000.0
