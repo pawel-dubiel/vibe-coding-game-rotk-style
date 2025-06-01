@@ -196,13 +196,27 @@ class FogOfWar:
             # Check terrain blocking
             terrain = game_state.terrain_map.get_terrain(hex_x, hex_y)
             
-            # Hills block unless viewer is elevated or on a hill
-            if terrain and terrain.type.value.lower() == 'hills':
-                origin_terrain = game_state.terrain_map.get_terrain(origin[0], origin[1])
-                # If viewer is on hills or is elevated (cavalry), they can see over hills
-                viewer_on_hills = origin_terrain and origin_terrain.type.value.lower() == 'hills'
-                if not is_elevated and not viewer_on_hills:
+            if terrain:
+                terrain_type = terrain.type.value.lower()
+                
+                # Mountains always block line of sight (impassable high terrain)
+                if terrain_type == 'mountains':
                     return False
+                
+                # High hills block unless viewer is elevated or on high ground
+                if terrain_type == 'high hills':
+                    origin_terrain = game_state.terrain_map.get_terrain(origin[0], origin[1])
+                    viewer_on_high_ground = origin_terrain and origin_terrain.type.value.lower() in ['hills', 'high hills', 'mountains']
+                    if not is_elevated and not viewer_on_high_ground:
+                        return False
+                
+                # Hills block unless viewer is elevated or on a hill
+                if terrain_type == 'hills':
+                    origin_terrain = game_state.terrain_map.get_terrain(origin[0], origin[1])
+                    # If viewer is on hills or is elevated (cavalry), they can see over hills
+                    viewer_on_hills = origin_terrain and origin_terrain.type.value.lower() in ['hills', 'high hills', 'mountains']
+                    if not is_elevated and not viewer_on_hills:
+                        return False
                     
             # Check unit blocking
             blocking_unit = game_state.get_unit_at(hex_x, hex_y)

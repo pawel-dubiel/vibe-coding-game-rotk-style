@@ -29,11 +29,18 @@ class StatsComponent(Component):
         
     def take_casualties(self, amount: int) -> bool:
         """Apply casualties to the unit. Returns True if unit is destroyed."""
+        old_soldiers = self.stats.current_soldiers
         self.stats.current_soldiers = max(0, self.stats.current_soldiers - amount)
         
-        # Morale loss based on casualties
+        # Morale loss based on casualties - increased for more dramatic effect
         casualty_percent = amount / self.stats.max_soldiers
-        self.stats.morale = max(0, self.stats.morale - casualty_percent * 20)
+        morale_loss = casualty_percent * 30  # Increased from 20 to 30 for faster routing
+        
+        # Heavy casualties cause additional morale loss
+        if casualty_percent > 0.25:  # If losing more than 25% in one attack
+            morale_loss += 15  # Additional shock penalty
+            
+        self.stats.morale = max(0, self.stats.morale - morale_loss)
         
         return self.stats.current_soldiers <= 0
         

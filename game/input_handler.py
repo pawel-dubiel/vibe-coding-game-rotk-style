@@ -45,13 +45,37 @@ class InputHandler:
                         game_state.current_action = None
                         game_state.possible_moves = []
                 elif game_state.current_action == 'attack':
-                    if game_state.attack_with_selected_knight(x, y):
+                    attack_tile_x, attack_tile_y = self.hex_layout.pixel_to_hex(x, y)
+                    if game_state.attack_with_selected_knight_hex(attack_tile_x, attack_tile_y):
                         game_state.current_action = None
                         game_state.attack_targets = []
+                    else:
+                        # Show attack failure feedback
+                        target = game_state.get_knight_at(attack_tile_x, attack_tile_y)
+                        if target and game_state.selected_knight:
+                            # Get attack behavior to check why attack failed
+                            attack_behavior = game_state.selected_knight.behaviors.get('attack')
+                            if attack_behavior and hasattr(attack_behavior, 'get_attack_blocked_reason'):
+                                reason = attack_behavior.get_attack_blocked_reason(game_state.selected_knight, target, game_state)
+                                game_state.add_message(f"Cannot attack: {reason}", priority=1)
+                            else:
+                                game_state.add_message("Cannot attack target", priority=1)
+                        elif not target:
+                            game_state.add_message("No target at that location", priority=1)
+                        else:
+                            game_state.add_message("Cannot attack - no unit selected", priority=1)
                 elif game_state.current_action == 'charge':
-                    if game_state.charge_with_selected_knight(x, y):
+                    charge_tile_x, charge_tile_y = self.hex_layout.pixel_to_hex(x, y)
+                    if game_state.charge_with_selected_knight_hex(charge_tile_x, charge_tile_y):
                         game_state.current_action = None
                         game_state.attack_targets = []
+                    else:
+                        # Show charge failure feedback
+                        charge_info = game_state.get_charge_info_at(charge_tile_x, charge_tile_y)
+                        if charge_info and not charge_info['can_charge']:
+                            # Display helpful message about why charge failed
+                            reason = charge_info['reason']
+                            game_state.add_message(f"Cannot charge: {reason}", priority=1)
                 else:
                     # Use hex layout to convert click to hex coordinates
                     tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
@@ -197,6 +221,10 @@ class InputHandler:
         if hasattr(game_state, 'renderer'):
             game_state.renderer.hex_grid = self.hex_grid
             game_state.renderer.hex_layout = self.hex_layout
+        
+        # Update game_state's hex_layout to ensure coordinate conversion consistency
+        if hasattr(game_state, 'hex_layout'):
+            game_state.hex_layout = self.hex_layout
     
     def screen_to_world_zoom_aware(self, screen_x, screen_y, game_state):
         """Convert screen coordinates to world coordinates accounting for zoom"""

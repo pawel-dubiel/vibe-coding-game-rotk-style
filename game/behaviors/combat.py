@@ -22,10 +22,23 @@ class AttackBehavior(Behavior):
         
     def can_execute(self, unit, game_state) -> bool:
         """Check if unit can attack"""
-        return unit.action_points >= self.get_ap_cost(unit) and not unit.has_acted
+        base_cost = self.get_ap_cost(unit)  # Get base cost without terrain penalty
         
-    def get_ap_cost(self, unit=None, target=None) -> int:
-        """Calculate AP cost for attack based on unit type and distance"""
+        # Basic requirements - remove has_acted check to allow multiple attacks
+        if unit.action_points < base_cost:
+            return False
+            
+        # Morale requirement: Need 50%+ morale to attack (except first attack)
+        if not hasattr(unit, 'attacks_this_turn'):
+            unit.attacks_this_turn = 0
+            
+        if unit.attacks_this_turn > 0 and unit.morale < 50:
+            return False
+            
+        return True
+        
+    def get_ap_cost(self, unit=None, target=None, game_state=None) -> int:
+        """Calculate AP cost for attack based on unit type, target terrain, and distance"""
         base_cost = 3  # Base melee attack cost
         
         if unit and hasattr(unit, 'unit_class'):
@@ -38,6 +51,18 @@ class AttackBehavior(Behavior):
                 base_cost = 3  # Cavalry are quick
             elif unit.unit_class == KnightClass.MAGE:
                 base_cost = 2  # Magic is efficient
+        
+        # Add terrain-based attack cost if target and game_state are provided
+        if target and game_state and hasattr(game_state, 'terrain_map') and game_state.terrain_map:
+            target_terrain = game_state.terrain_map.get_terrain(target.x, target.y)
+            if target_terrain:
+                # Get the base terrain movement cost (without unit-specific modifiers)
+                terrain_movement_cost = target_terrain.movement_cost
+                
+                # Apply terrain penalty: twice the additional movement cost as extra AP
+                if terrain_movement_cost > 1.0:  # Only apply penalty for difficult terrain
+                    terrain_penalty = int((terrain_movement_cost - 1.0) * 2)
+                    base_cost += terrain_penalty
                 
         return base_cost
         
@@ -99,16 +124,31 @@ class AttackBehavior(Behavior):
             counter_damage = int(self.calculate_counter_damage(target, unit, target_terrain, attacker_terrain) * 0.75)
         # RANGED mode has no counter-attack (counter_damage remains 0)
             
-        # Consume AP
-        ap_cost = self.get_ap_cost(unit, target)
+        # Consume AP (including terrain penalty)
+        ap_cost = self.get_ap_cost(unit, target, game_state)
         unit.action_points -= ap_cost
-        unit.has_acted = True
+        # Remove has_acted = True to allow multiple attacks per turn
         
-        # Mark units as engaged in combat
-        unit.is_engaged_in_combat = True
-        unit.engaged_with = target
-        target.is_engaged_in_combat = True
-        target.engaged_with = unit
+        # Track attacks this turn and apply progressive morale loss
+        if not hasattr(unit, 'attacks_this_turn'):
+            unit.attacks_this_turn = 0
+            
+        unit.attacks_this_turn += 1
+        
+        # Apply morale loss for multiple attacks (combat fatigue)
+        if unit.attacks_this_turn > 1:
+            # Progressive morale loss: 5% for second attack, 10% for third, etc.
+            morale_loss = unit.attacks_this_turn * 5
+            # Apply to base morale stats to avoid general bonus interference
+            unit.stats.stats.morale = max(0, unit.stats.stats.morale - morale_loss)
+        
+        # Mark units as engaged in combat (only for melee/close combat)
+        if combat_mode in [CombatMode.MELEE, CombatMode.CHARGE]:
+            unit.is_engaged_in_combat = True
+            unit.engaged_with = target
+            target.is_engaged_in_combat = True
+            target.engaged_with = unit
+        # Ranged attacks do not engage units in combat
         
         # Check attack angle for additional effects
         attack_angle = None
@@ -246,6 +286,26 @@ class AttackBehavior(Behavior):
             
         return min(base_casualties, attacker.stats.stats.current_soldiers)
         
+    def _is_valid_target(self, unit, target, game_state) -> bool:
+        """Check if a target is valid for attack"""
+        # Check fog of war visibility
+        if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
+            visibility = game_state.fog_of_war.get_visibility_state(
+                game_state.current_player, target.x, target.y
+            )
+            # Only target units we can see
+            if visibility != VisibilityState.VISIBLE:
+                return False
+        
+        # Use Chebyshev distance to include diagonals
+        dx = abs(unit.x - target.x)
+        dy = abs(unit.y - target.y)
+        distance = max(dx, dy)
+        if distance > self.attack_range:
+            return False
+            
+        return True
+        
     def get_valid_targets(self, unit, game_state) -> list:
         """Get list of valid attack targets"""
         if not self.can_execute(unit, game_state):
@@ -253,24 +313,41 @@ class AttackBehavior(Behavior):
             
         targets = []
         for other in game_state.knights:
-            if other.player_id != unit.player_id:
-                # Check fog of war visibility
-                if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
-                    visibility = game_state.fog_of_war.get_visibility_state(
-                        game_state.current_player, other.x, other.y
-                    )
-                    # Only target units we can see
-                    if visibility != VisibilityState.VISIBLE:
-                        continue
-                
-                # Use Chebyshev distance to include diagonals
-                dx = abs(unit.x - other.x)
-                dy = abs(unit.y - other.y)
-                distance = max(dx, dy)
-                if distance <= self.attack_range:
-                    targets.append(other)
+            if other.player_id != unit.player_id and self._is_valid_target(unit, other, game_state):
+                targets.append(other)
                     
         return targets
+        
+    def get_attack_blocked_reason(self, unit, target, game_state) -> str:
+        """Get reason why an attack is blocked (for user feedback)"""
+        # Check basic requirements first
+        if not self.can_execute(unit, game_state):
+            base_cost = self.get_ap_cost(unit)
+            if unit.action_points < base_cost:
+                return "Not enough action points"
+            if hasattr(unit, 'attacks_this_turn') and unit.attacks_this_turn > 0 and unit.morale < 50:
+                return "Morale too low for additional attacks"
+        
+        # Check if it's an enemy
+        if target.player_id == unit.player_id:
+            return "Cannot attack friendly units"
+            
+        # Check visibility
+        if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
+            visibility = game_state.fog_of_war.get_visibility_state(
+                game_state.current_player, target.x, target.y
+            )
+            if visibility != VisibilityState.VISIBLE:
+                return "Target not visible"
+        
+        # Check range
+        dx = abs(unit.x - target.x)
+        dy = abs(unit.y - target.y)
+        distance = max(dx, dy)
+        if distance > self.attack_range:
+            return f"Target out of range (distance: {distance}, max range: {self.attack_range})"
+            
+        return "Attack should be possible"
 
 class ArcherAttackBehavior(AttackBehavior):
     """Ranged attack behavior for archers"""
@@ -280,6 +357,54 @@ class ArcherAttackBehavior(AttackBehavior):
         # Keep name as "attack" so can_attack() works correctly
         self.name = "attack"
         
-    def get_ap_cost(self, unit=None, target=None) -> int:
-        """Ranged attacks cost less AP than melee"""
-        return 2  # Ranged attacks are quicker to execute
+    def get_ap_cost(self, unit=None, target=None, game_state=None) -> int:
+        """Ranged attacks cost less AP than melee, but still affected by terrain"""
+        base_cost = 2  # Ranged attacks are quicker to execute
+        
+        # Add terrain-based attack cost for ranged attacks too (reduced penalty)
+        if target and game_state and hasattr(game_state, 'terrain_map') and game_state.terrain_map:
+            target_terrain = game_state.terrain_map.get_terrain(target.x, target.y)
+            if target_terrain:
+                # Get the base terrain movement cost (without unit-specific modifiers)
+                terrain_movement_cost = target_terrain.movement_cost
+                
+                # Apply reduced terrain penalty for ranged attacks (1x instead of 2x)
+                if terrain_movement_cost > 1.0:  # Only apply penalty for difficult terrain
+                    terrain_penalty = int(terrain_movement_cost - 1.0)
+                    base_cost += terrain_penalty
+                
+        return base_cost
+        
+    def _has_line_of_sight(self, unit, target, game_state) -> bool:
+        """Check if archer has line of sight to target"""
+        if not hasattr(game_state, 'fog_of_war'):
+            return True
+            
+        # Check if unit has elevated vision
+        vision_behavior = unit.get_behavior('VisionBehavior') if hasattr(unit, 'get_behavior') else None
+        is_elevated = vision_behavior.is_elevated() if vision_behavior else False
+        
+        # Use fog of war's line of sight checking
+        return game_state.fog_of_war._has_line_of_sight(game_state, (unit.x, unit.y), (target.x, target.y), is_elevated)
+        
+    def _is_valid_target(self, unit, target, game_state) -> bool:
+        """Check if a target is valid for ranged attack (includes line of sight)"""
+        # Check basic validity first
+        if not super()._is_valid_target(unit, target, game_state):
+            return False
+            
+        # For ranged attacks (archers), also check line of sight
+        return self._has_line_of_sight(unit, target, game_state)
+        
+    def get_attack_blocked_reason(self, unit, target, game_state) -> str:
+        """Get reason why a ranged attack is blocked (includes line-of-sight reasons)"""
+        # Check basic reasons first
+        base_reason = super().get_attack_blocked_reason(unit, target, game_state)
+        if base_reason != "Attack should be possible":
+            return base_reason
+            
+        # Check line of sight for ranged attacks
+        if not self._has_line_of_sight(unit, target, game_state):
+            return "No line of sight - arrows blocked by terrain"
+            
+        return "Attack should be possible"

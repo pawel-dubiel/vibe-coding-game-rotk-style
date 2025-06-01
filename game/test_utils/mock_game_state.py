@@ -90,3 +90,56 @@ class MockGameState(IGameState):
     def add_castle(self, castle):
         """Add a castle to the game state"""
         self._castles.append(castle)
+    
+    def _update_zoc_status(self):
+        """Update Zone of Control status for all knights"""
+        for knight in self._knights:
+            in_zoc, enemy = knight.is_in_enemy_zoc(self)
+            knight.in_enemy_zoc = in_zoc
+            knight.engaged_with = enemy if in_zoc else None
+            
+            # Clear engagement status if no longer in enemy ZOC
+            if not in_zoc:
+                knight.is_engaged_in_combat = False
+    
+    def get_charge_info_at(self, tile_x, tile_y):
+        """Get charge information for a specific position (for UI feedback)"""
+        from game.entities.knight import KnightClass
+        from game.visibility import VisibilityState
+        
+        if not self.selected_knight or self.selected_knight.knight_class != KnightClass.CAVALRY:
+            return None
+            
+        # Check if there's an enemy at this position
+        target = self.get_knight_at(tile_x, tile_y)
+        if not target or target.player_id == self.current_player:
+            return {
+                'can_charge': False,
+                'reason': 'No enemy target at this position',
+                'type': 'no_target'
+            }
+        
+        # Check cavalry charge requirements
+        can_charge, reason = self.selected_knight.can_charge(target, self)
+        
+        # Categorize the failure reason for better UI feedback
+        failure_type = 'unknown'
+        if 'will' in reason.lower():
+            failure_type = 'insufficient_will'
+        elif 'adjacent' in reason.lower():
+            failure_type = 'not_adjacent'
+        elif 'hills' in reason.lower():
+            failure_type = 'terrain_restriction'
+        elif 'special' in reason.lower():
+            failure_type = 'already_used'
+        elif 'routing' in reason.lower():
+            failure_type = 'routing'
+        elif 'cavalry' in reason.lower():
+            failure_type = 'not_cavalry'
+        
+        return {
+            'can_charge': can_charge,
+            'reason': reason,
+            'type': failure_type,
+            'target': target
+        }

@@ -58,8 +58,8 @@ class InspireAbility(GeneralAbility):
         
     def apply(self, unit: 'Unit', context: Dict[str, Any]) -> Dict[str, Any]:
         return {
-            'morale_bonus': 10,
-            'morale_regen': 5
+            'morale_bonus': 5,
+            'morale_regen': 3
         }
 
 class TacticianAbility(GeneralAbility):
@@ -247,7 +247,7 @@ class General:
                         bonuses[key] = value
                         
         # Level bonuses
-        bonuses['morale_bonus'] += self.level * 2
+        bonuses['morale_bonus'] += self.level * 1
         bonuses['attack_bonus'] += self.level * 0.02
         bonuses['defense_bonus'] += self.level * 0.02
         

@@ -173,9 +173,114 @@ class Unit:
             return self.generals
         return None
         
-    def take_casualties(self, amount: int) -> bool:
+    def take_casualties(self, amount: int, game_state=None) -> bool:
         """Apply casualties to unit"""
-        return self.stats.take_casualties(amount)
+        # Routing units are harder to hit effectively (they're fleeing/scattered)
+        if self.is_routing:
+            amount = int(amount * 0.7)  # 30% damage reduction for routing units
+            
+        was_destroyed = self.stats.take_casualties(amount)
+        
+        # Check for automatic routing after casualties (only if not already routing)
+        if not was_destroyed and not self.is_routing:
+            self.check_routing(game_state)
+            
+        return was_destroyed
+    
+    def check_routing(self, game_state=None) -> bool:
+        """Check if unit should start routing based on morale and conditions"""
+        # Already routing
+        if self.is_routing:
+            return True
+            
+        # Units with very low morale start routing
+        routing_threshold = 20  # Start routing below 20% morale
+        
+        # Check for automatic routing conditions
+        if self.morale < routing_threshold:
+            self._start_routing(game_state)
+            return True
+            
+        # Check for morale-based probability routing (panic)
+        if self.morale < 40:  # Between 20-40% morale, chance to route
+            import random
+            # Higher chance to route with lower morale
+            route_chance = (40 - self.morale) / 40  # 0% at 40 morale, 50% at 20 morale
+            if random.random() < route_chance * 0.3:  # Max 15% chance per check
+                self._start_routing(game_state)
+                return True
+                
+        return False
+        
+    def _start_routing(self, game_state=None):
+        """Start routing and attempt immediate flee movement"""
+        was_routing = self.is_routing
+        self.is_routing = True
+        
+        # If game state is available and unit just started routing, try to auto-flee
+        if not was_routing and game_state is not None:
+            self._attempt_auto_routing_movement(game_state)
+    
+    def _attempt_auto_routing_movement(self, game_state):
+        """Attempt automatic routing movement away from enemies"""
+        if not self.is_routing:
+            return False
+            
+        # Check if unit has movement behavior and can move
+        movement_behavior = self.get_behavior('MovementBehavior')
+        if not movement_behavior:
+            return False
+            
+        # Get routing movement options
+        routing_moves = movement_behavior._get_routing_moves(self, game_state)
+        if not routing_moves:
+            return False
+            
+        # Choose the best routing move (furthest from nearest enemy)
+        enemies = [k for k in game_state.knights if k.player_id != self.player_id]
+        if not enemies:
+            return False
+            
+        nearest_enemy = min(enemies, key=lambda e: abs(e.x - self.x) + abs(e.y - self.y))
+        
+        # Find the move that gets furthest from nearest enemy
+        best_move = None
+        best_distance = 0
+        
+        for move_x, move_y in routing_moves:
+            distance = abs(move_x - nearest_enemy.x) + abs(move_y - nearest_enemy.y)
+            if distance > best_distance:
+                best_distance = distance
+                best_move = (move_x, move_y)
+        
+        # Execute the routing movement if we found a good move
+        if best_move:
+            old_x, old_y = self.x, self.y
+            new_x, new_y = best_move
+            
+            # Check if position is valid and not occupied
+            if (0 <= new_x < game_state.board_width and 
+                0 <= new_y < game_state.board_height and
+                not game_state.get_knight_at(new_x, new_y)):
+                
+                # Execute the routing movement directly
+                self.x = new_x
+                self.y = new_y
+                
+                # Consume some AP for the panic movement (but don't block future movement)
+                self.action_points = max(0, self.action_points - 1)
+                
+                # Add message about routing movement
+                if hasattr(game_state, 'add_message'):
+                    game_state.add_message(f"{self.name} routs and flees!", priority=2)
+                
+                # Update facing to show the unit is fleeing away from enemy
+                if hasattr(self, 'facing') and self.facing:
+                    self.facing.update_facing_from_movement(old_x, old_y, new_x, new_y)
+                
+                return True
+        
+        return False
         
     def end_turn(self):
         """Reset for new turn"""
@@ -187,15 +292,47 @@ class Unit:
         # Regenerate will
         self.stats.regenerate_will(20)
         
-        # Apply general morale regeneration
+        # Apply base morale regeneration (all units recover some morale each turn)
+        base_morale_regen = 10  # Base recovery per turn
+        
+        # Routing units recover morale faster when not under pressure
+        if self.is_routing:
+            base_morale_regen = 15  # Faster recovery for routing units
+            
+        # Apply general morale regeneration bonuses
         bonuses = self.generals.get_all_passive_bonuses(self)
-        morale_regen = bonuses.get('morale_regen', 0)
-        if morale_regen > 0:
-            self.stats.stats.morale = min(100, self.stats.stats.morale + morale_regen)
+        general_morale_regen = bonuses.get('morale_regen', 0)
+        
+        total_morale_regen = base_morale_regen + general_morale_regen
+        old_morale = self.stats.stats.morale
+        self.stats.stats.morale = min(100, self.stats.stats.morale + total_morale_regen)
+        
+        # Check if routing unit recovers enough morale to stop routing
+        self.has_rallied_this_turn = False
+        if self.is_routing and self.stats.stats.morale >= 40:  # Rally threshold
+            # Additional rally conditions for realism
+            rally_chance = 0.7  # 70% base chance to rally even with good morale
+            
+            # Better chance to rally with higher morale
+            if self.stats.stats.morale >= 60:
+                rally_chance = 0.9  # 90% chance with high morale
+                
+            # Reduced chance if heavily damaged
+            soldier_ratio = self.soldiers / self.max_soldiers
+            if soldier_ratio < 0.5:  # Less than 50% soldiers remaining
+                rally_chance *= 0.6  # Harder to rally when heavily damaged
+                
+            import random
+            if random.random() < rally_chance:
+                self.is_routing = False
+                self.has_rallied_this_turn = True
             
         # Reset temporary combat modifiers
         self.temp_damage_multiplier = 1.0
         self.temp_vulnerability = 1.0
+        
+        # Reset attack counter for new turn
+        self.attacks_this_turn = 0
         
         # Update generals
         self.generals.on_turn_end()

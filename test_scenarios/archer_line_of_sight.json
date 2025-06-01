@@ -1,0 +1,99 @@
+{
+  "name": "Archer Line of Sight Test",
+  "description": "Test scenario for archer line-of-sight restrictions with hills and mountains blocking shots",
+  "board_size": [15, 12],
+  "terrain": {
+    "base": "plains",
+    "tiles": [
+      {"x": 6, "y": 4, "type": "hills"},
+      {"x": 6, "y": 5, "type": "hills"},
+      {"x": 6, "y": 6, "type": "hills"},
+      {"x": 6, "y": 7, "type": "hills"},
+      {"x": 7, "y": 4, "type": "hills"},
+      {"x": 7, "y": 5, "type": "hills"},
+      {"x": 7, "y": 6, "type": "hills"},
+      {"x": 7, "y": 7, "type": "hills"},
+      {"x": 8, "y": 4, "type": "hills"},
+      {"x": 8, "y": 5, "type": "hills"},
+      {"x": 8, "y": 6, "type": "hills"},
+      {"x": 8, "y": 7, "type": "hills"},
+      {"x": 10, "y": 3, "type": "mountains"},
+      {"x": 10, "y": 4, "type": "mountains"},
+      {"x": 10, "y": 5, "type": "mountains"},
+      {"x": 11, "y": 3, "type": "mountains"},
+      {"x": 11, "y": 4, "type": "mountains"},
+      {"x": 11, "y": 5, "type": "mountains"},
+      {"x": 12, "y": 3, "type": "mountains"},
+      {"x": 12, "y": 4, "type": "mountains"},
+      {"x": 12, "y": 5, "type": "mountains"},
+      {"x": 2, "y": 2, "type": "forest"},
+      {"x": 2, "y": 3, "type": "forest"},
+      {"x": 3, "y": 2, "type": "forest"},
+      {"x": 3, "y": 3, "type": "forest"}
+    ]
+  },
+  "units": [
+    {
+      "name": "Archer Alpha",
+      "type": "archer",
+      "x": 3,
+      "y": 5,
+      "player": 1,
+      "facing": "EAST",
+      "morale": 80
+    },
+    {
+      "name": "Archer Beta",
+      "type": "archer", 
+      "x": 4,
+      "y": 8,
+      "player": 1,
+      "facing": "NORTH_EAST",
+      "morale": 80
+    },
+    {
+      "name": "Guard",
+      "type": "warrior",
+      "x": 2,
+      "y": 5,
+      "player": 1,
+      "facing": "EAST",
+      "morale": 85
+    },
+    {
+      "name": "Target A",
+      "type": "warrior",
+      "x": 9,
+      "y": 6,
+      "player": 2,
+      "facing": "WEST",
+      "morale": 70
+    },
+    {
+      "name": "Target B",
+      "type": "archer",
+      "x": 5,
+      "y": 9,
+      "player": 2,
+      "facing": "SOUTH_WEST",
+      "morale": 75
+    },
+    {
+      "name": "Mountain Target",
+      "type": "cavalry",
+      "x": 13,
+      "y": 4,
+      "player": 2,
+      "facing": "WEST",
+      "morale": 80
+    }
+  ],
+  "castles": [
+    {"x": 1, "y": 1, "player": 1},
+    {"x": 13, "y": 10, "player": 2}
+  ],
+  "victory_conditions": {
+    "type": "custom",
+    "description": "Test archer line-of-sight mechanics: Player 1 archers should NOT be able to shoot over hills/mountains at blocked targets, but should receive clear feedback messages when attempting blocked shots"
+  }
+}

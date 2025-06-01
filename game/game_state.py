@@ -303,6 +303,10 @@ class GameState(IGameState):
             in_zoc, enemy = knight.is_in_enemy_zoc(self)
             knight.in_enemy_zoc = in_zoc
             knight.engaged_with = enemy if in_zoc else None
+            
+            # Clear engagement status if no longer in enemy ZOC
+            if not in_zoc:
+                knight.is_engaged_in_combat = False
     
     def _execute_ai_turn(self):
         self.ai_player.execute_turn(self)
@@ -487,25 +491,65 @@ class GameState(IGameState):
         if distance <= attack_range:
             target = self.get_knight_at(tile_x, tile_y)
             if target and target.player_id != self.current_player:
-                # Proceed with attack
-                self.selected_knight.has_attacked = True
-                
-                # Get combat behavior for damage calculation
-                combat_behavior = self.selected_knight.behaviors.get('combat')
-                if combat_behavior:
-                    damage = combat_behavior.calculate_damage(self.selected_knight, target, self)
+                # Use attack behavior if available (which includes terrain-based AP costs and line of sight)
+                if hasattr(self.selected_knight, 'behaviors') and 'attack' in self.selected_knight.behaviors:
+                    attack_behavior = self.selected_knight.behaviors['attack']
+                    # Check if target is valid (includes line of sight for archers)
+                    valid_targets = attack_behavior.get_valid_targets(self.selected_knight, self)
+                    if target not in valid_targets:
+                        return False  # Attack blocked - feedback will be provided by input handler
+                    result = self.selected_knight.behaviors['attack'].execute(self.selected_knight, self, target)
+                    if result['success']:
+                        damage = result['damage']
+                        counter_damage = result.get('counter_damage', 0)
+                        attack_angle = result.get('attack_angle', None)
+                        extra_morale_penalty = result.get('extra_morale_penalty', 0)
+                        should_check_routing = result.get('should_check_routing', False)
+                        
+                        # Create attack animation with facing info
+                        anim = AttackAnimation(self.selected_knight, target, damage, counter_damage,
+                                             attack_angle=attack_angle, 
+                                             extra_morale_penalty=extra_morale_penalty,
+                                             should_check_routing=should_check_routing,
+                                             game_state=self)
+                        self.animation_manager.add_animation(anim)
                 else:
+                    # Fallback to old method with terrain-based AP cost
+                    # Proceed with attack
+                    self.selected_knight.has_attacked = True
+                    
                     damage = max(1, self.selected_knight.soldiers // 10)  # Fallback damage
-                
-                # Apply damage
-                target.take_damage(damage)
-                
-                # Consume action point
-                self.selected_knight.action_points -= 1
-                
-                # Create attack animation
-                anim = AttackAnimation(self.selected_knight, target, damage)
-                self.animation_manager.add_animation(anim)
+                    
+                    # Apply damage
+                    target.take_casualties(damage, self)
+                    
+                    # Calculate terrain-based AP cost
+                    ap_cost = 3  # Base cost
+                    if hasattr(self.selected_knight, 'unit_class'):
+                        if self.selected_knight.unit_class == KnightClass.WARRIOR:
+                            ap_cost = 4
+                        elif self.selected_knight.unit_class == KnightClass.ARCHER:
+                            ap_cost = 2
+                        elif self.selected_knight.unit_class == KnightClass.CAVALRY:
+                            ap_cost = 3
+                        elif self.selected_knight.unit_class == KnightClass.MAGE:
+                            ap_cost = 2
+                    
+                    # Add terrain penalty if target is on difficult terrain
+                    if self.terrain_map:
+                        target_terrain = self.terrain_map.get_terrain(target.x, target.y)
+                        if target_terrain:
+                            terrain_movement_cost = target_terrain.movement_cost
+                            if terrain_movement_cost > 1.0:
+                                terrain_penalty = int((terrain_movement_cost - 1.0) * 2)
+                                ap_cost += terrain_penalty
+                    
+                    # Consume calculated AP cost
+                    self.selected_knight.action_points -= ap_cost
+                    
+                    # Create attack animation
+                    anim = AttackAnimation(self.selected_knight, target, damage, game_state=self)
+                    self.animation_manager.add_animation(anim)
                 
                 self.attack_targets = []
                 return True
@@ -516,33 +560,31 @@ class GameState(IGameState):
         if not self.selected_knight or self.selected_knight.knight_class != KnightClass.CAVALRY:
             return False
         
-        # Calculate distance for charge
-        hex_grid = HexGrid()
-        attacker_hex = hex_grid.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
-        target_hex = hex_grid.offset_to_axial(tile_x, tile_y)
-        distance = attacker_hex.distance_to(target_hex)
-        
-        # Charge range is typically 2-4 hexes
-        if 2 <= distance <= 4:
-            target = self.get_knight_at(tile_x, tile_y)
-            if target and target.player_id != self.current_player:
-                # Proceed with charge
-                self.selected_knight.has_attacked = True
-                self.selected_knight.action_points -= 2  # Charges cost more AP
+        # Find target at clicked position
+        target = self.get_knight_at(tile_x, tile_y)
+        if target and target.player_id != self.current_player:
+            # Store original positions
+            start_x, start_y = self.selected_knight.x, self.selected_knight.y
+            target_start_x, target_start_y = target.x, target.y
+            
+            # Execute charge
+            success, message = self.selected_knight.execute_charge(target, self)
+            if success:
+                # Create animation for charge
+                from game.animation import MoveAnimation
                 
-                # Charge does extra damage
-                base_damage = max(1, self.selected_knight.soldiers // 8)
-                charge_damage = int(base_damage * 1.5)  # 50% bonus
+                # Check if target was pushed (compare positions)
+                if target.x != target_start_x or target.y != target_start_y:
+                    # Target was pushed, cavalry moves to target's original position
+                    anim = MoveAnimation(self.selected_knight, start_x, start_y, target_start_x, target_start_y, game_state=self)
+                    self.animation_manager.add_animation(anim)
+                    self.selected_knight.x = target_start_x
+                    self.selected_knight.y = target_start_y
+                # If target wasn't pushed, cavalry stays in place (crushing charge)
                 
-                # Apply damage
-                target.take_damage(charge_damage)
-                
-                # Create attack animation
-                anim = AttackAnimation(self.selected_knight, target, charge_damage)
-                self.animation_manager.add_animation(anim)
-                
-                self.attack_targets = []
+                self.add_message(message, priority=2)  # Higher priority for special abilities
                 return True
+        
         return False
     
     def get_knight_at(self, tile_x, tile_y):
@@ -592,7 +634,8 @@ class GameState(IGameState):
                         anim = AttackAnimation(self.selected_knight, target, damage, counter_damage,
                                              attack_angle=attack_angle, 
                                              extra_morale_penalty=extra_morale_penalty,
-                                             should_check_routing=should_check_routing)
+                                             should_check_routing=should_check_routing,
+                                             game_state=self)
                         self.animation_manager.add_animation(anim)
                 else:
                     # Fallback to old method
@@ -603,7 +646,7 @@ class GameState(IGameState):
                     if distance == 1:  # Melee range
                         counter_damage = target.calculate_counter_damage(self.selected_knight, attacker_terrain, target_terrain)
                     
-                    anim = AttackAnimation(self.selected_knight, target, damage, counter_damage)
+                    anim = AttackAnimation(self.selected_knight, target, damage, counter_damage, game_state=self)
                     self.animation_manager.add_animation(anim)
                 
                 # Add combat message
@@ -653,9 +696,18 @@ class GameState(IGameState):
         return False
     
     def end_turn(self):
+        # Check for rallied units before ending turn
+        rallied_units = []
         for knight in self.knights:
             if knight.player_id == self.current_player:
                 knight.end_turn()
+                # Check if unit rallied this turn
+                if hasattr(knight, 'has_rallied_this_turn') and knight.has_rallied_this_turn:
+                    rallied_units.append(knight)
+        
+        # Add rally messages
+        for knight in rallied_units:
+            self.add_message(f"{knight.name} rallies and stops routing!", priority=2)
         
         for castle in self.castles:
             if castle.player_id == self.current_player:
@@ -852,6 +904,55 @@ class GameState(IGameState):
                     break
         
         return targets
+    
+    def get_charge_info_at(self, tile_x, tile_y):
+        """Get charge information for a specific position (for UI feedback)"""
+        if not self.selected_knight or self.selected_knight.knight_class != KnightClass.CAVALRY:
+            return None
+            
+        # Check if there's an enemy at this position
+        target = self.get_knight_at(tile_x, tile_y)
+        if not target or target.player_id == self.current_player:
+            return {
+                'can_charge': False,
+                'reason': 'No enemy target at this position',
+                'type': 'no_target'
+            }
+        
+        # Check fog of war visibility
+        if hasattr(self, 'fog_of_war'):
+            visibility = self.fog_of_war.get_visibility_state(self.current_player, tile_x, tile_y)
+            if visibility != VisibilityState.VISIBLE:
+                return {
+                    'can_charge': False,
+                    'reason': 'Target not visible through fog of war',
+                    'type': 'not_visible'
+                }
+        
+        # Check cavalry charge requirements
+        can_charge, reason = self.selected_knight.can_charge(target, self)
+        
+        # Categorize the failure reason for better UI feedback
+        failure_type = 'unknown'
+        if 'will' in reason.lower():
+            failure_type = 'insufficient_will'
+        elif 'adjacent' in reason.lower():
+            failure_type = 'not_adjacent'
+        elif 'hills' in reason.lower():
+            failure_type = 'terrain_restriction'
+        elif 'special' in reason.lower():
+            failure_type = 'already_used'
+        elif 'routing' in reason.lower():
+            failure_type = 'routing'
+        elif 'cavalry' in reason.lower():
+            failure_type = 'not_cavalry'
+        
+        return {
+            'can_charge': can_charge,
+            'reason': reason,
+            'type': failure_type,
+            'target': target
+        }
     
     def _update_all_fog_of_war(self):
         """Update fog of war for all players"""

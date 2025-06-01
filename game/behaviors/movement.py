@@ -24,10 +24,8 @@ class MovementBehavior(Behavior):
         if unit.is_routing:
             return True
             
-        # Check if in enemy ZOC and can't disengage
-        if unit.in_enemy_zoc and not self._can_disengage_from_zoc(unit):
-            return False
-            
+        # Units can always move - ZOC restrictions are handled in get_possible_moves
+        # This allows units to enter ZOC to engage enemies
         return True
         
     def get_ap_cost(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], unit, game_state) -> int:
@@ -183,24 +181,13 @@ class MovementBehavior(Behavior):
                     max_cost=unit.action_points
                 )
                 
-                # Filter out starting position and positions that would enter ZOC
+                # Filter out starting position
                 moves = []
                 for pos, cost in reachable.items():
                     if pos != (unit.x, unit.y) and cost <= unit.action_points:
-                        # Check if position is valid
-                        if self._will_enter_enemy_zoc(pos[0], pos[1], unit, game_state):
-                            # Allow entering ZOC if it's adjacent to current position
-                            # This allows units to approach and attack enemies
-                            hex_grid = HexGrid()
-                            start_hex = hex_grid.offset_to_axial(unit.x, unit.y)
-                            end_hex = hex_grid.offset_to_axial(pos[0], pos[1])
-                            
-                            # If adjacent (distance 1 in hex), allow the move
-                            if start_hex.distance_to(end_hex) == 1:
-                                moves.append(pos)
-                        else:
-                            # Not entering ZOC, so move is allowed
-                            moves.append(pos)
+                        # Units can move into enemy ZOC to engage - no restrictions on entering ZOC
+                        # ZOC only restricts movement when you're already IN enemy ZOC
+                        moves.append(pos)
                 
                 return moves
             finally:
@@ -251,6 +238,14 @@ class MovementBehavior(Behavior):
         if unit.is_routing:
             return True
             
+        # Cavalry can sometimes disengage using special ability (check this first!)
+        if hasattr(unit, 'unit_class'):
+            from game.entities.knight import KnightClass
+            if unit.unit_class == KnightClass.CAVALRY:
+                # Cavalry with high morale can attempt to disengage
+                if unit.morale >= 75:
+                    return True
+        
         # Check if unit is heavy and engaged with another heavy unit
         if hasattr(unit, 'is_heavy_unit') and unit.is_heavy_unit():
             # Check if engaged with a heavy enemy
@@ -265,13 +260,6 @@ class MovementBehavior(Behavior):
             # Check if unit can break away based on unit types
             if hasattr(unit, 'can_break_away_from'):
                 return unit.can_break_away_from(unit.engaged_with)
-        
-        # Cavalry can sometimes disengage using special ability
-        if hasattr(unit, 'unit_class'):
-            from game.entities.knight import KnightClass
-            if unit.unit_class == KnightClass.CAVALRY:
-                # Cavalry with high morale can attempt to disengage
-                return unit.morale >= 75
                 
         # Other units can attempt to disengage (will use breakaway behavior)
         return True

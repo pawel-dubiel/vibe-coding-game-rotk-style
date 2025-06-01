@@ -14,6 +14,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Keyboard shortcuts: `+`/`=` to zoom in, `-` to zoom out
   - Zoom range: 0.5x to 3.0x with smooth 1.2x increments
   - Dynamic hex grid scaling that maintains accurate coordinates at all zoom levels
+  - Fixed attack and charge targeting to work correctly at all zoom levels
+  - Synchronized hex layout updates between input handler, renderer, and game state
+  - Fixed attack and charge damage application to use correct Unit API (take_casualties instead of take_damage)
+  - Fixed cavalry engagement bug: ranged attacks no longer incorrectly engage units in combat
+  - Engagement status now properly clears when units move away from enemies
+  - Only melee and charge attacks set engagement status, not ranged attacks
+  - Added comprehensive test suite for engagement mechanics (test_engagement_mechanics.py)
+  - Updated MockGameState to support ZOC testing for future test development
+- Improved morale system and automatic routing for more realistic combat
+  - Units now lose more morale from casualties (30% base + 15% shock for heavy losses)
+  - Automatic routing when morale drops below 20%
+  - Probabilistic routing between 20-40% morale for panic effects
+  - Units can start routing during the same turn they take heavy losses
+  - Added routing messages to inform players when units break
+  - Routing units now automatically flee away from enemies on the same turn
+  - Immediate panic movement provides realistic battlefield psychology
+- Enhanced archer line-of-sight restrictions
+  - Archers cannot shoot over hills, high hills, or mountains
+  - Terrain blocking uses existing fog of war line-of-sight calculations
+  - Clear user feedback when shots are blocked by terrain
+  - Added test scenario for archer line-of-sight mechanics
+- Comprehensive game documentation system
+  - Created docs/ folder with detailed mechanism guides
+  - Complete routing system documentation with tactical implications
+  - Quick reference cards for key game mechanics
+  - Code references and strategic guides for developers and players
+  - Both attackers and defenders can route from combat casualties
+
+### Fixed
+- Cavalry movement restrictions in Zone of Control scenarios
+  - Fixed logic order in ZOC disengagement checks
+  - High-morale cavalry (75%+) can now properly disengage from enemy ZOC
+  - Resolves issue where cavalry showed no movement options when adjacent to enemies
+  - Maintains tactical depth while allowing proper flanking maneuvers
+- Morale recovery and rally system for routing units
+  - All units recover +10 morale per turn, routing units recover +15 morale per turn
+  - Routing units can rally when morale reaches 40+ (probabilistic based on condition)
+  - Rally chance: 70% base, 90% with high morale, reduced if heavily damaged
+  - Routing units take 30% less damage (representing scattered/fleeing formation)
+  - Rally messages inform players when units stop routing and return to battle
+  - Prevents permanent routing - units can recover if given time to regroup
 - PNG asset support for terrain rendering
   - AssetManager class for loading and caching image assets
   - Automatic scaling of terrain images to match zoom level
@@ -65,15 +106,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed fog of war updating for all players instead of just active player
   - Reduced AI turn delay from 0.5s to 0.1s for snappier gameplay
   - Eliminated unnecessary visibility recalculations during turn changes
-- Battle-optimized terrain generation for more realistic battlefields
-  - Maps consist of mixed terrain with ~50% grassland/plains for tactical maneuvering
-  - Increased forest variety: more light forests, regular forests, and dense forest clusters
-  - Natural water features appear as streams rather than blocking rivers
-  - Hills appear in realistic clusters with occasional high hills at centers
-  - Forest progression: light forest on edges, regular forest inside, dense forest at centers
-  - Additional terrain features: more forest clusters and hill formations
-  - Enhanced stream generation for natural battlefield water features
-  - Stream features cross plains without blocking movement (small movement penalty)
+- Completely redesigned terrain generation for consistent, balanced battlefields
+  - All maps now start with plains base, then add strategic terrain features in controlled amounts
+  - Guaranteed terrain distribution: 1-2 hill clusters, 2-4 forest clusters, 1-2 streams, 0-1 swamp areas
+  - Hills placed strategically with 40% chance for high hills at cluster centers
+  - Forest clusters use natural progression: dense forest center → regular forest → light forest edges
+  - Streams drawn as lines across battlefield with occasional width variation
+  - Swamps only appear near streams (40% chance) for realistic placement
+  - Prevents problematic terrain generation (no more all-hills or all-forest maps)
+  - Area-clearing algorithm ensures features don't overlap inappropriately
+  - Maintains 60-70% plains for tactical maneuvering while adding meaningful terrain variety
 - Improved line-of-sight algorithm using shadow casting
   - Implemented SimpleShadowcaster for efficient field of view calculations
   - Sector-based approach adapted for hexagonal grids
@@ -82,6 +124,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Proper handling of elevation (cavalry, hills) for vision calculations
   - Tests updated to validate new shadow casting behavior
   - Turn transitions are now significantly faster
+- Reduced general morale bonuses for more visible combat feedback
+  - InspireAbility morale bonus reduced from +10 to +5
+  - General level morale bonus reduced from +2 per level to +1 per level
+  - Total typical morale bonus reduced from +14 to +7
+  - Morale drops now visible after smaller amounts of damage
+  - Maintains morale recovery benefits while improving combat feedback
+- Enhanced cavalry charge feedback system for better user experience
+  - Added `get_charge_info_at()` method to provide detailed charge failure reasons
+  - Input handler now displays helpful messages when charges fail
+  - Categorized failure types: terrain restrictions, insufficient will, not adjacent, etc.
+  - Players now see immediate feedback like "Cannot charge: Cannot charge from hills"
+  - Improved MockGameState with charge feedback support for testing
+- Completely overhauled attack system for tactical depth and realism
+  - **Terrain-based attack costs**: AP cost = unit base cost + (terrain movement cost - 1.0) × 2
+    - Plains: No penalty (1.0x movement cost)
+    - Hills/Forest: +2 AP penalty (2.0x movement cost)
+    - Dense Forest/Swamp: +4 AP penalty (3.0x movement cost)
+    - Light Forest: +1 AP penalty (1.5x movement cost)
+    - Ranged attacks have reduced terrain penalties (1x instead of 2x multiplier)
+  - **Multiple attacks per turn**: Removed `has_acted` limitation, units can attack multiple times per turn
+  - **Morale requirements**: Second and subsequent attacks require 50%+ morale to execute
+  - **Progressive morale loss**: Combat fatigue increases with multiple attacks
+    - 1st attack: No morale loss
+    - 2nd attack: -10 morale
+    - 3rd attack: -15 morale
+    - 4th attack: -20 morale, etc. (attacks_this_turn × 5)
+  - **Attack counter system**: Tracks attacks per turn, resets at end of turn
+  - **AP-based attack limits**: Natural limit through action point consumption
+  - Comprehensive test suite added (test_enhanced_attack_system.py)
+  - Examples:
+    - Warrior vs enemy on plains: 4 AP per attack, no morale loss (1st attack)
+    - Warrior vs enemy on hills: 6 AP per attack, -10 morale (2nd attack)
+    - Archer vs enemy in dense forest: 4 AP per attack (reduced terrain penalty)
+
+### Fixed
+- Fixed UnboundLocalError in attack_with_selected_knight_hex method
+  - Removed redundant local KnightClass import that was causing scoping issues
+  - Attack system now works correctly in the main game
 
 ## [0.5.0] - 2025-01-27
 

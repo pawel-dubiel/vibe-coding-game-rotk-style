@@ -160,7 +160,7 @@ class PathMoveAnimation(Animation):
 
 class AttackAnimation(Animation):
     def __init__(self, attacker, target, damage, counter_damage=0, duration=0.8, 
-                 attack_angle=None, extra_morale_penalty=0, should_check_routing=False):
+                 attack_angle=None, extra_morale_penalty=0, should_check_routing=False, game_state=None):
         super().__init__(duration)
         self.attacker = attacker
         self.target = target
@@ -171,6 +171,7 @@ class AttackAnimation(Animation):
         self.attack_angle = attack_angle
         self.extra_morale_penalty = extra_morale_penalty
         self.should_check_routing = should_check_routing
+        self.game_state = game_state
     
     def update(self, dt):
         super().update(dt)
@@ -179,24 +180,44 @@ class AttackAnimation(Animation):
         if progress >= 0.5 and not self.damage_applied:
             # Calculate casualties before applying
             initial_soldiers = self.target.soldiers
-            self.target.take_casualties(self.damage)
+            initial_morale = self.target.morale
+            was_routing_before = self.target.is_routing
+            
+            # Apply damage (this will trigger automatic routing checks)
+            self.target.take_casualties(self.damage, self.game_state)
             casualties_taken = initial_soldiers - self.target.soldiers
             
             # Apply extra morale penalty for flank/rear attacks
             if self.extra_morale_penalty > 0:
                 self.target.morale = max(0, self.target.morale - self.extra_morale_penalty)
+                # Recheck routing after additional morale loss
+                if not self.target.is_routing:
+                    self.target.check_routing(self.game_state)
             
-            # Check for routing from rear/flank attacks
+            # Check for routing from rear/flank attacks (legacy system)
             if self.should_check_routing and hasattr(self.target, 'facing') and casualties_taken > 0:
                 casualties_percent = casualties_taken / initial_soldiers
                 if self.target.facing.check_routing_chance(self.attack_angle, 
                                                           self.target.morale, 
                                                           casualties_percent):
-                    self.target.is_routing = True
+                    self.target._start_routing(self.game_state)
             
-            # Apply counter damage to attacker if melee
+            # Add routing message if unit just started routing
+            if not was_routing_before and self.target.is_routing:
+                if self.game_state:
+                    self.game_state.add_message(f"{self.target.name} breaks and starts routing!", priority=2)
+            
+            # Apply counter damage to attacker if melee (this can also cause routing)
             if self.counter_damage > 0:
-                self.attacker.take_casualties(self.counter_damage)
+                attacker_initial_morale = self.attacker.morale
+                was_attacker_routing = self.attacker.is_routing
+                self.attacker.take_casualties(self.counter_damage, self.game_state)
+                
+                # Message if attacker starts routing from counter-attack
+                if not was_attacker_routing and self.attacker.is_routing:
+                    if self.game_state:
+                        self.game_state.add_message(f"{self.attacker.name} breaks from counter-attack!", priority=2)
+                        
             self.damage_applied = True
         return not self.finished
     

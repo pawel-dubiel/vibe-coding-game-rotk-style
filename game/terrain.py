@@ -584,6 +584,190 @@ class TerrainGenerator:
                                 terrain_grid[y][x] = Terrain(TerrainType.HIGH_HILLS)
                             else:
                                 terrain_grid[y][x] = Terrain(TerrainType.HILLS)
+    
+    def generate_controlled_features(self, terrain_grid: List[List[Terrain]]) -> None:
+        """Generate terrain features in controlled amounts starting from plains base"""
+        # 1. Add 1-2 hill clusters (strategic high ground)
+        self._add_controlled_hills(terrain_grid)
+        
+        # 2. Add 2-4 forest clusters (cover and tactical positions)
+        self._add_controlled_forests(terrain_grid)
+        
+        # 3. Add 1-2 streams (water features for tactical complexity)
+        self._add_controlled_streams(terrain_grid)
+        
+        # 4. Add 0-1 swamp areas (difficult terrain, rare)
+        self._add_controlled_swamps(terrain_grid)
+    
+    def _add_controlled_hills(self, terrain_grid: List[List[Terrain]]) -> None:
+        """Add 1-2 hill clusters in strategic locations"""
+        num_hill_clusters = random.randint(1, 2)
+        
+        for _ in range(num_hill_clusters):
+            # Find a good location away from edges and other hills
+            attempts = 0
+            while attempts < 20:  # Prevent infinite loop
+                x = random.randint(3, self.width - 4)
+                y = random.randint(3, self.height - 4)
+                
+                # Check if area is mostly plains
+                if self._is_area_clear(terrain_grid, x, y, 2, TerrainType.PLAINS):
+                    self._create_strategic_hill_cluster(terrain_grid, x, y)
+                    break
+                attempts += 1
+    
+    def _add_controlled_forests(self, terrain_grid: List[List[Terrain]]) -> None:
+        """Add 2-4 forest clusters with realistic progression"""
+        num_forest_clusters = random.randint(2, 4)
+        
+        for _ in range(num_forest_clusters):
+            attempts = 0
+            while attempts < 20:
+                x = random.randint(2, self.width - 3)
+                y = random.randint(2, self.height - 3)
+                
+                # Check if area is mostly plains
+                if self._is_area_clear(terrain_grid, x, y, 2, TerrainType.PLAINS):
+                    self._create_strategic_forest_cluster(terrain_grid, x, y)
+                    break
+                attempts += 1
+    
+    def _add_controlled_streams(self, terrain_grid: List[List[Terrain]]) -> None:
+        """Add 1-2 streams across the battlefield"""
+        num_streams = random.randint(1, 2)
+        
+        for _ in range(num_streams):
+            if random.random() < 0.5:
+                # Horizontal stream
+                y = random.randint(2, self.height - 3)
+                start_x = random.randint(0, 2)
+                end_x = random.randint(self.width - 3, self.width - 1)
+                self._create_stream_line(terrain_grid, start_x, y, end_x, y)
+            else:
+                # Vertical stream
+                x = random.randint(2, self.width - 3)
+                start_y = random.randint(0, 2)
+                end_y = random.randint(self.height - 3, self.height - 1)
+                self._create_stream_line(terrain_grid, x, start_y, x, end_y)
+    
+    def _add_controlled_swamps(self, terrain_grid: List[List[Terrain]]) -> None:
+        """Add 0-1 small swamp areas near streams"""
+        if random.random() < 0.4:  # 40% chance for swamp
+            # Find stream locations
+            stream_locations = []
+            for y in range(self.height):
+                for x in range(self.width):
+                    if terrain_grid[y][x].feature == TerrainFeature.STREAM:
+                        stream_locations.append((x, y))
+            
+            if stream_locations:
+                # Pick a random stream location
+                stream_x, stream_y = random.choice(stream_locations)
+                # Create small swamp area nearby
+                for dy in range(-1, 2):
+                    for dx in range(-1, 2):
+                        nx, ny = stream_x + dx, stream_y + dy
+                        if (0 <= nx < self.width and 0 <= ny < self.height and
+                            terrain_grid[ny][nx].type == TerrainType.PLAINS and
+                            random.random() < 0.6):  # 60% chance per adjacent tile
+                            terrain_grid[ny][nx] = Terrain(TerrainType.SWAMP)
+    
+    def _is_area_clear(self, terrain_grid: List[List[Terrain]], center_x: int, center_y: int, 
+                      radius: int, required_type: TerrainType) -> bool:
+        """Check if an area is mostly the required terrain type"""
+        total_tiles = 0
+        matching_tiles = 0
+        
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                x, y = center_x + dx, center_y + dy
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    total_tiles += 1
+                    if terrain_grid[y][x].type == required_type:
+                        matching_tiles += 1
+        
+        return matching_tiles / total_tiles >= 0.8  # 80% must be the required type
+    
+    def _create_strategic_hill_cluster(self, terrain_grid: List[List[Terrain]], center_x: int, center_y: int) -> None:
+        """Create a hill cluster with strategic placement"""
+        cluster_size = random.randint(2, 3)  # Medium-sized clusters
+        
+        for dy in range(-cluster_size, cluster_size + 1):
+            for dx in range(-cluster_size, cluster_size + 1):
+                distance = abs(dx) + abs(dy)
+                if distance <= cluster_size:
+                    x, y = center_x + dx, center_y + dy
+                    if 0 <= x < self.width and 0 <= y < self.height:
+                        if terrain_grid[y][x].type == TerrainType.PLAINS:
+                            if distance == 0 and random.random() < 0.4:
+                                # Higher chance for high hills at center
+                                terrain_grid[y][x] = Terrain(TerrainType.HIGH_HILLS)
+                            elif distance <= 1:
+                                terrain_grid[y][x] = Terrain(TerrainType.HILLS)
+                            elif distance <= 2 and random.random() < 0.7:
+                                terrain_grid[y][x] = Terrain(TerrainType.HILLS)
+    
+    def _create_strategic_forest_cluster(self, terrain_grid: List[List[Terrain]], center_x: int, center_y: int) -> None:
+        """Create a forest cluster with natural progression"""
+        cluster_size = random.randint(2, 4)  # Varied forest sizes
+        
+        for dy in range(-cluster_size, cluster_size + 1):
+            for dx in range(-cluster_size, cluster_size + 1):
+                distance = abs(dx) + abs(dy)
+                if distance <= cluster_size:
+                    x, y = center_x + dx, center_y + dy
+                    if 0 <= x < self.width and 0 <= y < self.height:
+                        if terrain_grid[y][x].type == TerrainType.PLAINS:
+                            if distance == 0:
+                                # Center: dense forest
+                                terrain_grid[y][x] = Terrain(TerrainType.DENSE_FOREST)
+                            elif distance <= 1:
+                                # Inner ring: regular forest
+                                terrain_grid[y][x] = Terrain(TerrainType.FOREST)
+                            elif distance <= 2:
+                                # Outer ring: light forest
+                                terrain_grid[y][x] = Terrain(TerrainType.LIGHT_FOREST)
+                            elif distance <= cluster_size and random.random() < 0.5:
+                                # Sparse outer edge
+                                terrain_grid[y][x] = Terrain(TerrainType.LIGHT_FOREST)
+    
+    def _create_stream_line(self, terrain_grid: List[List[Terrain]], start_x: int, start_y: int, 
+                           end_x: int, end_y: int) -> None:
+        """Create a stream line between two points"""
+        # Simple line drawing algorithm
+        dx = abs(end_x - start_x)
+        dy = abs(end_y - start_y)
+        sx = 1 if start_x < end_x else -1
+        sy = 1 if start_y < end_y else -1
+        err = dx - dy
+        
+        x, y = start_x, start_y
+        
+        while True:
+            # Add stream with some randomness
+            if 0 <= x < self.width and 0 <= y < self.height:
+                if terrain_grid[y][x].type == TerrainType.PLAINS:
+                    terrain_grid[y][x] = Terrain(TerrainType.PLAINS, TerrainFeature.STREAM)
+                
+                # Occasionally add adjacent stream tiles for wider streams
+                if random.random() < 0.3:
+                    for dx_adj, dy_adj in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                        adj_x, adj_y = x + dx_adj, y + dy_adj
+                        if (0 <= adj_x < self.width and 0 <= adj_y < self.height and
+                            terrain_grid[adj_y][adj_x].type == TerrainType.PLAINS and
+                            random.random() < 0.5):
+                            terrain_grid[adj_y][adj_x] = Terrain(TerrainType.PLAINS, TerrainFeature.STREAM)
+            
+            if x == end_x and y == end_y:
+                break
+                
+            e2 = 2 * err
+            if e2 > -dy:
+                err -= dy
+                x += sx
+            if e2 < dx:
+                err += dx
+                y += sy
                         
 
 class TerrainMap:
@@ -601,28 +785,19 @@ class TerrainMap:
             self._generate_terrain(seed)
         
     def _generate_terrain(self, seed: Optional[int] = None):
-        """Generate realistic terrain"""
+        """Generate realistic battle terrain starting with plains base"""
         generator = TerrainGenerator(self.width, self.height, seed)
         
-        # Generate base maps optimized for battle terrain
-        # Use larger scale for fewer, more distinct terrain features
-        height_map = generator.generate_height_map(scale=0.02, octaves=3)  # Smoother, larger features
-        moisture_map = generator.generate_moisture_map(scale=0.03)  # Less variation in moisture
-        
-        # Create terrain grid
+        # Start with all plains for consistent battle terrain
         self.terrain_grid = []
         for y in range(self.height):
             row = []
             for x in range(self.width):
-                terrain_type = generator.classify_terrain(
-                    height_map[y][x],
-                    moisture_map[y][x]
-                )
-                row.append(Terrain(terrain_type))
+                row.append(Terrain(TerrainType.PLAINS))
             self.terrain_grid.append(row)
-            
-        # Add features
-        generator.generate_rivers(self.terrain_grid, height_map)
+        
+        # Generate strategic terrain features in controlled amounts
+        generator.generate_controlled_features(self.terrain_grid)
         
         # Add roads connecting castle positions (if standard size)
         if self.width >= 20 and self.height >= 20:
@@ -638,15 +813,6 @@ class TerrainMap:
                 if pos[0] < self.width and pos[1] < self.height
             ]
             generator.generate_roads(self.terrain_grid, valid_positions[:2])
-        
-        # Add realistic forest clusters
-        generator.generate_forest_clusters(self.terrain_grid)
-        
-        # Add stream features to water terrain
-        generator.generate_streams(self.terrain_grid)
-        
-        # Add additional hill clusters
-        generator.generate_hill_clusters(self.terrain_grid)
             
     def _generate_legacy_terrain(self):
         """Legacy terrain generation for compatibility"""
