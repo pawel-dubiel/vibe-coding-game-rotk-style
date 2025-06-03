@@ -76,7 +76,8 @@ class AssetManager:
         # Scale to fit properly within hex boundaries 
         # Use the inscribed circle diameter (hex_size * 2 * 0.866) for best fit
         inscribed_diameter = int(hex_size * 1.732)  # sqrt(3) ≈ 1.732
-        target_size = min(inscribed_diameter, 96)  # Conservative size for clean borders
+        # Scale assets aggressively with zoom - fill entire hex
+        target_size = max(16, inscribed_diameter)  # 100% of inscribed circle, min 16px
         scale_size = (target_size, target_size)
         
         return self.load_image(filename, scale_size)

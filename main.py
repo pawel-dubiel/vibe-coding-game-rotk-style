@@ -1,7 +1,7 @@
 import pygame
 import sys
 from game.game_state import GameState
-from game.renderer import Renderer
+from game.rendering import CoreRenderer
 from game.input_handler import InputHandler
 from game.ui.battle_setup import BattleSetupScreen
 from game.ui.game_mode_select import GameModeSelectScreen
@@ -42,7 +42,7 @@ class Game:
         self.vs_ai = True  # Default to single player
         
         self.game_state = None
-        self.renderer = Renderer(self.screen)
+        self.renderer = CoreRenderer(self.screen)
         self.input_handler = InputHandler()
         
         # Connect input handler and renderer for zoom functionality
@@ -88,6 +88,8 @@ class Game:
                                     'castles': 0
                                 }
                                 self.game_state = GameState(battle_config)
+                                # Connect renderer to game state for zoom consistency
+                                self.game_state.renderer = self.renderer
                                 self.game_state.restore_after_load(load_result['data'])
                                 self.in_main_menu = False
                                 self.in_game = True
@@ -162,6 +164,8 @@ class Game:
         if self.battle_setup_screen.ready:
             battle_config = self.battle_setup_screen.get_battle_config()
             self.game_state = GameState(battle_config, vs_ai=self.vs_ai)
+            # Connect renderer to game state for zoom consistency
+            self.game_state.renderer = self.renderer
             self.in_setup = False
             self.in_game = True
             self.battle_setup_screen.ready = False
@@ -199,6 +203,8 @@ class Game:
                             # Load the game
                             load_result = self.save_manager.load_game(result['slot'])
                             if load_result['success']:
+                                # Connect renderer to game state for zoom consistency
+                                self.game_state.renderer = self.renderer
                                 self.game_state.restore_after_load(load_result['data'])
                                 self.save_load_menu.hide()
                                 self.paused = False
@@ -261,6 +267,8 @@ class Game:
                     
                     # Create game state
                     self.game_state = GameState(battle_config, vs_ai=False)
+                    # Connect renderer to game state for zoom consistency
+                    self.game_state.renderer = self.renderer
                     
                     # Setup the scenario
                     scenario.setup(self.game_state)

@@ -8,6 +8,7 @@ from game.components.facing import FacingComponent, FacingDirection
 from game.entities.knight import KnightClass
 from game.combat_config import CombatConfig
 from game.hex_utils import HexGrid
+from game.behaviors.movement_service import MovementService
 
 @dataclass
 class UnitPosition:
@@ -643,13 +644,9 @@ class Unit:
         }
             
     def get_possible_moves(self, board_width, board_height, terrain_map=None, game_state=None):
-        """Compatibility method - get possible moves using movement behavior"""
-        if 'move' in self.behaviors:
-            move_behavior = self.behaviors['move']
-            return move_behavior.get_possible_moves(self, game_state)
-        else:
-            # Fallback to empty list if no movement behavior
-            return []
+        """Get possible moves using centralized MovementService"""
+        movement_service = MovementService()
+        return movement_service.get_possible_moves(self, game_state)
             
     def get_effective_soldiers(self, terrain=None):
         """Compatibility method - get effective fighting soldiers"""
@@ -673,15 +670,30 @@ class Unit:
         return False
         
     def move(self, new_x, new_y):
-        """Compatibility method - simple move (used by AI)"""
-        if self.can_move():
-            # Update facing based on movement
+        """Simple move for AI - delegates to MovementService for consistency"""
+        # For AI moves, we'll create a minimal game state context
+        # This ensures consistent movement logic across all callers
+        from game.behaviors.movement_service import MovementService
+        movement_service = MovementService()
+        
+        # For AI, we skip some game state validations but still use core logic
+        if self.can_move() and self.action_points > 0:
             old_x, old_y = self.x, self.y
             self.x = new_x
             self.y = new_y
-            self.facing.update_facing_from_movement(old_x, old_y, new_x, new_y)
-            self.action_points -= 1
-            self.has_moved = True
+            
+            # Update facing using movement behavior if available
+            if 'move' in self.behaviors:
+                movement_behavior = self.behaviors['move']
+                if hasattr(movement_behavior, 'execute'):
+                    # Let movement behavior handle facing updates
+                    pass
+            else:
+                # Fallback facing update
+                if hasattr(self, 'facing'):
+                    self.facing.update_facing_from_movement(old_x, old_y, new_x, new_y)
+            
+            movement_service.consume_movement_ap(self, 1.0)
             return True
         return False
     

@@ -18,6 +18,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Synchronized hex layout updates between input handler, renderer, and game state
   - Fixed attack and charge damage application to use correct Unit API (take_casualties instead of take_damage)
   - Fixed cavalry engagement bug: ranged attacks no longer incorrectly engage units in combat
+
+### Refactored
+- **Major Architecture Overhaul**: Comprehensive refactoring following single responsibility principle
+  - Split monolithic GameState class (1,137 lines) into focused components:
+    - MessageSystem: Combat messages and notifications with priority-based display
+    - CameraManager: Camera positioning, zoom, and coordinate transformations  
+    - VictoryManager: Victory condition checking and game completion detection
+    - StateSerializer: Game state serialization for save/load functionality
+    - AnimationCoordinator: Animation lifecycle and timing management
+  - Consolidated duplicate movement logic from unit.py, movement.py, game_state.py:
+    - Created MovementService as single source of truth for all movement operations
+    - Eliminated code duplication and ensured consistent movement validation
+    - Centralized movement path calculation and AP cost computation
+  - Split monolithic Renderer class (794 lines) into specialized components:
+    - TerrainRenderer: Hex grid, terrain types, and fog of war overlays
+    - UnitRenderer: Unit sprites, health bars, and status indicators  
+    - UIRenderer: HUD elements, turn counter, and context menus
+    - EffectRenderer: Animations, particles, and visual effects
+    - CoreRenderer: Coordinates all rendering components with clean pipeline
+- Created `game/state/` and `game/rendering/` modules with focused responsibilities
+- Improved testability and maintainability through better separation of concerns
+- Reduced file sizes (no files > 500 lines) and eliminated architectural violations
+- **Successfully integrated and tested**: All refactored components working correctly in-game
+  - Fixed attack target rendering to handle both coordinate tuples and unit objects
+  - Corrected context menu display to show proper text instead of raw object data
+  - Updated input handler to use new animation coordinator interface
+  - Ensured compatibility with existing unit property access patterns
+  - **Restored missing UI elements**: Added End Turn button, victory messages, castle info display
+  - Fixed context menu to display proper action text instead of raw object data
   - Engagement status now properly clears when units move away from enemies
   - Only melee and charge attacks set engagement status, not ranged attacks
   - Added comprehensive test suite for engagement mechanics (test_engagement_mechanics.py)
@@ -159,6 +188,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Archer vs enemy in dense forest: 4 AP per attack (reduced terrain penalty)
 
 ### Fixed
+- **Critical Post-Refactoring Issues**: Fixed zoom and attack functionality that stopped working after architecture overhaul
+  - **Zoom System**: Fixed zoom functionality by restoring the original working implementation
+    - **Reverted to Hex Layout Scaling**: Restored the original approach of scaling hex layout size for proper zoom
+    - Fixed zoom to scale hexes and all game elements proportionally (making everything appear larger/smaller)
+    - Input handler manages zoom level and creates scaled hex layouts (36px base × zoom factor)
+    - CoreRenderer uses input handler's scaled hex layouts for proper visual zoom effect
+    - **Asset Scaling**: Fixed terrain assets (PNG textures) to scale with zoom level
+    - Terrain images now get larger/smaller with zoom changes for proper visual zoom effect
+    - AssetManager scales terrain textures based on hex_size for consistent zoom behavior
+    - Updated input handler to call `update_zoom()` only when zoom actually changes
+    - Fixed coordinate conversion pipeline to use consistent camera and hex layout systems
+    - Synchronized legacy camera properties with new camera manager for compatibility
+  - **Attack System**: Fixed attack functionality by resolving coordinate conversion issues
+    - Updated input handler to use game state's hex layout instead of its own for coordinate conversion
+    - Fixed screen-to-world coordinate conversion to use camera manager consistently
+    - Added automatic hex layout synchronization with camera zoom in game state update loop
+    - Ensured all coordinate transformations maintain accuracy at all zoom levels
+  - **Camera Synchronization**: Implemented proper sync between legacy camera system and new camera manager
+    - Legacy `camera_x/camera_y` properties now stay synchronized with `camera_manager` position
+    - All coordinate conversion methods (`screen_to_world`, `world_to_screen`) now use camera manager
+    - Fixed initialization to ensure both camera systems start with identical positions
+  - **Animation System Integration**: Updated AI player to use new animation coordinator interface
+    - Fixed AI player references from `animation_manager` to `animation_coordinator.animation_manager`
+    - Updated state serializer to use animation coordinator's `clear_animations()` method
+    - Maintained backward compatibility while using new modular architecture
+- **Post-Refactoring UI Issues**: Fixed terrain info display and unit selection rendering
+  - **Terrain Info Display**: Fixed terrain details not showing when clicking on empty terrain
+    - Updated UI renderer to properly extract terrain object from terrain_info structure
+    - Fixed terrain_info parsing to show terrain type, movement cost, elevation, and defense bonus
+    - Terrain info now displays: "Terrain: Plains (2, 3) | Movement Cost: 1.0 | Elevation: 1, Defense: +0"
+  - **Unit Selection Rendering**: Fixed overlapping lines when selecting units
+    - Removed duplicate selection highlight from terrain renderer (hex polygon outline)
+    - Added proper selection circle rendering to unit renderer (yellow circle around unit)
+    - Eliminated visual conflicts between multiple selection indicator systems
+  - **Legacy Renderer Conflicts**: Renamed old renderer.py to prevent conflicts with new modular system
 - Fixed UnboundLocalError in attack_with_selected_knight_hex method
   - Removed redundant local KnightClass import that was causing scoping issues
   - Attack system now works correctly in the main game

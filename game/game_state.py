@@ -5,11 +5,13 @@ from game.entities.unit_factory import UnitFactory
 from game.entities.castle import Castle
 from game.ai.ai_player import AIPlayer
 from game.ui.context_menu import ContextMenu
-from game.animation import AnimationManager, MoveAnimation, AttackAnimation, ArrowAnimation, PathMoveAnimation
 from game.terrain import TerrainMap
 from game.hex_utils import HexGrid, HexCoord
 from game.interfaces.game_state import IGameState
 from game.visibility import FogOfWar, VisibilityState
+from game.state import MessageSystem, CameraManager, VictoryManager, StateSerializer, AnimationCoordinator
+from game.behaviors.movement_service import MovementService
+from game.animation import MoveAnimation, AttackAnimation, ArrowAnimation, PathMoveAnimation
 
 class GameState(IGameState):
     def __init__(self, battle_config=None, vs_ai=True):
@@ -26,11 +28,16 @@ class GameState(IGameState):
         
         self.tile_size = 64
         
-        # Camera/viewport system
-        self.camera_x = 0
-        self.camera_y = 0
-        self.screen_width = 1024
-        self.screen_height = 768
+        # Initialize state management components
+        # Use generous world bounds for camera movement
+        world_width = self.board_width * 64 * 2  # Allow more movement at high zoom
+        world_height = self.board_height * 64 * 2
+        self.camera_manager = CameraManager(1024, 768, world_width, world_height)
+        self.message_system = MessageSystem()
+        self.victory_manager = VictoryManager()
+        self.state_serializer = StateSerializer()
+        self.animation_coordinator = AnimationCoordinator()
+        self.movement_service = MovementService()
         
         self.castles = []
         self.knights = []
@@ -51,7 +58,11 @@ class GameState(IGameState):
         self.enemy_info_unit = None  # Track enemy unit to display info
         self.terrain_info = None  # Track terrain info to display
         
-        self.animation_manager = AnimationManager()
+        # Legacy camera properties for compatibility (will be removed)
+        self.camera_x = 0
+        self.camera_y = 0
+        self.screen_width = 1024
+        self.screen_height = 768
         self.pending_positions = {}  # Track where knights are moving to
         
         self.terrain_map = TerrainMap(self.board_width, self.board_height)
@@ -60,9 +71,9 @@ class GameState(IGameState):
         from game.hex_layout import HexLayout
         self.hex_layout = HexLayout(hex_size=36, orientation='flat')
         
-        # Message system for combat feedback
-        self.messages = []  # List of (message, timestamp, priority) tuples
-        self.message_duration = 3.0  # Seconds to display each message
+        # Legacy message properties for compatibility (will be removed)
+        self.messages = []
+        self.message_duration = 3.0
         
         # Debug options
         self.show_coordinates = False
@@ -83,6 +94,11 @@ class GameState(IGameState):
                 avg_x = sum(k.x for k in player1_knights) / len(player1_knights)
                 avg_y = sum(k.y for k in player1_knights) / len(player1_knights)
                 self.center_camera_on_tile(int(avg_x), int(avg_y))
+        
+        # Sync camera manager with legacy camera position
+        if hasattr(self, 'camera_manager'):
+            self.camera_manager.camera_x = self.camera_x
+            self.camera_manager.camera_y = self.camera_y
     
     def _init_game(self):
         
@@ -209,19 +225,27 @@ class GameState(IGameState):
     
     def add_message(self, message, priority=1):
         """Add a message to display. Higher priority messages display longer."""
+        self.message_system.add_message(message, priority)
+        # Legacy compatibility - update old messages list
         import time
         self.messages.append((message, time.time(), priority))
     
     def update_messages(self, dt):
         """Update message display times and remove expired messages"""
+        self.message_system.update(dt)
+        # Legacy compatibility - update old messages list
         import time
         current_time = time.time()
         self.messages = [(msg, timestamp, priority) for msg, timestamp, priority in self.messages 
                         if current_time - timestamp < self.message_duration * priority]
     
     def update(self, dt):
-        # Update animations
-        self.animation_manager.update(dt)
+        # Update state management components
+        self.animation_coordinator.update(dt)
+        self.message_system.update(dt)
+        
+        # Update hex layout to match camera zoom
+        self._sync_hex_layout_with_zoom()
         
         # Update messages
         self.update_messages(dt)
@@ -233,7 +257,7 @@ class GameState(IGameState):
         self._update_zoc_status()
         
         # Don't process AI or input during animations
-        if self.animation_manager.is_animating():
+        if self.animation_coordinator.is_animating():
             return
         
         # Update fog of war after animations complete
@@ -262,18 +286,29 @@ class GameState(IGameState):
     
     def set_camera_position(self, x, y):
         """Set camera position with bounds checking"""
-        # Calculate max camera positions to keep board in view
-        # Use a more generous bounds calculation for zoom
-        effective_tile_size = self.tile_size * 2  # Allow more movement at high zoom
-        max_camera_x = max(0, self.board_width * effective_tile_size - self.screen_width)
-        max_camera_y = max(0, self.board_height * effective_tile_size - self.screen_height)
-        
-        self.camera_x = max(-self.screen_width, min(x, max_camera_x))
-        self.camera_y = max(-self.screen_height, min(y, max_camera_y))
+        if hasattr(self, 'camera_manager'):
+            self.camera_manager.set_camera_position(x, y)
+            # Update legacy properties for compatibility
+            self.camera_x = self.camera_manager.camera_x
+            self.camera_y = self.camera_manager.camera_y
+        else:
+            # Legacy fallback with bounds checking
+            effective_tile_size = self.tile_size * 2  # Allow more movement at high zoom
+            max_camera_x = max(0, self.board_width * effective_tile_size - self.screen_width)
+            max_camera_y = max(0, self.board_height * effective_tile_size - self.screen_height)
+            
+            self.camera_x = max(0, min(x, max_camera_x))
+            self.camera_y = max(0, min(y, max_camera_y))
     
     def move_camera(self, dx, dy):
         """Move camera by delta amount"""
-        self.set_camera_position(self.camera_x + dx, self.camera_y + dy)
+        if hasattr(self, 'camera_manager'):
+            self.camera_manager.move_camera(dx, dy)
+            # Update legacy properties for compatibility
+            self.camera_x = self.camera_manager.camera_x
+            self.camera_y = self.camera_manager.camera_y
+        else:
+            self.set_camera_position(self.camera_x + dx, self.camera_y + dy)
     
     def center_camera_on_tile(self, tile_x, tile_y):
         """Center camera on a specific tile"""
@@ -287,15 +322,23 @@ class GameState(IGameState):
     
     def screen_to_world(self, screen_x, screen_y):
         """Convert screen coordinates to world coordinates"""
-        world_x = screen_x + self.camera_x
-        world_y = screen_y + self.camera_y
-        return world_x, world_y
+        if hasattr(self, 'camera_manager'):
+            return self.camera_manager.screen_to_world(screen_x, screen_y)
+        else:
+            # Legacy fallback
+            world_x = screen_x + self.camera_x
+            world_y = screen_y + self.camera_y
+            return world_x, world_y
     
     def world_to_screen(self, world_x, world_y):
         """Convert world coordinates to screen coordinates"""
-        screen_x = world_x - self.camera_x
-        screen_y = world_y - self.camera_y
-        return screen_x, screen_y
+        if hasattr(self, 'camera_manager'):
+            return self.camera_manager.world_to_screen(world_x, world_y)
+        else:
+            # Legacy fallback
+            screen_x = world_x - self.camera_x
+            screen_y = world_y - self.camera_y
+            return screen_x, screen_y
     
     def _update_zoc_status(self):
         """Update Zone of Control status for all knights"""
@@ -338,33 +381,12 @@ class GameState(IGameState):
         self.context_menu.hide()
     
     def _filter_valid_moves(self, moves):
-        valid_moves = []
-        for move_x, move_y in moves:
-            if not self._is_position_occupied(move_x, move_y, self.selected_knight):
-                valid_moves.append((move_x, move_y))
-        return valid_moves
+        """Legacy wrapper - now uses MovementService for consistency"""
+        return self.movement_service._filter_valid_moves(moves, self.selected_knight, self)
     
     def _is_position_occupied(self, x, y, exclude_knight=None):
-        """Check if a position is occupied by a knight, castle, or will be occupied (pending move)"""
-        # Check castle positions
-        for castle in self.castles:
-            if castle.contains_position(x, y):
-                return True
-        
-        # Check current knight positions (excluding garrisoned units)
-        for knight in self.knights:
-            if knight != exclude_knight and not knight.is_garrisoned and knight.x == x and knight.y == y:
-                return True
-        
-        # Check pending positions (knights that are moving)
-        for knight_id, pos in self.pending_positions.items():
-            if pos == (x, y):
-                # Make sure this pending position is not from the excluded knight
-                for knight in self.knights:
-                    if id(knight) == knight_id and knight != exclude_knight:
-                        return True
-        
-        return False
+        """Legacy wrapper - now uses MovementService for consistency"""
+        return self.movement_service._is_position_occupied(x, y, exclude_knight, self)
     
     def move_selected_knight(self, x, y):
         if not self.selected_knight:
@@ -401,7 +423,7 @@ class GameState(IGameState):
                     
                     # Create path animation - shows the optimal route
                     anim = PathMoveAnimation(self.selected_knight, path, step_duration=0.25, game_state=self)
-                    self.animation_manager.add_animation(anim)
+                    self.animation_coordinator.animation_manager.add_animation(anim)
                     
                     self.possible_moves = []
                     self._fog_update_needed = True  # Update fog after movement
@@ -416,7 +438,7 @@ class GameState(IGameState):
                 self.movement_history[id(self.selected_knight)] = [(start_x, start_y), (tile_x, tile_y)]
                 
                 anim = MoveAnimation(self.selected_knight, start_x, start_y, tile_x, tile_y, game_state=self)
-                self.animation_manager.add_animation(anim)
+                self.animation_coordinator.animation_manager.add_animation(anim)
                 self.possible_moves = []
                 self._fog_update_needed = True  # Update fog after movement
                 return True
@@ -455,7 +477,7 @@ class GameState(IGameState):
                     
                     # Create path animation - shows the optimal route
                     anim = PathMoveAnimation(self.selected_knight, path, step_duration=0.25, game_state=self)
-                    self.animation_manager.add_animation(anim)
+                    self.animation_coordinator.animation_manager.add_animation(anim)
                     
                     self.possible_moves = []
                     self._fog_update_needed = True  # Update fog after movement
@@ -470,7 +492,7 @@ class GameState(IGameState):
                 self.movement_history[id(self.selected_knight)] = [(start_x, start_y), (tile_x, tile_y)]
                 
                 anim = MoveAnimation(self.selected_knight, start_x, start_y, tile_x, tile_y, game_state=self)
-                self.animation_manager.add_animation(anim)
+                self.animation_coordinator.animation_manager.add_animation(anim)
                 self.possible_moves = []
                 self._fog_update_needed = True  # Update fog after movement
                 return True
@@ -512,47 +534,49 @@ class GameState(IGameState):
                                              extra_morale_penalty=extra_morale_penalty,
                                              should_check_routing=should_check_routing,
                                              game_state=self)
-                        self.animation_manager.add_animation(anim)
-                else:
-                    # Fallback to old method with terrain-based AP cost
-                    # Proceed with attack
-                    self.selected_knight.has_attacked = True
-                    
-                    damage = max(1, self.selected_knight.soldiers // 10)  # Fallback damage
-                    
-                    # Apply damage
-                    target.take_casualties(damage, self)
-                    
-                    # Calculate terrain-based AP cost
-                    ap_cost = 3  # Base cost
-                    if hasattr(self.selected_knight, 'unit_class'):
-                        if self.selected_knight.unit_class == KnightClass.WARRIOR:
-                            ap_cost = 4
-                        elif self.selected_knight.unit_class == KnightClass.ARCHER:
-                            ap_cost = 2
-                        elif self.selected_knight.unit_class == KnightClass.CAVALRY:
-                            ap_cost = 3
-                        elif self.selected_knight.unit_class == KnightClass.MAGE:
-                            ap_cost = 2
-                    
-                    # Add terrain penalty if target is on difficult terrain
-                    if self.terrain_map:
-                        target_terrain = self.terrain_map.get_terrain(target.x, target.y)
-                        if target_terrain:
-                            terrain_movement_cost = target_terrain.movement_cost
-                            if terrain_movement_cost > 1.0:
-                                terrain_penalty = int((terrain_movement_cost - 1.0) * 2)
-                                ap_cost += terrain_penalty
-                    
-                    # Consume calculated AP cost
-                    self.selected_knight.action_points -= ap_cost
-                    
-                    # Create attack animation
-                    anim = AttackAnimation(self.selected_knight, target, damage, game_state=self)
-                    self.animation_manager.add_animation(anim)
+                        self.animation_coordinator.animation_manager.add_animation(anim)
+                    else:
+                        return False
+            else:
+                # Fallback to old method with terrain-based AP cost
+                # Proceed with attack
+                self.selected_knight.has_attacked = True
                 
-                self.attack_targets = []
-                return True
+                damage = max(1, self.selected_knight.soldiers // 10)  # Fallback damage
+                
+                # Apply damage
+                target.take_casualties(damage, self)
+                
+                # Calculate terrain-based AP cost
+                ap_cost = 3  # Base cost
+                if hasattr(self.selected_knight, 'unit_class'):
+                    if self.selected_knight.unit_class == KnightClass.WARRIOR:
+                        ap_cost = 4
+                    elif self.selected_knight.unit_class == KnightClass.ARCHER:
+                        ap_cost = 2
+                    elif self.selected_knight.unit_class == KnightClass.CAVALRY:
+                        ap_cost = 3
+                    elif self.selected_knight.unit_class == KnightClass.MAGE:
+                        ap_cost = 2
+                
+                # Add terrain penalty if target is on difficult terrain
+                if self.terrain_map:
+                    target_terrain = self.terrain_map.get_terrain(target.x, target.y)
+                    if target_terrain:
+                        terrain_movement_cost = target_terrain.movement_cost
+                        if terrain_movement_cost > 1.0:
+                            terrain_penalty = int((terrain_movement_cost - 1.0) * 2)
+                            ap_cost += terrain_penalty
+                
+                # Consume calculated AP cost
+                self.selected_knight.action_points -= ap_cost
+                
+                # Create attack animation
+                anim = AttackAnimation(self.selected_knight, target, damage, game_state=self)
+                self.animation_coordinator.animation_manager.add_animation(anim)
+            
+            self.attack_targets = []
+            return True
         return False
     
     def charge_with_selected_knight_hex(self, tile_x, tile_y):
@@ -577,7 +601,7 @@ class GameState(IGameState):
                 if target.x != target_start_x or target.y != target_start_y:
                     # Target was pushed, cavalry moves to target's original position
                     anim = MoveAnimation(self.selected_knight, start_x, start_y, target_start_x, target_start_y, game_state=self)
-                    self.animation_manager.add_animation(anim)
+                    self.animation_coordinator.animation_manager.add_animation(anim)
                     self.selected_knight.x = target_start_x
                     self.selected_knight.y = target_start_y
                 # If target wasn't pushed, cavalry stays in place (crushing charge)
@@ -636,7 +660,7 @@ class GameState(IGameState):
                                              extra_morale_penalty=extra_morale_penalty,
                                              should_check_routing=should_check_routing,
                                              game_state=self)
-                        self.animation_manager.add_animation(anim)
+                        self.animation_coordinator.animation_manager.add_animation(anim)
                 else:
                     # Fallback to old method
                     damage = self.selected_knight.calculate_damage(target, attacker_terrain, target_terrain)
@@ -647,7 +671,7 @@ class GameState(IGameState):
                         counter_damage = target.calculate_counter_damage(self.selected_knight, attacker_terrain, target_terrain)
                     
                     anim = AttackAnimation(self.selected_knight, target, damage, counter_damage, game_state=self)
-                    self.animation_manager.add_animation(anim)
+                    self.animation_coordinator.animation_manager.add_animation(anim)
                 
                 # Add combat message
                 if counter_damage > 0:
@@ -685,7 +709,7 @@ class GameState(IGameState):
                 if target.x != target_start_x or target.y != target_start_y:
                     # Target was pushed, cavalry moves to target's original position
                     anim = MoveAnimation(self.selected_knight, start_x, start_y, target_start_x, target_start_y, game_state=self)
-                    self.animation_manager.add_animation(anim)
+                    self.animation_coordinator.animation_manager.add_animation(anim)
                     self.selected_knight.x = target_start_x
                     self.selected_knight.y = target_start_y
                 # If target wasn't pushed, cavalry stays in place (crushing charge)
@@ -718,7 +742,7 @@ class GameState(IGameState):
                     # Create arrow animation - animation will apply damage when arrows hit
                     if damages:
                         anim = ArrowAnimation(castle, enemies, [d[1] for d in damages])
-                        self.animation_manager.add_animation(anim)
+                        self.animation_coordinator.animation_manager.add_animation(anim)
                         
                         # Add message for castle archer volleys
                         total_damage = sum(d[1] for d in damages)
@@ -760,35 +784,18 @@ class GameState(IGameState):
                 castle.end_turn()
     
     def check_victory(self):
-        player1_knights = [k for k in self.knights if k.player_id == 1]
-        player2_knights = [k for k in self.knights if k.player_id == 2]
-        
-        # Check if all units of one player are eliminated
-        if not player1_knights:
-            return 2
-        elif not player2_knights:
-            return 1
-            
-        # Check castle destruction if castles exist
-        if self.castles:
-            player1_castles = [c for c in self.castles if c.player_id == 1]
-            player2_castles = [c for c in self.castles if c.player_id == 2]
-            
-            if player1_castles and all(c.is_destroyed() for c in player1_castles):
-                return 2
-            elif player2_castles and all(c.is_destroyed() for c in player2_castles):
-                return 1
-        
-        return None
+        """Check for victory conditions using VictoryManager."""
+        return self.victory_manager.check_victory(self.knights, self.castles)
     
     def set_action_mode(self, action):
         if action == 'move' and self.selected_knight and self.selected_knight.can_move():
             self.current_action = 'move'
-            self.possible_moves = self.selected_knight.get_possible_moves(self.board_width, self.board_height, self.terrain_map, self)
-            self.possible_moves = self._filter_valid_moves(self.possible_moves)
+            # Use MovementService for consistent movement logic
+            self.possible_moves = self.movement_service.get_possible_moves(self.selected_knight, self)
         elif action == 'attack' and self.selected_knight and self.selected_knight.can_attack():
             self.current_action = 'attack'
             self.attack_targets = self._get_attack_targets()
+            self.add_message(f"Attack mode: {len(self.attack_targets)} targets available", priority=1)
         elif action == 'charge' and self.selected_knight:
             self.current_action = 'charge'
             self.attack_targets = self._get_charge_targets()
@@ -971,167 +978,25 @@ class GameState(IGameState):
     
     def prepare_for_save(self):
         """Prepare game state for saving (clean up non-serializable objects)"""
-        # Clear any animations
-        if hasattr(self, 'animation_manager'):
-            self.animation_manager.animations.clear()
+        self.state_serializer.prepare_for_save(self)
             
     def restore_after_load(self, save_data):
         """Restore game state from loaded save data"""
-        from game.entities.unit_factory import UnitFactory
-        from game.entities.castle import Castle
-        from game.entities.knight import KnightClass
-        from game.components.facing import FacingDirection
-        from game.terrain import TerrainType, TerrainMap
-        from game.visibility import FogOfWar, VisibilityState
-        from game.ai.ai_player import AIPlayer
+        self.state_serializer.deserialize_game_state(save_data, self)
         
-        # Restore basic properties
-        self.board_width = save_data['board_width']
-        self.board_height = save_data['board_height']
-        self.tile_size = save_data['tile_size']
-        self.current_player = save_data['current_player']
-        self.turn_number = save_data['turn_number']
-        self.vs_ai = save_data['vs_ai']
+        # Update camera manager with restored camera position  
+        self.camera_manager.camera_x = self.camera_x
+        self.camera_manager.camera_y = self.camera_y
         
-        # Restore AI player if needed
-        if self.vs_ai and save_data['ai_difficulty']:
-            self.ai_player = AIPlayer(2, save_data['ai_difficulty'])
-        else:
-            self.ai_player = None
-            
-        # Restore camera position
-        self.camera_x = save_data['camera_x']
-        self.camera_y = save_data['camera_y']
-        
-        # Restore messages
-        self.messages = save_data['messages']
-        
-        # Restore movement history
-        self.movement_history = save_data['movement_history']
-        
-        # Clear existing units and castles
-        self.knights.clear()
-        self.castles.clear()
-        
-        # Restore knights
-        for knight_data in save_data['knights']:
-            # Create unit with proper class
-            unit_class = KnightClass(knight_data['unit_class'])
-            knight = UnitFactory.create_unit(
-                knight_data['name'],
-                unit_class,
-                knight_data['x'],
-                knight_data['y']
-            )
-            
-            # Restore properties
-            knight.player_id = knight_data['player_id']
-            knight.has_moved = knight_data['has_moved']
-            knight.has_acted = knight_data['has_acted']
-            knight.has_used_special = knight_data['has_used_special']
-            knight.max_action_points = knight_data['max_action_points']
-            knight.action_points = knight_data['action_points']
-            
-            # Restore stats
-            knight.stats.stats.current_soldiers = knight_data['current_soldiers']
-            knight.stats.stats.max_soldiers = knight_data['max_soldiers']
-            knight.stats.stats.morale = knight_data['morale']
-            knight.stats.stats.will = knight_data['will']
-            knight.stats.stats.max_will = knight_data['max_will']
-            
-            # Restore state flags
-            knight.is_garrisoned = knight_data['is_garrisoned']
-            knight.is_disrupted = knight_data['is_disrupted']
-            knight.is_routing = knight_data['is_routing']
-            knight.in_enemy_zoc = knight_data['in_enemy_zoc']
-            knight.is_engaged_in_combat = knight_data['is_engaged_in_combat']
-            
-            # Restore facing
-            if knight_data['facing'] and hasattr(knight, 'facing'):
-                knight.facing.facing = FacingDirection(knight_data['facing'])
-                
-            # Restore generals
-            if 'generals' in knight_data and hasattr(knight, 'generals'):
-                for general_data in knight_data['generals']:
-                    # Create a basic general with the saved data
-                    from game.components.generals import General
-                    
-                    # Map ability names to ability instances
-                    abilities = []
-                    for ability_class_name in general_data['abilities']:
-                        # Try to recreate abilities based on class name
-                        # For now, we'll create empty ability list
-                        # In a full implementation, we'd map class names to instances
-                        pass
-                    
-                    general = General(
-                        name=general_data['name'],
-                        title=general_data['title'],
-                        abilities=abilities,  # Empty for now
-                        level=general_data['level'],
-                        experience=general_data['experience']
-                    )
-                    
-                    knight.generals.add_general(general)
-                    
-            self.knights.append(knight)
-            
-        # Restore castles
-        for castle_data in save_data['castles']:
-            castle = Castle(
-                castle_data['center_x'],
-                castle_data['center_y'],
-                castle_data['player_id']
-            )
-            castle.max_health = castle_data['max_health']
-            castle.health = castle_data['health']
-            castle.defense = castle_data['defense']
-            castle.arrow_damage_per_archer = castle_data['arrow_damage_per_archer']
-            castle.arrow_range = castle_data['arrow_range']
-            castle.garrison_slots = castle_data['garrison_slots']
-            
-            # Note: Garrisoned units will need to be linked after all units are created
-            self.castles.append(castle)
-            
-        # Link garrisoned units to castles
-        for castle, castle_data in zip(self.castles, save_data['castles']):
-            for unit_name in castle_data['garrisoned_units']:
-                for knight in self.knights:
-                    if knight.name == unit_name:
-                        castle.garrisoned_units.append(knight)
-                        knight.garrison_location = castle
-                        break
-                        
-        # Restore terrain map
-        if save_data['terrain_map']:
-            self.terrain_map = TerrainMap(self.board_width, self.board_height)
-            for terrain_data in save_data['terrain_map']:
-                terrain_type = TerrainType(terrain_data['type'])
-                self.terrain_map.set_terrain(
-                    terrain_data['x'],
-                    terrain_data['y'],
-                    terrain_type
-                )
-        else:
-            self.terrain_map = TerrainMap(self.board_width, self.board_height)
-            
-        # Restore fog of war
-        if save_data['fog_of_war']:
-            fog_data = save_data['fog_of_war']
-            self.fog_of_war = FogOfWar(
-                fog_data['width'],
-                fog_data['height'],
-                fog_data['num_players']
-            )
-            
-            # Restore visibility states
-            for player_id_str, vis_map in fog_data['visibility_maps'].items():
-                player_id = int(player_id_str)
-                for coord_str, state_value in vis_map.items():
-                    x, y = map(int, coord_str.split(','))
-                    self.fog_of_war.visibility_maps[player_id][(x, y)] = VisibilityState(state_value)
-        else:
-            self.fog_of_war = FogOfWar(self.board_width, self.board_height, 2)
-            
         # Re-update fog of war to ensure consistency
         self._update_all_fog_of_war()
+    
+    def _sync_hex_layout_with_zoom(self):
+        """Synchronize hex layout with camera manager zoom level (original working implementation)."""
+        if hasattr(self, 'camera_manager'):
+            base_hex_size = 36
+            expected_hex_size = int(base_hex_size * self.camera_manager.zoom_level)
+            
+            if self.hex_layout.hex_size != expected_hex_size:
+                from game.hex_layout import HexLayout
+                self.hex_layout = HexLayout(hex_size=expected_hex_size, orientation='flat')

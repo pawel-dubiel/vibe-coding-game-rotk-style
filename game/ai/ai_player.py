@@ -418,7 +418,7 @@ class AIPlayer:
                         knight.consume_move_ap()
                         game_state.pending_positions[id(knight)] = (target_x, target_y)
                         anim = MoveAnimation(knight, start_x, start_y, target_x, target_y, game_state=game_state)
-                        game_state.animation_manager.add_animation(anim)
+                        game_state.animation_coordinator.animation_manager.add_animation(anim)
                         actions_taken.append(f"{knight.name} moved to ({target_x}, {target_y})")
             
             elif move_type == 'attack':
@@ -436,7 +436,7 @@ class AIPlayer:
                     
                     # Add animation - animation will apply damage when projectile hits
                     anim = AttackAnimation(knight, target, damage)
-                    game_state.animation_manager.add_animation(anim)
+                    game_state.animation_coordinator.animation_manager.add_animation(anim)
                     
                     actions_taken.append(f"{knight.name} attacked {target.name} for {damage} damage")
         

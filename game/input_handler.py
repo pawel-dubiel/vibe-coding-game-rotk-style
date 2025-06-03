@@ -17,7 +17,7 @@ class InputHandler:
         self.max_zoom = 3.0
     
     def handle_event(self, event, game_state):
-        if game_state.ai_thinking or game_state.animation_manager.is_animating():
+        if game_state.ai_thinking or game_state.animation_coordinator.is_animating():
             return
             
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -40,12 +40,12 @@ class InputHandler:
                     return
                 
                 if game_state.current_action == 'move':
-                    move_tile_x, move_tile_y = self.hex_layout.pixel_to_hex(x, y)
+                    move_tile_x, move_tile_y = game_state.hex_layout.pixel_to_hex(x, y)
                     if game_state.move_selected_knight_hex(move_tile_x, move_tile_y):
                         game_state.current_action = None
                         game_state.possible_moves = []
                 elif game_state.current_action == 'attack':
-                    attack_tile_x, attack_tile_y = self.hex_layout.pixel_to_hex(x, y)
+                    attack_tile_x, attack_tile_y = game_state.hex_layout.pixel_to_hex(x, y)
                     if game_state.attack_with_selected_knight_hex(attack_tile_x, attack_tile_y):
                         game_state.current_action = None
                         game_state.attack_targets = []
@@ -65,7 +65,7 @@ class InputHandler:
                         else:
                             game_state.add_message("Cannot attack - no unit selected", priority=1)
                 elif game_state.current_action == 'charge':
-                    charge_tile_x, charge_tile_y = self.hex_layout.pixel_to_hex(x, y)
+                    charge_tile_x, charge_tile_y = game_state.hex_layout.pixel_to_hex(x, y)
                     if game_state.charge_with_selected_knight_hex(charge_tile_x, charge_tile_y):
                         game_state.current_action = None
                         game_state.attack_targets = []
@@ -78,7 +78,7 @@ class InputHandler:
                             game_state.add_message(f"Cannot charge: {reason}", priority=1)
                 else:
                     # Use hex layout to convert click to hex coordinates
-                    tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
+                    tile_x, tile_y = game_state.hex_layout.pixel_to_hex(x, y)
                     knight = game_state.get_knight_at(tile_x, tile_y)
                     
                     if knight:
@@ -199,32 +199,54 @@ class InputHandler:
     
     def zoom_in(self, game_state):
         """Zoom in the view"""
-        old_zoom = self.zoom_level
-        self.zoom_level = min(self.max_zoom, self.zoom_level * 1.2)
-        if self.zoom_level != old_zoom:
-            self.update_zoom(game_state)
+        if hasattr(game_state, 'camera_manager'):
+            if game_state.camera_manager.zoom_in():
+                self.update_zoom(game_state)
+        else:
+            # Legacy fallback
+            old_zoom = self.zoom_level
+            self.zoom_level = min(self.max_zoom, self.zoom_level * 1.2)
+            if self.zoom_level != old_zoom:
+                self.update_zoom(game_state)
     
     def zoom_out(self, game_state):
         """Zoom out the view"""
-        old_zoom = self.zoom_level
-        self.zoom_level = max(self.min_zoom, self.zoom_level / 1.2)
-        if self.zoom_level != old_zoom:
-            self.update_zoom(game_state)
+        if hasattr(game_state, 'camera_manager'):
+            if game_state.camera_manager.zoom_out():
+                self.update_zoom(game_state)
+        else:
+            # Legacy fallback
+            old_zoom = self.zoom_level
+            self.zoom_level = max(self.min_zoom, self.zoom_level / 1.2)
+            if self.zoom_level != old_zoom:
+                self.update_zoom(game_state)
     
     def update_zoom(self, game_state):
-        """Update hex grid and layout with new zoom level"""
-        new_hex_size = int(36 * self.zoom_level)
+        """Update hex grid and layout with new zoom level (original working implementation)"""
+        # Get zoom level from camera manager if available, otherwise use local zoom
+        zoom_level = getattr(game_state.camera_manager, 'zoom_level', self.zoom_level) if hasattr(game_state, 'camera_manager') else self.zoom_level
+        
+        # Scale hex size based on zoom level
+        new_hex_size = int(36 * zoom_level)
         self.hex_grid = HexGrid(hex_size=new_hex_size)
         self.hex_layout = HexLayout(hex_size=new_hex_size, orientation='flat')
-        
-        # Update renderer's hex grid and layout
-        if hasattr(game_state, 'renderer'):
-            game_state.renderer.hex_grid = self.hex_grid
-            game_state.renderer.hex_layout = self.hex_layout
         
         # Update game_state's hex_layout to ensure coordinate conversion consistency
         if hasattr(game_state, 'hex_layout'):
             game_state.hex_layout = self.hex_layout
+            
+        # Update renderer's hex_layout if available to maintain consistency
+        if hasattr(game_state, 'renderer') and hasattr(game_state.renderer, 'hex_layout'):
+            game_state.renderer.hex_layout = self.hex_layout
+            game_state.renderer.hex_grid = self.hex_grid
+            # Update all sub-renderers if using the new rendering system
+            if hasattr(game_state.renderer, 'terrain_renderer'):
+                game_state.renderer.terrain_renderer.hex_layout = self.hex_layout
+                game_state.renderer.terrain_renderer.hex_grid = self.hex_grid
+            if hasattr(game_state.renderer, 'unit_renderer'):
+                game_state.renderer.unit_renderer.hex_layout = self.hex_layout
+            if hasattr(game_state.renderer, 'effect_renderer'):
+                game_state.renderer.effect_renderer.hex_layout = self.hex_layout
     
     def screen_to_world_zoom_aware(self, screen_x, screen_y, game_state):
         """Convert screen coordinates to world coordinates accounting for zoom"""
