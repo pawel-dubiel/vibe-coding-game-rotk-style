@@ -512,9 +512,11 @@ class GameState(IGameState):
         
         if distance <= attack_range:
             target = self.get_knight_at(tile_x, tile_y)
-            if target and target.player_id != self.current_player:
-                # Use attack behavior if available (which includes terrain-based AP costs and line of sight)
-                if hasattr(self.selected_knight, 'behaviors') and 'attack' in self.selected_knight.behaviors:
+            if not target or target.player_id == self.current_player:
+                return False
+
+            # Use attack behavior if available (which includes terrain-based AP costs and line of sight)
+            if hasattr(self.selected_knight, 'behaviors') and 'attack' in self.selected_knight.behaviors:
                     attack_behavior = self.selected_knight.behaviors['attack']
                     # Check if target is valid (includes line of sight for archers)
                     valid_targets = attack_behavior.get_valid_targets(self.selected_knight, self)
