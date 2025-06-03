@@ -75,14 +75,18 @@ class CameraManager:
         
     def world_to_screen(self, world_x: float, world_y: float) -> Tuple[float, float]:
         """Convert world coordinates to screen coordinates."""
-        screen_x = (world_x - self.camera_x) * self.zoom_level
-        screen_y = (world_y - self.camera_y) * self.zoom_level
+        # Hex layout scaling already applies the zoom level. Avoid doubling the
+        # effect by removing the extra multiplication here.
+        screen_x = world_x - self.camera_x
+        screen_y = world_y - self.camera_y
         return screen_x, screen_y
-        
+
     def screen_to_world(self, screen_x: float, screen_y: float) -> Tuple[float, float]:
         """Convert screen coordinates to world coordinates."""
-        world_x = screen_x / self.zoom_level + self.camera_x
-        world_y = screen_y / self.zoom_level + self.camera_y
+        # Mirror world_to_screen logic to maintain consistency with the scaled
+        # hex layout approach.
+        world_x = screen_x + self.camera_x
+        world_y = screen_y + self.camera_y
         return world_x, world_y
         
     def get_viewport_bounds(self) -> Tuple[float, float, float, float]:
