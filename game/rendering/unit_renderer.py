@@ -52,20 +52,20 @@ class UnitRenderer:
     
     def _should_render_unit(self, unit, game_state) -> bool:
         """Check if unit should be rendered based on fog of war."""
-        if not hasattr(game_state, 'fog_of_war') or game_state.current_player is None:
+        if not hasattr(game_state, 'fog_of_war') or game_state.fog_view_player is None:
             return True
-        
-        visibility = game_state.fog_of_war.get_visibility_state(game_state.current_player, unit.x, unit.y)
+
+        visibility = game_state.fog_of_war.get_visibility_state(game_state.fog_view_player, unit.x, unit.y)
         return visibility in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]
     
     def _should_render_castle(self, castle, game_state) -> bool:
         """Check if castle should be rendered based on fog of war."""
-        if not hasattr(game_state, 'fog_of_war') or game_state.current_player is None:
+        if not hasattr(game_state, 'fog_of_war') or game_state.fog_view_player is None:
             return True
         
         # Check if any castle tile is visible
         for tile_x, tile_y in castle.occupied_tiles:
-            visibility = game_state.fog_of_war.get_visibility_state(game_state.current_player, tile_x, tile_y)
+            visibility = game_state.fog_of_war.get_visibility_state(game_state.fog_view_player, tile_x, tile_y)
             if visibility in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]:
                 return True
         return False
@@ -113,11 +113,11 @@ class UnitRenderer:
     
     def _is_unit_identified(self, unit, game_state) -> bool:
         """Check if unit is fully identified (not just detected)."""
-        if not hasattr(game_state, 'fog_of_war') or game_state.current_player is None:
+        if not hasattr(game_state, 'fog_of_war') or game_state.fog_view_player is None:
             return True
-        
-        visibility = game_state.fog_of_war.get_visibility_state(game_state.current_player, unit.x, unit.y)
-        return (visibility == VisibilityState.VISIBLE or unit.player_id == game_state.current_player)
+
+        visibility = game_state.fog_of_war.get_visibility_state(game_state.fog_view_player, unit.x, unit.y)
+        return (visibility == VisibilityState.VISIBLE or unit.player_id == game_state.fog_view_player)
     
     def _render_unit_sprite(self, unit, screen_x: float, screen_y: float, is_identified: bool):
         """Render the unit sprite based on type and identification status."""

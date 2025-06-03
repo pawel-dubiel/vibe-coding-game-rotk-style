@@ -185,8 +185,8 @@ class TerrainRenderer:
         """Apply fog of war overlay based on visibility state."""
         # Check fog of war visibility
         visibility = VisibilityState.VISIBLE  # Default for no fog
-        if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
-            visibility = game_state.fog_of_war.get_visibility_state(game_state.current_player, col, row)
+        if hasattr(game_state, 'fog_of_war') and game_state.fog_view_player is not None:
+            visibility = game_state.fog_of_war.get_visibility_state(game_state.fog_view_player, col, row)
         
         # Apply fog overlay for non-visible hexes
         if visibility != VisibilityState.VISIBLE:
