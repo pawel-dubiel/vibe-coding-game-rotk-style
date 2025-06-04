@@ -52,10 +52,10 @@ GENERAL_ARCHETYPES = {
 
 # Name pools for generating general names
 FIRST_NAMES = [
-    "Marcus", "Julius", "Gaius", "Alexander", "Leonidas", "Hannibal",
-    "Scipio", "Augustus", "Trajan", "Constantine", "Belisarius", "Arthur",
-    "Roland", "Charlemagne", "William", "Richard", "Edward", "Henry",
-    "Frederick", "Gustav", "Napoleon", "Wellington", "Grant", "Lee"
+    "Mieszko", "Siemomysł", "Bolesław", "Kazimierz", "Włodzimierz", "Czcibor",
+    "Dobiesław", "Odon", "Świętopełk", "Leszek", "Zbigniew", "Władysław",
+    "Przemysław", "Bronisław", "Mirosław", "Stanisław", "Henryk", "Janusz",
+    "Krzesimir", "Jaromir", "Bogusław", "Dobromir", "Witosław", "Radosław"
 ]
 
 EPITHETS = [

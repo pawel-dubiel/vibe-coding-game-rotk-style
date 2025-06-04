@@ -43,12 +43,13 @@ class TestGeneralSystem(unittest.TestCase):
         )
         unit.generals.add_general(general)
         
-        # Base morale is 100, Inspire adds 10, level 1 adds 2
+        # Base morale is 100, Inspire adds 5, level 1 adds 1
         self.assertEqual(unit.morale, 100)  # Capped at 100
         
         # Lower morale to see bonus
         unit.stats.stats.morale = 80
-        self.assertEqual(unit.morale, 92)  # 80 + 10 (Inspire) + 2 (level)
+        # With reduced bonuses: +5 Inspire, +1 per level
+        self.assertEqual(unit.morale, 86)  # 80 + 5 (Inspire) + 1 (level)
         
     def test_damage_bonus(self):
         """Test damage bonuses from generals"""
