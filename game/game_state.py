@@ -74,7 +74,7 @@ class GameState(IGameState):
         
         # Hex layout for coordinate conversions
         from game.hex_layout import HexLayout
-        self.hex_layout = HexLayout(hex_size=36, orientation='flat')
+        self.hex_layout = HexLayout(hex_size=36)
         
         # Legacy message properties for compatibility (will be removed)
         self.messages = []
@@ -1011,7 +1011,7 @@ class GameState(IGameState):
             
             if self.hex_layout.hex_size != expected_hex_size:
                 from game.hex_layout import HexLayout
-                self.hex_layout = HexLayout(hex_size=expected_hex_size, orientation='flat')
+                self.hex_layout = HexLayout(hex_size=expected_hex_size)
 
                 # Adjust camera bounds so the board remains fully reachable
                 hl = self.hex_layout

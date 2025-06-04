@@ -5,7 +5,7 @@ from game.hex_layout import HexLayout
 
 class TestHexLayout(unittest.TestCase):
     def setUp(self):
-        self.layout = HexLayout(hex_size=30, orientation='flat')
+        self.layout = HexLayout(hex_size=30)
     
     def test_hex_dimensions(self):
         """Test that hex dimensions are calculated correctly"""
@@ -141,21 +141,6 @@ class TestHexLayout(unittest.TestCase):
                 dist = math.sqrt((neighbor[0] - center[0])**2 + 
                                (neighbor[1] - center[1])**2)
                 self.assertAlmostEqual(dist, expected_dist, places=5)
-
-
-class TestHexLayoutPointyTop(unittest.TestCase):
-    """Test pointy-top orientation"""
-    
-    def setUp(self):
-        self.layout = HexLayout(hex_size=30, orientation='pointy')
-    
-    def test_pointy_hex_dimensions(self):
-        """Test dimensions for pointy-top hexes"""
-        self.assertAlmostEqual(self.layout.hex_width, 30 * math.sqrt(3))
-        self.assertEqual(self.layout.hex_height, 60)
-        self.assertAlmostEqual(self.layout.col_spacing, 30 * math.sqrt(3))
-        self.assertEqual(self.layout.row_spacing, 45)
-        self.assertEqual(self.layout.row_offset, 30)  # hex_height / 2
 
 
 if __name__ == '__main__':

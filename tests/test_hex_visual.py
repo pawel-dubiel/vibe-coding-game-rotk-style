@@ -16,7 +16,7 @@ def visualize_hex_grid():
     clock = pygame.time.Clock()
     
     # Use HexLayout like the game does
-    hex_layout = HexLayout(hex_size=30, orientation='flat')
+    hex_layout = HexLayout(hex_size=30)
     font = pygame.font.Font(None, 20)
     
     running = True
@@ -73,12 +73,11 @@ def visualize_hex_grid():
 
 def test_hex_neighbor_positions():
     """Test that hex neighbors are positioned correctly"""
-    hex_layout = HexLayout(hex_size=30, orientation='flat')
+    hex_layout = HexLayout(hex_size=30)
     hex_grid = HexGrid(hex_size=30)  # For axial coordinate calculations
     
     print("\nHex dimensions (using HexLayout):")
     print(f"Hex size: {hex_layout.hex_size}")
-    print(f"Orientation: {hex_layout.orientation}")
     
     # Test specific positions using HexLayout
     positions = []

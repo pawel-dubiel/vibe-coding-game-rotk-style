@@ -39,7 +39,7 @@ class TestHexRenderingBounds(unittest.TestCase):
                 # Create terrain renderer with updated hex layout
                 hex_size = int(36 * zoom)
                 hex_grid = HexGrid(hex_size=hex_size)
-                hex_layout = HexLayout(hex_size=hex_size, orientation='flat')
+                hex_layout = HexLayout(hex_size=hex_size)
                 terrain_renderer = TerrainRenderer(self.screen, hex_grid, hex_layout)
                 
                 # Position camera to see bottom-right corner
@@ -80,7 +80,7 @@ class TestHexRenderingBounds(unittest.TestCase):
         
         # Create terrain renderer
         hex_grid = HexGrid(hex_size=36)
-        hex_layout = HexLayout(hex_size=36, orientation='flat')
+        hex_layout = HexLayout(hex_size=36)
         terrain_renderer = TerrainRenderer(self.screen, hex_grid, hex_layout)
         
         # Calculate visible range

@@ -22,7 +22,7 @@ class TestHexRenderingZoom(unittest.TestCase):
         
         # Create terrain renderer with initial hex layout
         hex_grid = HexGrid(hex_size=36)
-        hex_layout = HexLayout(hex_size=36, orientation='flat')
+        hex_layout = HexLayout(hex_size=36)
         terrain_renderer = TerrainRenderer(self.screen, hex_grid, hex_layout)
         
         # Test at zoom level 1.0
@@ -53,7 +53,7 @@ class TestHexRenderingZoom(unittest.TestCase):
         self.game_state.camera_manager.zoom_level = 2.0
         # Update hex layout to match zoom
         hex_grid = HexGrid(hex_size=72)  # 36 * 2
-        hex_layout = HexLayout(hex_size=72, orientation='flat')
+        hex_layout = HexLayout(hex_size=72)
         terrain_renderer.hex_grid = hex_grid
         terrain_renderer.hex_layout = hex_layout
         
@@ -71,7 +71,7 @@ class TestHexRenderingZoom(unittest.TestCase):
         self.game_state.camera_manager.zoom_level = 0.5
         # Update hex layout to match zoom
         hex_grid = HexGrid(hex_size=18)  # 36 * 0.5
-        hex_layout = HexLayout(hex_size=18, orientation='flat')
+        hex_layout = HexLayout(hex_size=18)
         terrain_renderer.hex_grid = hex_grid
         terrain_renderer.hex_layout = hex_layout
         
@@ -91,7 +91,7 @@ class TestHexRenderingZoom(unittest.TestCase):
         # Set up hex layout
         hex_size = 36
         hex_grid = HexGrid(hex_size=hex_size)
-        hex_layout = HexLayout(hex_size=hex_size, orientation='flat')
+        hex_layout = HexLayout(hex_size=hex_size)
         terrain_renderer = TerrainRenderer(self.screen, hex_grid, hex_layout)
         
         # Position camera to see right edge of board

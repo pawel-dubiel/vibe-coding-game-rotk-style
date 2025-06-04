@@ -12,7 +12,7 @@ class Renderer:
         self.screen = screen
         self.tile_size = 64
         self.hex_grid = HexGrid(hex_size=36)  # For hex distance calculations
-        self.hex_layout = HexLayout(hex_size=36, orientation='flat')  # For positioning
+        self.hex_layout = HexLayout(hex_size=36)  # For positioning
         self.font = pygame.font.Font(None, 24)
         self.ui_font = pygame.font.Font(None, 32)
         self.asset_manager = AssetManager()
