@@ -9,6 +9,7 @@ class MockTerrain:
     def __init__(self):
         self.type = type('obj', (object,), {'value': 'Plains'})
         self.defense_bonus = 0
+        self.movement_cost = 1
         
     def get_combat_modifier_for_unit(self, unit_class):
         return 1.0

@@ -125,8 +125,8 @@ class TestMovementPaths(unittest.TestCase):
         self.game_state.end_turn()
         
         # Make enemy position not visible in fog
-        self.game_state.fog_of_war._visibility_grid[1][7][7] = VisibilityState.HIDDEN
-        self.game_state.fog_of_war._visibility_grid[1][6][7] = VisibilityState.HIDDEN
+        self.game_state.fog_of_war.visibility_maps[1][(7, 7)] = VisibilityState.HIDDEN
+        self.game_state.fog_of_war.visibility_maps[1][(6, 7)] = VisibilityState.HIDDEN
         
         # The path should exist but not be drawn (tested in renderer)
         unit_id = id(self.p2_unit)

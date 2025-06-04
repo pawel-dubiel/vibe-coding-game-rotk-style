@@ -89,9 +89,9 @@ class CavalryTerrainBehavior(TerrainMovementBehavior):
     def get_combat_modifier(self, terrain_type: TerrainType) -> float:
         """Cavalry combat effectiveness varies by terrain"""
         combat_mods = {
-            TerrainType.PLAINS: 1.15,     # 15% bonus
+            TerrainType.PLAINS: 1.2,      # 20% bonus
             TerrainType.ROAD: 1.1,        # 10% bonus
-            TerrainType.HILLS: 0.8,       # 20% penalty
+            TerrainType.HILLS: 0.85,      # 15% penalty
             TerrainType.FOREST: 0.7,      # 30% penalty
             TerrainType.SWAMP: 0.6,       # 40% penalty
         }

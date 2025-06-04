@@ -16,6 +16,7 @@ class MockTerrain:
     """Mock terrain for testing"""
     def __init__(self):
         self.type = MockTerrainType()
+        self.movement_cost = 1
         
     def get_combat_modifier_for_unit(self, unit_class):
         return 1.0
