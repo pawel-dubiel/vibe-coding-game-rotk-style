@@ -93,15 +93,40 @@ class EffectRenderer:
     
     def _render_attack_effect(self, game_state, animation):
         """Render attack animation effects (flashes, impacts)."""
+        progress = animation.progress if hasattr(animation, 'progress') else animation.get_progress()
+
+        if animation.is_ranged:
+            arrow_pos = animation.get_current_arrow_position()
+            if arrow_pos:
+                arrow_pixel_x, arrow_pixel_y = self.hex_layout.hex_to_pixel(arrow_pos[0], arrow_pos[1])
+                arrow_screen_x, arrow_screen_y = game_state.world_to_screen(arrow_pixel_x, arrow_pixel_y)
+
+                start_pixel_x, start_pixel_y = self.hex_layout.hex_to_pixel(animation.attacker.x, animation.attacker.y)
+                start_screen_x, start_screen_y = game_state.world_to_screen(start_pixel_x, start_pixel_y)
+
+                dx = arrow_screen_x - start_screen_x
+                dy = arrow_screen_y - start_screen_y
+                distance = math.sqrt(dx * dx + dy * dy)
+
+                if distance > 0:
+                    dx /= distance
+                    dy /= distance
+                    arrow_length = 10
+                    arrow_end_x = arrow_screen_x + dx * arrow_length
+                    arrow_end_y = arrow_screen_y + dy * arrow_length
+                    pygame.draw.line(self.screen, self.colors['arrow_color'],
+                                     (arrow_screen_x, arrow_screen_y),
+                                     (arrow_end_x, arrow_end_y), 3)
+
         # Flash effect when attack lands
-        if hasattr(animation, 'progress') and 0.4 <= animation.progress <= 0.6:
+        if 0.45 <= progress <= 0.55:
             # Flash the target area
             target_pixel_x, target_pixel_y = self.hex_layout.hex_to_pixel(animation.target.x, animation.target.y)
             target_screen_x, target_screen_y = game_state.world_to_screen(target_pixel_x, target_pixel_y)
-            
+
             flash_radius = 30
             flash_surface = pygame.Surface((flash_radius * 2, flash_radius * 2), pygame.SRCALPHA)
-            flash_alpha = int(255 * (1.0 - abs(animation.progress - 0.5) * 4))  # Peak at 0.5
+            flash_alpha = int(255 * (1.0 - abs(progress - 0.5) * 4))  # Peak at 0.5
             
             pygame.draw.circle(flash_surface, (*self.colors['attack_flash'], flash_alpha),
                              (flash_radius, flash_radius), flash_radius)

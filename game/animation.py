@@ -1,6 +1,7 @@
 import pygame
 import math
 from game.entities.unit_helpers import check_cavalry_disruption_for_terrain
+from game.entities.knight import KnightClass
 
 class Animation:
     def __init__(self, duration):
@@ -31,6 +32,7 @@ class MoveAnimation(Animation):
     
     def update(self, dt):
         super().update(dt)
+        self.progress = self.get_progress()
         # Update knight's actual position when animation completes
         if self.finished and not self.position_updated:
             self.knight.x = self.end_x
@@ -159,8 +161,9 @@ class PathMoveAnimation(Animation):
         return t * t * (3.0 - 2.0 * t)
 
 class AttackAnimation(Animation):
-    def __init__(self, attacker, target, damage, counter_damage=0, duration=0.8, 
-                 attack_angle=None, extra_morale_penalty=0, should_check_routing=False, game_state=None):
+    def __init__(self, attacker, target, damage, counter_damage=0, duration=0.8,
+                 attack_angle=None, extra_morale_penalty=0, should_check_routing=False,
+                 game_state=None, is_ranged=False):
         super().__init__(duration)
         self.attacker = attacker
         self.target = target
@@ -172,11 +175,15 @@ class AttackAnimation(Animation):
         self.extra_morale_penalty = extra_morale_penalty
         self.should_check_routing = should_check_routing
         self.game_state = game_state
+        # Determine if this should be rendered as a ranged attack
+        self.is_ranged = is_ranged or getattr(attacker, "knight_class", None) == KnightClass.ARCHER
+        self.progress = 0.0
     
     def update(self, dt):
         super().update(dt)
+        self.progress = self.get_progress()
         # Apply casualties when projectile hits (at 50% progress)
-        progress = self.get_progress()
+        progress = self.progress
         if progress >= 0.5 and not self.damage_applied:
             # Calculate casualties before applying
             initial_soldiers = self.target.soldiers
@@ -220,9 +227,20 @@ class AttackAnimation(Animation):
                         
             self.damage_applied = True
         return not self.finished
+
+    def get_current_arrow_position(self):
+        """Return arrow position for ranged attacks before impact."""
+        if not self.is_ranged:
+            return None
+        if self.progress >= 0.5:
+            return None
+        arrow_progress = self.progress * 2
+        x = self.attacker.x + (self.target.x - self.attacker.x) * arrow_progress
+        y = self.attacker.y + (self.target.y - self.attacker.y) * arrow_progress
+        return x, y
     
     def get_effect_position(self):
-        progress = self.get_progress()
+        progress = self.progress
         
         # Attack effect moves from attacker to target
         if progress < 0.5:
