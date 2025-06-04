@@ -55,14 +55,16 @@ class TerrainRenderer:
             screen_height = game_state.camera_manager.screen_height
             zoom_level = game_state.camera_manager.zoom_level
             
-            # Use scaled hex dimensions for proper culling
+            # Calculate visible hex range
+            # The hex_layout dimensions are already scaled by zoom, and the camera coordinates
+            # are in the same scaled space, so we use them directly
             hex_width = self.hex_layout.col_spacing
             hex_height = self.hex_layout.row_spacing
             
             start_col = max(0, int(camera_x / hex_width) - 1)
-            end_col = min(game_state.board_width, int((camera_x + screen_width / zoom_level) / hex_width) + 2)
+            end_col = min(game_state.board_width, int((camera_x + screen_width) / hex_width) + 2)
             start_row = max(0, int(camera_y / hex_height) - 1)
-            end_row = min(game_state.board_height, int((camera_y + screen_height / zoom_level) / hex_height) + 2)
+            end_row = min(game_state.board_height, int((camera_y + screen_height) / hex_height) + 2)
         else:
             # Legacy fallback
             start_col = max(0, int(game_state.camera_x / self.hex_grid.hex_width) - 1)

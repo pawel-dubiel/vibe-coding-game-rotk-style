@@ -1012,3 +1012,19 @@ class GameState(IGameState):
             if self.hex_layout.hex_size != expected_hex_size:
                 from game.hex_layout import HexLayout
                 self.hex_layout = HexLayout(hex_size=expected_hex_size, orientation='flat')
+
+                # Adjust camera bounds so the board remains fully reachable
+                hl = self.hex_layout
+                board_pixel_width = ((self.board_width - 1) * hl.col_spacing +
+                                     hl.hex_width + (hl.row_offset if self.board_height > 1 else 0))
+                board_pixel_height = ((self.board_height - 1) * hl.row_spacing +
+                                      hl.hex_height)
+
+                world_width = int(board_pixel_width * 2)
+                world_height = int(board_pixel_height * 2)
+                self.camera_manager.set_world_bounds(world_width, world_height)
+                # Re-clamp the camera to the new bounds
+                self.camera_manager.set_camera_position(
+                    self.camera_manager.camera_x,
+                    self.camera_manager.camera_y
+                )
