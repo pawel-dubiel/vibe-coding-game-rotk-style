@@ -127,7 +127,8 @@ class AttackBehavior(Behavior):
         # Consume AP (including terrain penalty)
         ap_cost = self.get_ap_cost(unit, target, game_state)
         unit.action_points -= ap_cost
-        # Remove has_acted = True to allow multiple attacks per turn
+        # Mark unit as having acted this turn
+        unit.has_acted = True
         
         # Track attacks this turn and apply progressive morale loss
         if not hasattr(unit, 'attacks_this_turn'):

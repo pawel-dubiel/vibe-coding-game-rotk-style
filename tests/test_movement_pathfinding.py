@@ -39,6 +39,9 @@ class TestMovementPathfinding:
         """Test movement behavior using A* pathfinder"""
         movement = MovementBehavior(pathfinder=AStarPathFinder())
         
+        # Give unit enough action points to reach the target
+        self.unit.action_points = 10
+        
         # Get path to specific location
         path = movement.get_path_to(self.unit, self.game_state, 3, 2)
         

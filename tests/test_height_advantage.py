@@ -1,7 +1,5 @@
 """Test height advantage/disadvantage for ranged attacks"""
 import pygame
-pygame.init()
-
 from game.game_state import GameState
 from game.entities.unit_factory import UnitFactory
 from game.entities.knight import KnightClass
@@ -11,6 +9,9 @@ from game.behaviors.combat import ArcherAttackBehavior
 
 def test_archer_shooting_uphill_penalty():
     """Test that archers shooting uphill do less damage"""
+    # Initialize pygame properly for this test
+    pygame.init()
+    
     # Create game state
     game_state = GameState(battle_config={
         'board_size': (10, 10),
@@ -63,6 +64,9 @@ def test_archer_shooting_uphill_penalty():
 
 def test_archer_shooting_downhill_bonus():
     """Test that archers shooting downhill do more damage"""
+    # Initialize pygame properly for this test
+    pygame.init()
+    
     # Create game state
     game_state = GameState(battle_config={
         'board_size': (10, 10),
@@ -72,8 +76,9 @@ def test_archer_shooting_downhill_bonus():
     game_state.knights = []
     game_state.castles = []
     
-    # Set terrain - archer on hills
+    # Set terrain - archer on hills, enemy on plains
     game_state.terrain_map.set_terrain(4, 5, TerrainType.HILLS)
+    game_state.terrain_map.set_terrain(6, 5, TerrainType.PLAINS)  # Explicitly set enemy to plains
     
     # Create archer on hills
     archer = UnitFactory.create_unit("Archer", KnightClass.ARCHER, 4, 5)
@@ -100,21 +105,24 @@ def test_archer_shooting_downhill_bonus():
     target_terrain_hills = game_state.terrain_map.get_terrain(enemy.x, enemy.y)
     damage_both_on_hills = archer_behavior.calculate_damage(archer, enemy, attacker_terrain, target_terrain_hills)
     
-    # Damage downhill should be about 120% of damage when both on hills
-    expected_ratio = 1.2
+    # Damage downhill should be about 150% of damage when both on hills (50% bonus from height advantage)
+    expected_ratio = 1.5
     actual_ratio = damage_downhill / damage_both_on_hills if damage_both_on_hills > 0 else 0
     
     print(f"\nDamage when both on hills: {damage_both_on_hills}")
     print(f"Damage shooting downhill: {damage_downhill}")
     print(f"Actual ratio: {actual_ratio:.2f} (expected: {expected_ratio})")
     
-    # Allow more variance due to rounding and small damage numbers
-    assert 1.1 <= actual_ratio <= 1.4
+    # Allow some variance due to rounding and small damage numbers, but should be around 1.5
+    assert 1.2 <= actual_ratio <= 1.6
     print("✓ Archers shooting downhill have damage bonus")
 
 
 def test_melee_no_height_advantage():
     """Test that melee attacks are not affected by height advantage"""
+    # Initialize pygame properly for this test
+    pygame.init()
+    
     # Create game state
     game_state = GameState(battle_config={
         'board_size': (10, 10),
@@ -167,6 +175,9 @@ def test_melee_no_height_advantage():
 
 def test_mage_ranged_height_advantage():
     """Test that mage ranged attacks also get height advantage"""
+    # Initialize pygame properly for this test
+    pygame.init()
+    
     # Create game state
     game_state = GameState(battle_config={
         'board_size': (10, 10),

@@ -13,7 +13,6 @@ Tests include:
 import pytest
 import pygame
 import time
-pygame.init()
 
 from game.shadowcasting import SimpleShadowcaster, HexShadowcaster
 from game.visibility import FogOfWar, VisibilityState
@@ -28,17 +27,46 @@ class TestShadowCasting:
     """Test the shadow casting algorithm"""
     
     def setup_method(self):
-        """Setup test environment"""
+        """Setup test environment with completely fresh state"""
+        # Initialize pygame if not already done
+        if not pygame.get_init():
+            pygame.init()
+            
+        # Create completely fresh game state for each test
+        self._create_fresh_game_state()
+        
+    def _create_fresh_game_state(self):
+        """Create completely fresh game state to avoid any contamination"""
         self.game_state = GameState(battle_config={
             'board_size': (20, 20),
             'knights': 0,
             'castles': 0
         })
-        # Clear default units
+        # Ensure completely empty state
         self.game_state.knights = []
         self.game_state.castles = []
+        self.game_state.current_player = 1
+        self.game_state.selected_knight = None
         
+        # Create fresh shadowcaster
         self.shadowcaster = SimpleShadowcaster()
+        
+    def teardown_method(self):
+        """Clean up test environment"""
+        # Clean up game state
+        if hasattr(self, 'game_state'):
+            # Clear all units and castles completely
+            self.game_state.knights.clear()
+            self.game_state.castles.clear()
+            
+            # Reset terrain map to clear any modifications
+            from game.terrain import TerrainMap
+            self.game_state.terrain_map = TerrainMap(self.game_state.board_width, self.game_state.board_height)
+            
+            # Reset any other game state that might affect visibility
+            self.game_state.selected_knight = None
+            if hasattr(self.game_state, 'current_player'):
+                self.game_state.current_player = 1
         
     def test_basic_visibility(self):
         """Test basic visibility calculation without obstacles"""
@@ -158,6 +186,9 @@ class TestShadowCasting:
         
     def test_shadow_sectors(self):
         """Test that shadows propagate correctly in sectors"""
+        # Create completely fresh state for this test
+        self._create_fresh_game_state()
+        
         origin = (10, 10)
         
         # Place a mountain to create a shadow
@@ -209,6 +240,9 @@ class TestShadowCasting:
         
     def test_fog_of_war_integration(self):
         """Test that fog of war correctly uses the shadow casting algorithm"""
+        # Create completely fresh state for this test
+        self._create_fresh_game_state()
+        
         # Ensure starting position is on plains
         self.game_state.terrain_map.set_terrain(5, 5, TerrainType.PLAINS)
         

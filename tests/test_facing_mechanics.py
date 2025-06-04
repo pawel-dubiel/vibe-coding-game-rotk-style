@@ -1,6 +1,7 @@
 """Comprehensive tests for unit facing mechanics"""
 import sys
 import os
+import pygame
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from game.entities.unit_factory import UnitFactory
@@ -15,6 +16,8 @@ class TestFacingMechanics:
     
     def setup_method(self):
         """Set up test environment"""
+        # Ensure pygame is initialized for each test
+        pygame.init()
         self.game_state = MockGameState(board_width=20, board_height=20)
         
     def test_facing_component_exists(self):

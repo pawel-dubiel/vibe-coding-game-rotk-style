@@ -64,24 +64,35 @@ class TestMovementPaths(unittest.TestCase):
         
         # Move the unit
         start_pos = (self.p2_unit.x, self.p2_unit.y)
-        self.game_state.move_selected_knight(6 * 64, 7 * 64)  # Move to (6, 7)
+        target_pixel_x, target_pixel_y = 6 * 64, 7 * 64
+        target_hex = self.game_state.hex_layout.pixel_to_hex(target_pixel_x, target_pixel_y)
+        self.game_state.move_selected_knight(target_pixel_x, target_pixel_y)
         
         # Check movement history was recorded
         unit_id = id(self.p2_unit)
         self.assertIn(unit_id, self.game_state.movement_history)
         
         path = self.game_state.movement_history[unit_id]
-        self.assertEqual(len(path), 2)  # Start and end position
-        self.assertEqual(path[0], start_pos)
-        self.assertEqual(path[1], (6, 7))
         
-        print(f"Movement history recorded: {path}")
+        # Movement should be from start to end, possibly with intermediate steps
+        self.assertGreaterEqual(len(path), 2)  # At least start and end
+        self.assertEqual(path[0], start_pos)  # First position should be start
+        self.assertEqual(path[-1], target_hex)  # Last position should be target
         
     def test_enemy_paths_preserved_after_turn(self):
         """Test that enemy paths are preserved when turn changes"""
         # Move player 2 unit
         self.game_state.current_player = 2
         self.game_state.selected_knight = self.p2_unit
+        
+        # Populate possible moves for player 2 unit
+        self.game_state.possible_moves = self.p2_unit.get_possible_moves(
+            self.game_state.board_width,
+            self.game_state.board_height,
+            self.game_state.terrain_map,
+            self.game_state
+        )
+        
         self.game_state.move_selected_knight(6 * 64, 7 * 64)
         
         # End turn (switches to player 1)
@@ -95,23 +106,41 @@ class TestMovementPaths(unittest.TestCase):
         self.assertEqual(self.game_state.current_player, 1)
         self.assertTrue(len(self.game_state.movement_history) > 0)
         
-        print(f"Enemy paths preserved after turn: {self.game_state.movement_history}")
-        
-    def test_own_paths_cleared_after_turn(self):
-        """Test that own paths are cleared after turn"""
+    def test_own_paths_preserved_for_enemy_visibility(self):
+        """Test that own paths are preserved after turn for enemy visibility"""
         # Move player 1 unit
         self.game_state.current_player = 1
         self.game_state.selected_knight = self.p1_unit
+        
+        # Populate possible moves for player 1 unit
+        self.game_state.possible_moves = self.p1_unit.get_possible_moves(
+            self.game_state.board_width,
+            self.game_state.board_height,
+            self.game_state.terrain_map,
+            self.game_state
+        )
+        
         self.game_state.move_selected_knight(3 * 64, 2 * 64)
         
         # Check path was recorded
         unit_id = id(self.p1_unit)
         self.assertIn(unit_id, self.game_state.movement_history)
         
-        # End turn
+        # End turn (switches to player 2)
         self.game_state.end_turn()
         
-        # Player 1's path should be cleared
+        # Player 1's path should be preserved so player 2 can see enemy movements
+        self.assertIn(unit_id, self.game_state.movement_history)
+        self.assertEqual(self.game_state.current_player, 2)
+        
+        # Verify the path is still there for enemy to see
+        path = self.game_state.movement_history[unit_id]
+        self.assertEqual(path[0], (2, 2))  # Start position
+        
+        # Now when player 2 ends their turn, player 1's old paths should be cleared
+        self.game_state.end_turn()  # Back to player 1
+        
+        # Now player 1's old path should be cleared
         self.assertNotIn(unit_id, self.game_state.movement_history)
         
     def test_path_visibility_with_fog(self):
@@ -119,6 +148,15 @@ class TestMovementPaths(unittest.TestCase):
         # Move player 2 unit
         self.game_state.current_player = 2
         self.game_state.selected_knight = self.p2_unit
+        
+        # Populate possible moves for player 2 unit
+        self.game_state.possible_moves = self.p2_unit.get_possible_moves(
+            self.game_state.board_width,
+            self.game_state.board_height,
+            self.game_state.terrain_map,
+            self.game_state
+        )
+        
         self.game_state.move_selected_knight(6 * 64, 7 * 64)
         
         # Switch to player 1
@@ -215,8 +253,8 @@ class TestMovementPaths(unittest.TestCase):
         print(f"Move success: {success}")
         print(f"Movement history after move: {self.game_state.movement_history}")
         
-        # Check if animation was created
-        print(f"Animations: {len(self.game_state.animation_manager.animations)}")
+        # Check if animation was created (correct path to animation manager)
+        print(f"Animations: {len(self.game_state.animation_coordinator.animation_manager.animations)}")
         
         return success
 

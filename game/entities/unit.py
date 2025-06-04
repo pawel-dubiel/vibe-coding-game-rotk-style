@@ -682,16 +682,9 @@ class Unit:
             self.x = new_x
             self.y = new_y
             
-            # Update facing using movement behavior if available
-            if 'move' in self.behaviors:
-                movement_behavior = self.behaviors['move']
-                if hasattr(movement_behavior, 'execute'):
-                    # Let movement behavior handle facing updates
-                    pass
-            else:
-                # Fallback facing update
-                if hasattr(self, 'facing'):
-                    self.facing.update_facing_from_movement(old_x, old_y, new_x, new_y)
+            # Update facing based on movement direction
+            if hasattr(self, 'facing'):
+                self.facing.update_facing_from_movement(old_x, old_y, new_x, new_y)
             
             movement_service.consume_movement_ap(self, 1.0)
             return True
