@@ -247,6 +247,26 @@ class InputHandler:
                 game_state.renderer.unit_renderer.hex_layout = self.hex_layout
             if hasattr(game_state.renderer, 'effect_renderer'):
                 game_state.renderer.effect_renderer.hex_layout = self.hex_layout
+
+        # Update camera manager world bounds so the camera can pan to the
+        # board edges even at high zoom levels. Calculate approximate board
+        # pixel dimensions from the hex layout and scale by 2 to match the
+        # camera manager's internal bounds logic.
+        if hasattr(game_state, 'camera_manager'):
+            hl = self.hex_layout
+            board_pixel_width = ((game_state.board_width - 1) * hl.col_spacing +
+                                 hl.hex_width + (hl.row_offset if game_state.board_height > 1 else 0))
+            board_pixel_height = ((game_state.board_height - 1) * hl.row_spacing +
+                                  hl.hex_height)
+
+            world_width = int(board_pixel_width * 2)
+            world_height = int(board_pixel_height * 2)
+            game_state.camera_manager.set_world_bounds(world_width, world_height)
+            # Re-apply current camera position so it remains clamped to the new bounds
+            game_state.camera_manager.set_camera_position(
+                game_state.camera_manager.camera_x,
+                game_state.camera_manager.camera_y
+            )
     
     def screen_to_world_zoom_aware(self, screen_x, screen_y, game_state):
         """Convert screen coordinates to world coordinates accounting for zoom"""
