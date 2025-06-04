@@ -12,7 +12,7 @@ board_width, board_height = 20, 15
 hex_size = 36
 
 # Create hex layout and camera
-hex_layout = HexLayout(hex_size=hex_size, orientation='flat')
+hex_layout = HexLayout(hex_size=hex_size)
 camera = CameraManager(screen_width, screen_height)
 
 # Test at different zoom levels
@@ -23,7 +23,7 @@ for zoom in zoom_levels:
     
     # Update hex layout for zoom
     scaled_hex_size = int(36 * zoom)
-    hex_layout = HexLayout(hex_size=scaled_hex_size, orientation='flat')
+    hex_layout = HexLayout(hex_size=scaled_hex_size)
     camera.set_zoom(zoom)
     
     # Position camera at bottom-right to test edge visibility

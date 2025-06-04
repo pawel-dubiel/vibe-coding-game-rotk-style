@@ -11,7 +11,7 @@ class InputHandler:
         self.camera_drag_start_x = 0
         self.camera_drag_start_y = 0
         self.hex_grid = HexGrid(hex_size=36)  # For hex distance calculations
-        self.hex_layout = HexLayout(hex_size=36, orientation='flat')  # For positioning
+        self.hex_layout = HexLayout(hex_size=36)  # For positioning
         self.zoom_level = 1.0
         self.min_zoom = 0.5
         self.max_zoom = 3.0
@@ -229,7 +229,7 @@ class InputHandler:
         # Scale hex size based on zoom level
         new_hex_size = int(36 * zoom_level)
         self.hex_grid = HexGrid(hex_size=new_hex_size)
-        self.hex_layout = HexLayout(hex_size=new_hex_size, orientation='flat')
+        self.hex_layout = HexLayout(hex_size=new_hex_size)
         
         # Update game_state's hex_layout to ensure coordinate conversion consistency
         if hasattr(game_state, 'hex_layout'):

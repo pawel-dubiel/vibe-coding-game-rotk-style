@@ -21,7 +21,7 @@ class CoreRenderer:
         
         # Initialize hex system
         self.hex_grid = HexGrid(hex_size=36)
-        self.hex_layout = HexLayout(hex_size=36, orientation='flat')
+        self.hex_layout = HexLayout(hex_size=36)
         
         # Initialize specialized renderers
         self.terrain_renderer = TerrainRenderer(screen, self.hex_grid, self.hex_layout)
