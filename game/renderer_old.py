@@ -194,8 +194,8 @@ class Renderer:
                 
                 # Check fog of war visibility and apply overlay
                 visibility = VisibilityState.VISIBLE  # Default for no fog
-                if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
-                    visibility = game_state.fog_of_war.get_visibility_state(game_state.current_player, col, row)
+                if hasattr(game_state, 'fog_of_war') and game_state.fog_view_player is not None:
+                    visibility = game_state.fog_of_war.get_visibility_state(game_state.fog_view_player, col, row)
                 
                 # Apply fog overlay for non-visible hexes
                 if visibility != VisibilityState.VISIBLE:
@@ -342,9 +342,9 @@ class Renderer:
         for castle in game_state.castles:
             # Check if any part of the castle is visible
             castle_visible = False
-            if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
+            if hasattr(game_state, 'fog_of_war') and game_state.fog_view_player is not None:
                 for tile_x, tile_y in castle.occupied_tiles:
-                    visibility = game_state.fog_of_war.get_visibility_state(game_state.current_player, tile_x, tile_y)
+                    visibility = game_state.fog_of_war.get_visibility_state(game_state.fog_view_player, tile_x, tile_y)
                     if visibility in [VisibilityState.VISIBLE, VisibilityState.PARTIAL, VisibilityState.EXPLORED]:
                         castle_visible = True
                         break
@@ -419,8 +419,8 @@ class Renderer:
         for knight in game_state.knights:
             # Check fog of war visibility
             is_identified = True  # Default to identified if no fog of war
-            if hasattr(game_state, 'fog_of_war') and game_state.current_player is not None:
-                visibility = game_state.fog_of_war.get_visibility_state(game_state.current_player, knight.x, knight.y)
+            if hasattr(game_state, 'fog_of_war') and game_state.fog_view_player is not None:
+                visibility = game_state.fog_of_war.get_visibility_state(game_state.fog_view_player, knight.x, knight.y)
                 
                 # Don't draw units we can't see
                 if visibility not in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]:

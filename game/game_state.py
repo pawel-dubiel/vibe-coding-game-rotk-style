@@ -46,6 +46,11 @@ class GameState(IGameState):
         self.selected_knight = None
         self.possible_moves = []
         self.turn_number = 1
+
+        # Determine which player's perspective to use for fog of war rendering
+        # When playing vs AI we always view from player 1's perspective
+        # In multiplayer mode we view the current player's perspective
+        # This is exposed via the fog_view_player property
         
         self.vs_ai = vs_ai
         self.ai_player = AIPlayer(2, 'medium') if vs_ai else None
@@ -99,6 +104,11 @@ class GameState(IGameState):
         if hasattr(self, 'camera_manager'):
             self.camera_manager.camera_x = self.camera_x
             self.camera_manager.camera_y = self.camera_y
+
+    @property
+    def fog_view_player(self) -> int:
+        """Player id whose vision should be used for rendering."""
+        return 1 if self.vs_ai else self.current_player
     
     def _init_game(self):
         
@@ -868,7 +878,7 @@ class GameState(IGameState):
             if knight.player_id != self.current_player:
                 # Check fog of war visibility
                 if hasattr(self, 'fog_of_war'):
-                    visibility = self.fog_of_war.get_visibility_state(self.current_player, knight.x, knight.y)
+                    visibility = self.fog_of_war.get_visibility_state(self.fog_view_player, knight.x, knight.y)
                     if visibility != VisibilityState.VISIBLE:
                         continue  # Skip invisible units
                 
@@ -900,7 +910,7 @@ class GameState(IGameState):
                     not knight.is_garrisoned):
                     # Check fog of war visibility
                     if hasattr(self, 'fog_of_war'):
-                        visibility = self.fog_of_war.get_visibility_state(self.current_player, knight.x, knight.y)
+                        visibility = self.fog_of_war.get_visibility_state(self.fog_view_player, knight.x, knight.y)
                         if visibility != VisibilityState.VISIBLE:
                             continue  # Skip invisible units
                     
@@ -928,7 +938,7 @@ class GameState(IGameState):
         
         # Check fog of war visibility
         if hasattr(self, 'fog_of_war'):
-            visibility = self.fog_of_war.get_visibility_state(self.current_player, tile_x, tile_y)
+            visibility = self.fog_of_war.get_visibility_state(self.fog_view_player, tile_x, tile_y)
             if visibility != VisibilityState.VISIBLE:
                 return {
                     'can_charge': False,
