@@ -23,7 +23,7 @@ Welcome to the Castle Knights tactical combat game documentation. This directory
 - **[Terrain Effects](../TERRAIN_EFFECTS.md)** *(Planned)* - How terrain affects combat and movement
 - **[General Abilities](../GENERAL_ABILITIES.md)** *(Planned)* - Command abilities and strategies
 - **[Unit Facing](../UNIT_FACING.md)** *(Planned)* - Facing mechanics and flanking attacks
-- **[Zone of Control](../ZONE_OF_CONTROL.md)** *(Planned)* - ZOC rules and tactical positioning
+- **[Zone of Control](zone_of_control.md)** - ZOC rules and tactical positioning
 
 ### 🛠️ Technical Documentation
 
