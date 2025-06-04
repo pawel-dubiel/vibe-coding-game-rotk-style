@@ -4,7 +4,8 @@ Based on recursive shadowcasting adapted for hexagonal grids.
 """
 from typing import Dict, Tuple, List
 from dataclasses import dataclass
-from game.hex_utils import HexCoord, HexGrid
+from game.hex_utils import HexCoord
+from game.hex_layout import HexLayout
 
 
 @dataclass
@@ -29,7 +30,7 @@ class HexShadowcaster:
     """
     
     def __init__(self):
-        self.hex_grid = HexGrid()
+        self.hex_layout = HexLayout()
         # Pre-calculate hex directions for the 6 sextants
         self._init_sextants()
         
@@ -68,7 +69,7 @@ class HexShadowcaster:
         visible_hexes = {origin: 0}  # Always see your own position
         
         # Convert origin to hex coordinates
-        origin_hex = self.hex_grid.offset_to_axial(origin[0], origin[1])
+        origin_hex = self.hex_layout.offset_to_axial(origin[0], origin[1])
         
         # Process each of the 6 sextants
         for sextant in self.sextants:
@@ -96,7 +97,7 @@ class HexShadowcaster:
             
             for hex_pos, angle_start, angle_end in ring_hexes:
                 # Convert back to offset coordinates
-                offset_x, offset_y = self.hex_grid.axial_to_offset(hex_pos)
+                offset_x, offset_y = self.hex_layout.axial_to_offset(hex_pos)
                 
                 # Check if this hex is in valid bounds
                 if not (0 <= offset_x < game_state.board_width and 
@@ -272,7 +273,7 @@ class SimpleShadowcaster:
     """
     
     def __init__(self):
-        self.hex_grid = HexGrid()
+        self.hex_layout = HexLayout()
     
     def calculate_visible_hexes(self, game_state, origin: Tuple[int, int],
                                max_range: int, is_elevated: bool = False) -> Dict[Tuple[int, int], int]:
@@ -281,7 +282,7 @@ class SimpleShadowcaster:
         More efficient than checking line-of-sight to every hex.
         """
         visible_hexes = {origin: 0}
-        origin_hex = self.hex_grid.offset_to_axial(origin[0], origin[1])
+        origin_hex = self.hex_layout.offset_to_axial(origin[0], origin[1])
         
         # Instead of tracking blocked sectors, check line of sight for each hex
         # This is more accurate for hex grids where "sectors" don't map cleanly
@@ -293,7 +294,7 @@ class SimpleShadowcaster:
             
             for hex_coord in ring_hexes:
                 # Convert to offset coordinates
-                offset_x, offset_y = self.hex_grid.axial_to_offset(hex_coord)
+                offset_x, offset_y = self.hex_layout.axial_to_offset(hex_coord)
                 offset_pos = (offset_x, offset_y)
                 
                 # Check bounds
@@ -359,16 +360,16 @@ class SimpleShadowcaster:
     def _check_visibility_simple(game_state, origin: Tuple[int, int],
                                 target: Tuple[int, int], is_elevated: bool) -> bool:
         """Check visibility along the line between origin and target"""
-        hex_grid = HexGrid()
-        origin_hex = hex_grid.offset_to_axial(origin[0], origin[1])
-        target_hex = hex_grid.offset_to_axial(target[0], target[1])
+        hex_layout = HexLayout()
+        origin_hex = hex_layout.offset_to_axial(origin[0], origin[1])
+        target_hex = hex_layout.offset_to_axial(target[0], target[1])
         
         # Get all hexes along the line
-        line_hexes = HexGrid.get_line(origin_hex, target_hex)
+        line_hexes = HexLayout.get_line(origin_hex, target_hex)
         
         # Check each hex for blocking (except origin and target)
         for i, hex_coord in enumerate(line_hexes[1:-1], 1):
-            offset_x, offset_y = hex_grid.axial_to_offset(hex_coord)
+            offset_x, offset_y = hex_layout.axial_to_offset(hex_coord)
             
             # Check bounds
             if not (0 <= offset_x < game_state.board_width and 

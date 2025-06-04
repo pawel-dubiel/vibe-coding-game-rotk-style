@@ -13,7 +13,8 @@ from typing import Dict, List, Tuple, Set, Optional
 import math
 from dataclasses import dataclass
 
-from game.hex_utils import HexCoord, HexGrid
+from game.hex_utils import HexCoord
+from game.hex_layout import HexLayout
 from game.shadowcasting import SimpleShadowcaster
 
 
@@ -181,9 +182,9 @@ class FogOfWar:
                           target: Tuple[int, int], is_elevated: bool) -> bool:
         """Check if there's line of sight between two hexes."""
         # Simple line of sight - check each hex along the path
-        hex_grid = HexGrid()
-        origin_hex = hex_grid.offset_to_axial(origin[0], origin[1])
-        target_hex = hex_grid.offset_to_axial(target[0], target[1])
+        hex_layout = HexLayout()
+        origin_hex = hex_layout.offset_to_axial(origin[0], origin[1])
+        target_hex = hex_layout.offset_to_axial(target[0], target[1])
         
         # Get line between hexes
         line_hexes = self._get_line(origin_hex, target_hex)
@@ -191,7 +192,7 @@ class FogOfWar:
         # Check each hex along the line for blocking
         for i, hex_coord in enumerate(line_hexes[1:-1], 1):  # Skip origin and target
             # Convert back to offset coordinates
-            hex_x, hex_y = hex_grid.axial_to_offset(hex_coord)
+            hex_x, hex_y = hex_layout.axial_to_offset(hex_coord)
             
             # Check terrain blocking
             terrain = game_state.terrain_map.get_terrain(hex_x, hex_y)
@@ -246,10 +247,10 @@ class FogOfWar:
                           target: Tuple[int, int]) -> bool:
         """Check if target is behind blocker from viewer's perspective."""
         # Simple check: if blocker is between viewer and target on the line
-        hex_grid = HexGrid()
-        viewer_hex = hex_grid.offset_to_axial(viewer[0], viewer[1])
-        blocker_hex = hex_grid.offset_to_axial(blocker[0], blocker[1])
-        target_hex = hex_grid.offset_to_axial(target[0], target[1])
+        hex_layout = HexLayout()
+        viewer_hex = hex_layout.offset_to_axial(viewer[0], viewer[1])
+        blocker_hex = hex_layout.offset_to_axial(blocker[0], blocker[1])
+        target_hex = hex_layout.offset_to_axial(target[0], target[1])
         
         # Calculate distances
         viewer_to_blocker = viewer_hex.distance_to(blocker_hex)
@@ -383,15 +384,15 @@ class FogOfWar:
         
         for pos in changed_positions:
             # Get hexes that might be affected by change at this position
-            hex_grid = HexGrid()
-            center_hex = hex_grid.offset_to_axial(pos[0], pos[1])
+            hex_layout = HexLayout()
+            center_hex = hex_layout.offset_to_axial(pos[0], pos[1])
             
             # Check all hexes within max vision range
             for y in range(max(0, pos[1] - max_vision_range), 
                           min(self.height, pos[1] + max_vision_range + 1)):
                 for x in range(max(0, pos[0] - max_vision_range), 
                               min(self.width, pos[0] + max_vision_range + 1)):
-                    target_hex = hex_grid.offset_to_axial(x, y)
+                    target_hex = hex_layout.offset_to_axial(x, y)
                     if center_hex.distance_to(target_hex) <= max_vision_range:
                         updated_hexes.add((x, y))
                         
@@ -412,9 +413,9 @@ class FogOfWar:
                 
                 # Only check visibility for affected hexes within this unit's range
                 for hex_pos in updated_hexes:
-                    hex_grid = HexGrid()
-                    unit_hex = hex_grid.offset_to_axial(unit.x, unit.y)
-                    target_hex = hex_grid.offset_to_axial(hex_pos[0], hex_pos[1])
+                    hex_layout = HexLayout()
+                    unit_hex = hex_layout.offset_to_axial(unit.x, unit.y)
+                    target_hex = hex_layout.offset_to_axial(hex_pos[0], hex_pos[1])
                     distance = unit_hex.distance_to(target_hex)
                     
                     if distance <= vision_range:

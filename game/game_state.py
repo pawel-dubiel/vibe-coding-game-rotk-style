@@ -6,7 +6,7 @@ from game.entities.castle import Castle
 from game.ai.ai_player import AIPlayer
 from game.ui.context_menu import ContextMenu
 from game.terrain import TerrainMap
-from game.hex_utils import HexGrid, HexCoord
+from game.hex_utils import HexCoord
 from game.interfaces.game_state import IGameState
 from game.visibility import FogOfWar, VisibilityState
 from game.state import MessageSystem, CameraManager, VictoryManager, StateSerializer, AnimationCoordinator
@@ -514,9 +514,8 @@ class GameState(IGameState):
             return False
         
         # Calculate hex distance for attack range
-        hex_grid = HexGrid()
-        attacker_hex = hex_grid.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
-        target_hex = hex_grid.offset_to_axial(tile_x, tile_y)
+        attacker_hex = self.hex_layout.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
+        target_hex = self.hex_layout.offset_to_axial(tile_x, tile_y)
         distance = attacker_hex.distance_to(target_hex)
         attack_range = 1 if self.selected_knight.knight_class != KnightClass.ARCHER else 3
         
@@ -643,9 +642,8 @@ class GameState(IGameState):
         tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
         
         # Calculate hex distance for attack range
-        hex_grid = HexGrid()
-        attacker_hex = hex_grid.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
-        target_hex = hex_grid.offset_to_axial(tile_x, tile_y)
+        attacker_hex = self.hex_layout.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
+        target_hex = self.hex_layout.offset_to_axial(tile_x, tile_y)
         distance = attacker_hex.distance_to(target_hex)
         attack_range = 1 if self.selected_knight.knight_class != KnightClass.ARCHER else 3
         
@@ -873,8 +871,7 @@ class GameState(IGameState):
         
         targets = []
         attack_range = 1 if self.selected_knight.knight_class != KnightClass.ARCHER else 3
-        hex_grid = HexGrid()
-        attacker_hex = hex_grid.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
+        attacker_hex = self.hex_layout.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
         
         for knight in self.knights:
             if knight.player_id != self.current_player:
@@ -884,7 +881,7 @@ class GameState(IGameState):
                     if visibility != VisibilityState.VISIBLE:
                         continue  # Skip invisible units
                 
-                target_hex = hex_grid.offset_to_axial(knight.x, knight.y)
+                target_hex = self.hex_layout.offset_to_axial(knight.x, knight.y)
                 distance = attacker_hex.distance_to(target_hex)
                 if distance <= attack_range:
                     targets.append((knight.x, knight.y))
@@ -897,13 +894,12 @@ class GameState(IGameState):
             return []
         
         targets = []
-        hex_grid = HexGrid()
-        cavalry_hex = hex_grid.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
+        cavalry_hex = self.hex_layout.offset_to_axial(self.selected_knight.x, self.selected_knight.y)
         
         # Check all adjacent hex positions
         neighbors = cavalry_hex.get_neighbors()
         for neighbor_hex in neighbors:
-            check_x, check_y = hex_grid.axial_to_offset(neighbor_hex)
+            check_x, check_y = self.hex_layout.axial_to_offset(neighbor_hex)
             
             # Check for enemy at this position
             for knight in self.knights:

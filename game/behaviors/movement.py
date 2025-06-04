@@ -4,7 +4,7 @@ from collections import deque
 import math
 from game.components.base import Behavior
 from game.pathfinding import PathFinder, DijkstraPathFinder, AStarPathFinder
-from game.hex_utils import HexGrid
+from game.hex_layout import HexLayout
 from game.entities.knight import KnightClass
 
 class MovementBehavior(Behavior):
@@ -196,12 +196,12 @@ class MovementBehavior(Behavior):
         else:
             # For other pathfinders, use a simple range-based approach
             moves = []
-            hex_grid = HexGrid()
-            start_hex = hex_grid.offset_to_axial(unit.x, unit.y)
+            hex_layout = HexLayout()
+            start_hex = hex_layout.offset_to_axial(unit.x, unit.y)
             
             # Check all positions within movement range
             for hex_coord in start_hex.get_neighbors_within_range(self.movement_range):
-                offset_pos = hex_grid.axial_to_offset(hex_coord)
+                offset_pos = hex_layout.axial_to_offset(hex_coord)
                 x, y = offset_pos
                 
                 if (0 <= x < game_state.board_width and 
@@ -329,13 +329,13 @@ class MovementBehavior(Behavior):
         
     def _should_auto_face_enemy(self, x: int, y: int, unit, game_state) -> bool:
         """Check if unit should automatically face an enemy after movement"""
-        hex_grid = HexGrid()
-        unit_hex = hex_grid.offset_to_axial(x, y)
+        hex_layout = HexLayout()
+        unit_hex = hex_layout.offset_to_axial(x, y)
         
         # Check for adjacent enemies
         for enemy in game_state.knights:
             if enemy.player_id != unit.player_id:
-                enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
+                enemy_hex = hex_layout.offset_to_axial(enemy.x, enemy.y)
                 distance = unit_hex.distance_to(enemy_hex)
                 if distance <= 2:  # Adjacent or one hex away
                     return True
@@ -346,8 +346,8 @@ class MovementBehavior(Behavior):
         if not hasattr(unit, 'facing'):
             return
             
-        hex_grid = HexGrid()
-        unit_hex = hex_grid.offset_to_axial(x, y)
+        hex_layout = HexLayout()
+        unit_hex = hex_layout.offset_to_axial(x, y)
         
         # Find nearest enemy
         nearest_enemy = None
@@ -355,7 +355,7 @@ class MovementBehavior(Behavior):
         
         for enemy in game_state.knights:
             if enemy.player_id != unit.player_id:
-                enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
+                enemy_hex = hex_layout.offset_to_axial(enemy.x, enemy.y)
                 distance = unit_hex.distance_to(enemy_hex)
                 if distance < nearest_distance:
                     nearest_distance = distance

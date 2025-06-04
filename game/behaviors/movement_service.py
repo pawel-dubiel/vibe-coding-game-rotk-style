@@ -6,14 +6,14 @@ movement.py, and game_state.py. Eliminates code duplication and ensures consiste
 """
 from typing import List, Tuple, Optional
 from game.pathfinding import PathFinder, DijkstraPathFinder
-from game.hex_utils import HexGrid
+from game.hex_layout import HexLayout
 
 
 class MovementService:
     """Centralized service for all movement operations and validation."""
     
     def __init__(self):
-        self.hex_grid = HexGrid()
+        self.hex_layout = HexLayout()
     
     def get_possible_moves(self, unit, game_state) -> List[Tuple[int, int]]:
         """

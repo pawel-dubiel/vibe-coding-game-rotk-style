@@ -1,5 +1,6 @@
 import pygame
-from game.hex_utils import HexGrid, HexCoord
+from game.hex_utils import HexCoord
+from game.hex_layout import HexLayout
 
 class Castle:
     def __init__(self, center_x, center_y, player_id):
@@ -73,16 +74,16 @@ class Castle:
     
     def get_enemies_in_range(self, knights):
         enemies = []
-        hex_grid = HexGrid()
+        hex_layout = HexLayout()
         
         for knight in knights:
             if knight.player_id != self.player_id and not knight.is_garrisoned:
                 # Check hex distance from any castle tile
-                knight_hex = hex_grid.offset_to_axial(knight.x, knight.y)
+                knight_hex = hex_layout.offset_to_axial(knight.x, knight.y)
                 min_distance = float('inf')
                 
                 for tile_x, tile_y in self.occupied_tiles:
-                    castle_hex = hex_grid.offset_to_axial(tile_x, tile_y)
+                    castle_hex = hex_layout.offset_to_axial(tile_x, tile_y)
                     distance = castle_hex.distance_to(knight_hex)
                     min_distance = min(min_distance, distance)
                     

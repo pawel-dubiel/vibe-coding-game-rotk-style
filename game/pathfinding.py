@@ -4,7 +4,8 @@ from typing import List, Tuple, Optional, Dict, Set
 from dataclasses import dataclass
 import heapq
 import math
-from game.hex_utils import HexCoord, HexGrid
+from game.hex_utils import HexCoord
+from game.hex_layout import HexLayout
 from functools import lru_cache
 
 
@@ -57,9 +58,9 @@ class PathFinder(ABC):
             ))
         
         # Hex-based movement - check if diagonal in offset coords
-        hex_grid = HexGrid()
-        from_hex = hex_grid.offset_to_axial(from_pos[0], from_pos[1])
-        to_hex = hex_grid.offset_to_axial(to_pos[0], to_pos[1])
+        hex_layout = HexLayout()
+        from_hex = hex_layout.offset_to_axial(from_pos[0], from_pos[1])
+        to_hex = hex_layout.offset_to_axial(to_pos[0], to_pos[1])
         
         # In hex grid, all adjacent moves have same cost (no diagonals)
         # But we still apply terrain modifiers
@@ -101,12 +102,12 @@ class PathFinder(ABC):
             return self._cached_hex_grid.get_neighbors(pos[0], pos[1])
         
         # Fallback to original implementation
-        hex_grid = HexGrid()
-        hex_coord = hex_grid.offset_to_axial(pos[0], pos[1])
+        hex_layout = HexLayout()
+        hex_coord = hex_layout.offset_to_axial(pos[0], pos[1])
         neighbors = []
         
         for neighbor_hex in hex_coord.get_neighbors():
-            offset_pos = hex_grid.axial_to_offset(neighbor_hex)
+            offset_pos = hex_layout.axial_to_offset(neighbor_hex)
             if (0 <= offset_pos[0] < game_state.board_width and 
                 0 <= offset_pos[1] < game_state.board_height):
                 neighbors.append(offset_pos)
@@ -147,10 +148,10 @@ class AStarPathFinder(PathFinder):
         if not self._is_position_valid(end, game_state, unit):
             return None
         
-        # Initialize hex grid for distance calculations
-        hex_grid = HexGrid()
-        start_hex = hex_grid.offset_to_axial(start[0], start[1])
-        end_hex = hex_grid.offset_to_axial(end[0], end[1])
+        # Initialize hex layout for distance calculations
+        hex_layout = HexLayout()
+        start_hex = hex_layout.offset_to_axial(start[0], start[1])
+        end_hex = hex_layout.offset_to_axial(end[0], end[1])
         
         # Priority queue of nodes to explore
         open_set = []
@@ -208,7 +209,7 @@ class AStarPathFinder(PathFinder):
                 g_costs[neighbor_pos] = tentative_g
                 
                 # Calculate heuristic
-                neighbor_hex = hex_grid.offset_to_axial(neighbor_pos[0], neighbor_pos[1])
+                neighbor_hex = hex_layout.offset_to_axial(neighbor_pos[0], neighbor_pos[1])
                 h_cost = float(neighbor_hex.distance_to(end_hex))
                 
                 # Create neighbor node
@@ -242,17 +243,17 @@ class CachedHexGrid:
         self.width = width
         self.height = height
         self._neighbor_cache = {}
-        self._hex_grid = HexGrid()
+        self._hex_layout = HexLayout()
         self._precompute_neighbors()
     
     def _precompute_neighbors(self):
         """Pre-compute all hex neighbors for the grid"""
         for y in range(self.height):
             for x in range(self.width):
-                hex_coord = self._hex_grid.offset_to_axial(x, y)
+                hex_coord = self._hex_layout.offset_to_axial(x, y)
                 neighbors = []
                 for neighbor_hex in hex_coord.get_neighbors():
-                    offset_pos = self._hex_grid.axial_to_offset(neighbor_hex)
+                    offset_pos = self._hex_layout.axial_to_offset(neighbor_hex)
                     if (0 <= offset_pos[0] < self.width and 
                         0 <= offset_pos[1] < self.height):
                         neighbors.append(offset_pos)

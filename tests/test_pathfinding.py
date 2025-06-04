@@ -114,14 +114,14 @@ class TestPathfinding(unittest.TestCase):
         
         # Check hex neighbors are reachable
         # In hex grid, neighbors might be different than orthogonal
-        from game.hex_utils import HexGrid
-        hex_grid = HexGrid()
-        start_hex = hex_grid.offset_to_axial(5, 5)
+        from game.hex_layout import HexLayout
+        hex_layout = HexLayout()
+        start_hex = hex_layout.offset_to_axial(5, 5)
         
         # Check that at least some neighbors are reachable
         neighbor_count = 0
         for neighbor_hex in start_hex.get_neighbors():
-            neighbor_offset = hex_grid.axial_to_offset(neighbor_hex)
+            neighbor_offset = hex_layout.axial_to_offset(neighbor_hex)
             if neighbor_offset in reachable:
                 neighbor_count += 1
         
@@ -190,10 +190,10 @@ class TestPathfinding(unittest.TestCase):
         assert path is not None
         # In hex grid, the distance might be different than expected
         # Let's check the actual hex distance
-        from game.hex_utils import HexGrid
-        hex_grid = HexGrid()
-        start_hex = hex_grid.offset_to_axial(5, 5)
-        end_hex = hex_grid.offset_to_axial(7, 6)
+        from game.hex_layout import HexLayout
+        hex_layout = HexLayout()
+        start_hex = hex_layout.offset_to_axial(5, 5)
+        end_hex = hex_layout.offset_to_axial(7, 6)
         hex_distance = start_hex.distance_to(end_hex)
         
         # The path length should match the hex distance

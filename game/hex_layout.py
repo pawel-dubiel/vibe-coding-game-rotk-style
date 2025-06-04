@@ -4,8 +4,8 @@ Handles the conversion between hex grid coordinates and pixel positions.
 """
 
 import math
-from typing import Tuple
-from game.hex_utils import HexCoord, HexGrid
+from typing import Tuple, List
+from game.hex_utils import HexCoord
 
 
 class HexLayout:
@@ -215,3 +215,88 @@ class HexLayout:
                 (-1, 0)   # Northwest
             ]
             return (even_col, odd_col)
+    
+    # Methods migrated from HexGrid for consolidation
+    
+    def offset_to_axial(self, col: int, row: int) -> HexCoord:
+        """Convert offset coordinates to axial hex coordinates (odd-r offset)"""
+        if self.orientation == 'flat':
+            # Odd-r offset for flat-top
+            q = col - (row - (row & 1)) // 2
+            r = row
+        else:
+            # Odd-q offset for pointy-top
+            q = col
+            r = row - (col - (col & 1)) // 2
+        return HexCoord(q, r)
+    
+    def axial_to_offset(self, hex_coord: HexCoord) -> Tuple[int, int]:
+        """Convert axial hex coordinates to offset coordinates"""
+        if self.orientation == 'flat':
+            # Odd-r offset for flat-top
+            col = hex_coord.q + (hex_coord.r - (hex_coord.r & 1)) // 2
+            row = hex_coord.r
+        else:
+            # Odd-q offset for pointy-top
+            col = hex_coord.q
+            row = hex_coord.r + (hex_coord.q - (hex_coord.q & 1)) // 2
+        return (col, row)
+    
+    def hex_coord_to_pixel(self, hex_coord: HexCoord) -> Tuple[float, float]:
+        """Convert HexCoord to pixel coordinates"""
+        col, row = self.axial_to_offset(hex_coord)
+        return self.hex_to_pixel(col, row)
+    
+    def pixel_to_hex_coord(self, x: float, y: float) -> HexCoord:
+        """Convert pixel coordinates to HexCoord"""
+        col, row = self.pixel_to_hex(x, y)
+        return self.offset_to_axial(col, row)
+    
+    def is_valid_coord(self, hex_coord: HexCoord, width: int, height: int) -> bool:
+        """Check if hex coordinate is within rectangular bounds"""
+        col, row = self.axial_to_offset(hex_coord)
+        return 0 <= col < width and 0 <= row < height
+    
+    @staticmethod
+    def get_line(start: HexCoord, end: HexCoord) -> List[HexCoord]:
+        """Get a line of hexes between two points (from Red Blob Games)"""
+        distance = start.distance_to(end)
+        results = []
+        
+        if distance == 0:
+            return [start]
+            
+        # Linear interpolation in cube coordinates
+        for i in range(distance + 1):
+            t = i / distance
+            
+            # Convert to cube coordinates
+            start_cube = start.to_cube()
+            end_cube = end.to_cube()
+            
+            # Interpolate
+            x = start_cube[0] + (end_cube[0] - start_cube[0]) * t
+            y = start_cube[1] + (end_cube[1] - start_cube[1]) * t
+            z = start_cube[2] + (end_cube[2] - start_cube[2]) * t
+            
+            # Round to nearest hex
+            rx = round(x)
+            ry = round(y)
+            rz = round(z)
+            
+            # Fix rounding errors
+            x_diff = abs(rx - x)
+            y_diff = abs(ry - y)
+            z_diff = abs(rz - z)
+            
+            if x_diff > y_diff and x_diff > z_diff:
+                rx = -ry - rz
+            elif y_diff > z_diff:
+                ry = -rx - rz
+            else:
+                rz = -rx - ry
+                
+            # Convert back to axial
+            results.append(HexCoord(rx, rz))
+            
+        return results

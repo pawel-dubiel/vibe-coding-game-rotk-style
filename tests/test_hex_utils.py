@@ -1,6 +1,7 @@
 import unittest
 import math
-from game.hex_utils import HexCoord, HexGrid
+from game.hex_utils import HexCoord
+from game.hex_layout import HexLayout
 
 
 class TestHexCoord(unittest.TestCase):
@@ -110,25 +111,25 @@ class TestHexCoord(unittest.TestCase):
             self.assertLessEqual(hex_coord.distance_to(hex), 2)
 
 
-class TestHexGrid(unittest.TestCase):
+class TestHexLayout(unittest.TestCase):
     def setUp(self):
-        self.hex_grid = HexGrid(hex_size=32)
+        self.hex_layout = HexLayout(hex_size=32)
     
     def test_hex_grid_dimensions(self):
         """Test hex grid dimension calculations"""
-        self.assertEqual(self.hex_grid.hex_size, 32)
-        self.assertEqual(self.hex_grid.hex_width, 64)  # 2 * hex_size for flat-top
-        self.assertAlmostEqual(self.hex_grid.hex_height, 32 * math.sqrt(3))
+        self.assertEqual(self.hex_layout.hex_size, 32)
+        self.assertEqual(self.hex_layout.hex_width, 64)  # 2 * hex_size for flat-top
+        self.assertAlmostEqual(self.hex_layout.hex_height, 32 * math.sqrt(3))
     
     def test_offset_to_axial_conversion(self):
         """Test offset to axial coordinate conversion"""
         # Even row
-        hex_coord = self.hex_grid.offset_to_axial(2, 0)
+        hex_coord = self.hex_layout.offset_to_axial(2, 0)
         self.assertEqual(hex_coord.q, 2)
         self.assertEqual(hex_coord.r, 0)
         
         # Odd row - should shift
-        hex_coord = self.hex_grid.offset_to_axial(2, 1)
+        hex_coord = self.hex_layout.offset_to_axial(2, 1)
         self.assertEqual(hex_coord.q, 2)
         self.assertEqual(hex_coord.r, 1)
         
@@ -143,7 +144,7 @@ class TestHexGrid(unittest.TestCase):
         ]
         
         for (col, row), (expected_q, expected_r) in test_cases:
-            hex_coord = self.hex_grid.offset_to_axial(col, row)
+            hex_coord = self.hex_layout.offset_to_axial(col, row)
             self.assertEqual(hex_coord.q, expected_q, 
                            f"Failed for offset ({col}, {row})")
             self.assertEqual(hex_coord.r, expected_r,
@@ -154,8 +155,8 @@ class TestHexGrid(unittest.TestCase):
         # Test round-trip conversion
         for col in range(5):
             for row in range(5):
-                hex_coord = self.hex_grid.offset_to_axial(col, row)
-                result_col, result_row = self.hex_grid.axial_to_offset(hex_coord)
+                hex_coord = self.hex_layout.offset_to_axial(col, row)
+                result_col, result_row = self.hex_layout.axial_to_offset(hex_coord)
                 self.assertEqual(result_col, col, 
                                f"Round-trip failed for ({col}, {row})")
                 self.assertEqual(result_row, row,
@@ -165,26 +166,26 @@ class TestHexGrid(unittest.TestCase):
         """Test hex to pixel coordinate conversion"""
         # Origin hex
         hex_coord = HexCoord(0, 0)
-        x, y = self.hex_grid.hex_to_pixel(hex_coord)
+        x, y = self.hex_layout.hex_to_pixel(hex_coord)
         self.assertEqual(x, 0)
         self.assertEqual(y, 0)
         
         # Hex at (1, 0)
         hex_coord = HexCoord(1, 0)
-        x, y = self.hex_grid.hex_to_pixel(hex_coord)
-        self.assertAlmostEqual(x, self.hex_grid.hex_size * math.sqrt(3))
+        x, y = self.hex_layout.hex_to_pixel(hex_coord)
+        self.assertAlmostEqual(x, self.hex_layout.hex_size * math.sqrt(3))
         self.assertEqual(y, 0)
         
         # Hex at (0, 1)
         hex_coord = HexCoord(0, 1)
-        x, y = self.hex_grid.hex_to_pixel(hex_coord)
-        self.assertAlmostEqual(x, self.hex_grid.hex_size * math.sqrt(3) / 2)
-        self.assertEqual(y, self.hex_grid.hex_size * 1.5)
+        x, y = self.hex_layout.hex_to_pixel(hex_coord)
+        self.assertAlmostEqual(x, self.hex_layout.hex_size * math.sqrt(3) / 2)
+        self.assertEqual(y, self.hex_layout.hex_size * 1.5)
     
     def test_pixel_to_hex_conversion(self):
         """Test pixel to hex coordinate conversion"""
         # Test center of origin hex
-        hex_coord = self.hex_grid.pixel_to_hex(0, 0)
+        hex_coord = self.hex_layout.pixel_to_hex(0, 0)
         self.assertEqual(hex_coord.q, 0)
         self.assertEqual(hex_coord.r, 0)
         
@@ -195,12 +196,12 @@ class TestHexGrid(unittest.TestCase):
     def test_hex_rounding(self):
         """Test fractional hex coordinate rounding"""
         # Test exact coordinates
-        hex_coord = self.hex_grid._round_hex(1.0, 2.0)
+        hex_coord = self.hex_layout._round_hex(1.0, 2.0)
         self.assertEqual(hex_coord.q, 1)
         self.assertEqual(hex_coord.r, 2)
         
         # Test rounding with small fractions
-        hex_coord = self.hex_grid._round_hex(1.1, 2.1)
+        hex_coord = self.hex_layout._round_hex(1.1, 2.1)
         self.assertEqual(hex_coord.q, 1)
         self.assertEqual(hex_coord.r, 2)
         
@@ -208,14 +209,14 @@ class TestHexGrid(unittest.TestCase):
         for i in range(10):
             q = i * 0.3
             r = i * 0.4
-            hex_coord = self.hex_grid._round_hex(q, r)
+            hex_coord = self.hex_layout._round_hex(q, r)
             x, y, z = hex_coord.to_cube()
             self.assertEqual(x + y + z, 0, 
                            f"Cube constraint violated for ({q}, {r})")
     
     def test_get_hex_corners(self):
         """Test getting hex corner points"""
-        corners = self.hex_grid.get_hex_corners(100, 100)
+        corners = self.hex_layout.get_hex_corners(100, 100)
         
         # Should have 6 corners
         self.assertEqual(len(corners), 6)
@@ -223,41 +224,41 @@ class TestHexGrid(unittest.TestCase):
         # All corners should be at hex_size distance from center
         for corner_x, corner_y in corners:
             distance = math.sqrt((corner_x - 100)**2 + (corner_y - 100)**2)
-            self.assertAlmostEqual(distance, self.hex_grid.hex_size, places=5)
+            self.assertAlmostEqual(distance, self.hex_layout.hex_size, places=5)
         
         # First corner should be at 0 degrees (right side for flat-top)
         first_corner = corners[0]
-        self.assertAlmostEqual(first_corner[0], 100 + self.hex_grid.hex_size)
+        self.assertAlmostEqual(first_corner[0], 100 + self.hex_layout.hex_size)
         self.assertAlmostEqual(first_corner[1], 100)
     
     def test_is_valid_coord(self):
         """Test coordinate validation within board bounds"""
         # Valid coordinates
         hex_coord = HexCoord(2, 2)
-        self.assertTrue(self.hex_grid.is_valid_coord(hex_coord, 10, 10))
+        self.assertTrue(self.hex_layout.is_valid_coord(hex_coord, 10, 10))
         
         # Out of bounds
         hex_coord = HexCoord(15, 5)
-        self.assertFalse(self.hex_grid.is_valid_coord(hex_coord, 10, 10))
+        self.assertFalse(self.hex_layout.is_valid_coord(hex_coord, 10, 10))
         
         hex_coord = HexCoord(5, 15)
-        self.assertFalse(self.hex_grid.is_valid_coord(hex_coord, 10, 10))
+        self.assertFalse(self.hex_layout.is_valid_coord(hex_coord, 10, 10))
         
         # Negative coordinates
         hex_coord = HexCoord(-1, 5)
-        self.assertFalse(self.hex_grid.is_valid_coord(hex_coord, 10, 10))
+        self.assertFalse(self.hex_layout.is_valid_coord(hex_coord, 10, 10))
 
 
-class TestHexGridIntegration(unittest.TestCase):
+class TestHexLayoutIntegration(unittest.TestCase):
     """Test hex grid integration with game mechanics"""
     
     def setUp(self):
-        self.hex_grid = HexGrid(hex_size=36)
+        self.hex_layout = HexLayout(hex_size=36)
     
     def test_movement_range_calculations(self):
         """Test that movement ranges work correctly in hex grid"""
         # Knight at position (5, 5)
-        knight_hex = self.hex_grid.offset_to_axial(5, 5)
+        knight_hex = self.hex_layout.offset_to_axial(5, 5)
         
         # Get all hexes within movement range 3
         move_range = knight_hex.get_neighbors_within_range(3)
@@ -272,7 +273,7 @@ class TestHexGridIntegration(unittest.TestCase):
     def test_line_of_sight_hex_distance(self):
         """Test hex distance for line of sight calculations"""
         # Archer at (5, 5) with range 3
-        archer_pos = self.hex_grid.offset_to_axial(5, 5)
+        archer_pos = self.hex_layout.offset_to_axial(5, 5)
         
         # Target positions and expected distances
         test_cases = [
@@ -286,7 +287,7 @@ class TestHexGridIntegration(unittest.TestCase):
         ]
         
         for (target_col, target_row), expected_distance in test_cases:
-            target_hex = self.hex_grid.offset_to_axial(target_col, target_row)
+            target_hex = self.hex_layout.offset_to_axial(target_col, target_row)
             distance = archer_pos.distance_to(target_hex)
             self.assertEqual(distance, expected_distance,
                            f"Wrong distance from (5,5) to ({target_col},{target_row})")
@@ -294,14 +295,14 @@ class TestHexGridIntegration(unittest.TestCase):
     def test_zone_of_control_neighbors(self):
         """Test that zone of control covers all 6 neighbors"""
         # Unit at (4, 4)
-        unit_hex = self.hex_grid.offset_to_axial(4, 4)
+        unit_hex = self.hex_layout.offset_to_axial(4, 4)
         zoc_hexes = unit_hex.get_neighbors()
         
         # Should control exactly 6 hexes
         self.assertEqual(len(zoc_hexes), 6)
         
         # Convert back to offset and check specific positions
-        zoc_offsets = [self.hex_grid.axial_to_offset(hex) for hex in zoc_hexes]
+        zoc_offsets = [self.hex_layout.axial_to_offset(hex) for hex in zoc_hexes]
         
         # For a unit at (4, 4) in odd-r offset, neighbors depend on row parity
         # Row 4 is even, so we need to check what our actual implementation returns
@@ -310,7 +311,7 @@ class TestHexGridIntegration(unittest.TestCase):
         
         # Verify all are adjacent
         for offset_col, offset_row in zoc_offsets:
-            neighbor_hex = self.hex_grid.offset_to_axial(offset_col, offset_row)
+            neighbor_hex = self.hex_layout.offset_to_axial(offset_col, offset_row)
             distance = unit_hex.distance_to(neighbor_hex)
             self.assertEqual(distance, 1, 
                            f"Neighbor at ({offset_col}, {offset_row}) is not adjacent")

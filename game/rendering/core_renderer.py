@@ -5,7 +5,6 @@ Orchestrates all specialized renderers and maintains the overall rendering pipel
 Replaces the monolithic Renderer class with a clean, modular architecture.
 """
 import pygame
-from game.hex_utils import HexGrid
 from game.hex_layout import HexLayout
 from .terrain_renderer import TerrainRenderer
 from .unit_renderer import UnitRenderer
@@ -20,10 +19,11 @@ class CoreRenderer:
         self.screen = screen
         
         # Initialize hex system
-        self.hex_grid = HexGrid(hex_size=36)
         self.hex_layout = HexLayout(hex_size=36, orientation='flat')
         
         # Initialize specialized renderers
+        # Create dummy hex_grid for backward compatibility
+        self.hex_grid = type('DummyHexGrid', (), {'hex_size': 36, 'hex_width': self.hex_layout.hex_width, 'hex_height': self.hex_layout.hex_height})()
         self.terrain_renderer = TerrainRenderer(screen, self.hex_grid, self.hex_layout)
         self.unit_renderer = UnitRenderer(screen, self.hex_layout)
         self.ui_renderer = UIRenderer(screen)

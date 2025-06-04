@@ -7,7 +7,7 @@ from game.components.generals import GeneralRoster
 from game.components.facing import FacingComponent, FacingDirection
 from game.entities.knight import KnightClass
 from game.combat_config import CombatConfig
-from game.hex_utils import HexGrid
+from game.hex_layout import HexLayout
 from game.behaviors.movement_service import MovementService
 
 @dataclass
@@ -657,12 +657,12 @@ class Unit:
         if not game_state:
             return False
         
-        hex_grid = HexGrid()
-        pos_hex = hex_grid.offset_to_axial(x, y)
+        hex_layout = HexLayout()
+        pos_hex = hex_layout.offset_to_axial(x, y)
         neighbors = pos_hex.get_neighbors()
         
         for neighbor_hex in neighbors:
-            check_x, check_y = hex_grid.axial_to_offset(neighbor_hex)
+            check_x, check_y = hex_layout.axial_to_offset(neighbor_hex)
             for knight in game_state.knights:
                 if (knight != self and knight.player_id == self.player_id and 
                     knight.x == check_x and knight.y == check_y and not knight.is_garrisoned):

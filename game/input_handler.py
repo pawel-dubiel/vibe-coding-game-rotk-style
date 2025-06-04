@@ -1,5 +1,4 @@
 import pygame
-from game.hex_utils import HexGrid
 from game.hex_layout import HexLayout
 
 class InputHandler:
@@ -10,7 +9,7 @@ class InputHandler:
         self.drag_start_y = 0
         self.camera_drag_start_x = 0
         self.camera_drag_start_y = 0
-        self.hex_grid = HexGrid(hex_size=36)  # For hex distance calculations
+        # hex_grid removed - using hex_layout for all coordinate operations
         self.hex_layout = HexLayout(hex_size=36, orientation='flat')  # For positioning
         self.zoom_level = 1.0
         self.min_zoom = 0.5
@@ -228,7 +227,7 @@ class InputHandler:
         
         # Scale hex size based on zoom level
         new_hex_size = int(36 * zoom_level)
-        self.hex_grid = HexGrid(hex_size=new_hex_size)
+        # hex_grid removed - only using hex_layout
         self.hex_layout = HexLayout(hex_size=new_hex_size, orientation='flat')
         
         # Update game_state's hex_layout to ensure coordinate conversion consistency
@@ -238,11 +237,12 @@ class InputHandler:
         # Update renderer's hex_layout if available to maintain consistency
         if hasattr(game_state, 'renderer') and hasattr(game_state.renderer, 'hex_layout'):
             game_state.renderer.hex_layout = self.hex_layout
-            game_state.renderer.hex_grid = self.hex_grid
+            # Create dummy hex_grid for backward compatibility with same hex_size
+            game_state.renderer.hex_grid = type('DummyHexGrid', (), {'hex_size': new_hex_size, 'hex_width': self.hex_layout.hex_width, 'hex_height': self.hex_layout.hex_height})()
             # Update all sub-renderers if using the new rendering system
             if hasattr(game_state.renderer, 'terrain_renderer'):
                 game_state.renderer.terrain_renderer.hex_layout = self.hex_layout
-                game_state.renderer.terrain_renderer.hex_grid = self.hex_grid
+                game_state.renderer.terrain_renderer.hex_grid = game_state.renderer.hex_grid
             if hasattr(game_state.renderer, 'unit_renderer'):
                 game_state.renderer.unit_renderer.hex_layout = self.hex_layout
             if hasattr(game_state.renderer, 'effect_renderer'):
