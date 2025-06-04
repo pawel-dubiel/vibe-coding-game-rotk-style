@@ -124,7 +124,10 @@ class MovementBehavior(Behavior):
         original_get_cost = self.pathfinder._get_movement_cost
         
         def custom_get_cost(from_pos, to_pos, game_state, unit):
-            return self.get_ap_cost(from_pos, to_pos, unit, game_state)
+            base = self.get_ap_cost(from_pos, to_pos, unit, game_state)
+            if self._zoc_transition_blocked(from_pos, to_pos, unit, game_state):
+                return float('inf')
+            return base
         
         # Temporarily replace the cost function
         self.pathfinder._get_movement_cost = custom_get_cost
@@ -166,7 +169,8 @@ class MovementBehavior(Behavior):
             
             def custom_get_cost(from_pos, to_pos, game_state, unit):
                 base_cost = self.get_ap_cost(from_pos, to_pos, unit, game_state)
-                # Don't modify cost here - we'll handle ZOC in the filtering step
+                if self._zoc_transition_blocked(from_pos, to_pos, unit, game_state):
+                    return float('inf')
                 return base_cost
             
             # Temporarily replace the cost function
@@ -208,7 +212,16 @@ class MovementBehavior(Behavior):
                     0 <= y < game_state.board_height and
                     (x, y) != (unit.x, unit.y)):
                     
-                    # Use pathfinder to check if reachable
+                    # Use pathfinder to check if reachable with ZOC rules
+                    original_get_cost = self.pathfinder._get_movement_cost
+
+                    def custom_get_cost(from_pos, to_pos, game_state, unit):
+                        base = self.get_ap_cost(from_pos, to_pos, unit, game_state)
+                        if self._zoc_transition_blocked(from_pos, to_pos, unit, game_state):
+                            return float('inf')
+                        return base
+
+                    self.pathfinder._get_movement_cost = custom_get_cost
                     path = self.pathfinder.find_path(
                         start=(unit.x, unit.y),
                         end=(x, y),
@@ -216,6 +229,7 @@ class MovementBehavior(Behavior):
                         unit=unit,
                         max_cost=unit.action_points
                     )
+                    self.pathfinder._get_movement_cost = original_get_cost
                     if path:
                         moves.append((x, y))
             return moves
@@ -284,17 +298,43 @@ class MovementBehavior(Behavior):
                     not other.is_routing):
                     return True
         return False
-        
+
     def _will_enter_enemy_zoc(self, x: int, y: int, unit, game_state) -> bool:
         """Check if moving to position would enter enemy ZOC"""
         for enemy in game_state.knights:
-            if (enemy.player_id != unit.player_id and 
+            if (enemy.player_id != unit.player_id and
                 enemy.has_zone_of_control()):
                 # Check if adjacent (including diagonals)
                 dx = abs(x - enemy.x)
                 dy = abs(y - enemy.y)
                 if dx <= 1 and dy <= 1 and (dx + dy > 0):  # Adjacent including diagonals
                     return True
+        return False
+
+    def _is_enemy_zoc_tile(self, x: int, y: int, unit, game_state) -> bool:
+        """Check if a tile is inside enemy ZOC"""
+        for enemy in game_state.knights:
+            if enemy.player_id != unit.player_id and enemy.has_zone_of_control():
+                dx = abs(x - enemy.x)
+                dy = abs(y - enemy.y)
+                if dx <= 1 and dy <= 1 and (dx + dy > 0):
+                    return True
+        return False
+
+    def _zoc_transition_blocked(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int],
+                                unit, game_state) -> bool:
+        """Check if moving from one tile to another violates ZOC rules"""
+        # Only restrict if unit is currently outside enemy ZOC
+        if unit.in_enemy_zoc:
+            return False
+
+        from_in_zoc = self._is_enemy_zoc_tile(from_pos[0], from_pos[1], unit, game_state)
+        to_in_zoc = self._is_enemy_zoc_tile(to_pos[0], to_pos[1], unit, game_state)
+
+        # Once we enter enemy ZOC we cannot leave in the same movement
+        if from_in_zoc and not to_in_zoc and not self._is_enemy_at(to_pos[0], to_pos[1], unit, game_state):
+            return True
+
         return False
         
     def _get_routing_moves(self, unit, game_state) -> List[Tuple[int, int]]:
