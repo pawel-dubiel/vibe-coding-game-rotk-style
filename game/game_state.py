@@ -120,10 +120,10 @@ class GameState(IGameState):
             self.castles.append(Castle(self.board_width - 3, y_pos, 2))
         
         # Knight names and classes for variety
-        knight_names_p1 = ["Sir Lancelot", "Robin Hood", "Sir Galahad", "Sir Kay", "Sir Gawain", 
-                          "Sir Percival", "Sir Tristan", "Sir Bedivere"]
-        knight_names_p2 = ["Black Knight", "Dark Archer", "Shadow Rider", "Dark Mage", "Iron Lord",
-                          "Death Knight", "Void Walker", "Night Hunter"]
+        knight_names_p1 = ["General 1", "General 2", "General 3", "General 4", "General 5",
+                          "General 6", "General 7", "General 8"]
+        knight_names_p2 = ["General 9", "General 10", "General 11", "General 12", "General 13",
+                          "General 14", "General 15", "General 16"]
         knight_classes = [KnightClass.WARRIOR, KnightClass.ARCHER, KnightClass.CAVALRY, KnightClass.MAGE]
         
         # Place knights for player 1

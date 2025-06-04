@@ -15,7 +15,7 @@ class Game:
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((1024, 768))
-        pygame.display.set_caption("Castle Knights")
+        pygame.display.set_caption("Vibe Coding Demo Project")
         self.clock = pygame.time.Clock()
         self.running = True
         

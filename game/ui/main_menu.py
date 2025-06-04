@@ -95,7 +95,7 @@ class MainMenu:
         self.screen.blit(overlay, (0, 0))
         
         # Draw title
-        title_text = self.title_font.render("Castle Knights", True, self.colors['text'])
+        title_text = self.title_font.render("Demo Project", True, self.colors['text'])
         title_rect = title_text.get_rect(center=(self.screen.get_width() // 2, 150))
         self.screen.blit(title_text, title_rect)
         
