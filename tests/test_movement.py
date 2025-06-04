@@ -94,7 +94,8 @@ class MockGameState:
 class TestMovement(unittest.TestCase):
     
     def setUp(self):
-        """Set up test fixtures"""
+        """Set up test fixtures with fresh state"""
+        # Create fresh mock game state for each test
         self.game_state = MockGameState()
         
         # Create test units
