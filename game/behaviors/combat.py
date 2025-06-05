@@ -39,18 +39,11 @@ class AttackBehavior(Behavior):
         
     def get_ap_cost(self, unit=None, target=None, game_state=None) -> int:
         """Calculate AP cost for attack based on unit type, target terrain, and distance"""
-        base_cost = 3  # Base melee attack cost
-        
+        base_cost = 3  # Default
+
         if unit and hasattr(unit, 'unit_class'):
-            from game.entities.knight import KnightClass
-            
-            # Different costs by unit type
-            if unit.unit_class == KnightClass.WARRIOR:
-                base_cost = 4  # Warriors are methodical
-            elif unit.unit_class == KnightClass.CAVALRY:
-                base_cost = 3  # Cavalry are quick
-            elif unit.unit_class == KnightClass.MAGE:
-                base_cost = 2  # Magic is efficient
+            from game.combat_config import CombatConfig
+            base_cost = CombatConfig.get_attack_ap_cost(unit.unit_class.value)
         
         # Add terrain-based attack cost if target and game_state are provided
         if target and game_state and hasattr(game_state, 'terrain_map') and game_state.terrain_map:
