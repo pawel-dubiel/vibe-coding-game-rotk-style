@@ -3,3 +3,4 @@
 - write end-to-end tests for critical paths
 - use fixtures for setup
 - use factories for data generation
+- after every feature, write tests and run all existing tests
