@@ -104,6 +104,8 @@ Tests archer ranged attacks and positioning. Includes hills for elevation testin
 
 ### cavalry_charge.json
 Tests cavalry charge mechanics against different unit types and on various terrain.
+### cavalry_screening.json
+Scenario for experimenting with cavalry screening mechanics.
 
 ### fog_of_war.json
 Tests visibility mechanics with terrain obstacles and unit positioning.
