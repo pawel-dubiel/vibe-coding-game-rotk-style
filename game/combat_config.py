@@ -27,6 +27,19 @@ class CombatConfig:
     
     # Opportunity attack damage multiplier when enemy breaks away
     OPPORTUNITY_ATTACK_MULTIPLIER = 0.7  # 70% of normal attack damage
+
+    # Action point costs for standard attacks by unit class
+    ATTACK_AP_COSTS = {
+        "Warrior": 4,
+        "Archer": 2,
+        "Cavalry": 3,
+        "Mage": 2,
+    }
+
+    @classmethod
+    def get_attack_ap_cost(cls, unit_class_name: str) -> int:
+        """Get the base AP cost for a standard attack"""
+        return cls.ATTACK_AP_COSTS.get(unit_class_name, 3)
     
     @classmethod
     def is_heavy_unit(cls, unit_class_name: str) -> bool:

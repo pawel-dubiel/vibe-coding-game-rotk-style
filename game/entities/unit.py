@@ -557,16 +557,9 @@ class Unit:
         
     def consume_attack_ap(self):
         """Compatibility method - consume AP for attack"""
-        ap_cost = 3  # Default attack cost
-        if hasattr(self, 'unit_class'):
-            if self.unit_class == KnightClass.WARRIOR:
-                ap_cost = 4
-            elif self.unit_class == KnightClass.ARCHER:
-                ap_cost = 2
-            elif self.unit_class == KnightClass.CAVALRY:
-                ap_cost = 3
-            elif self.unit_class == KnightClass.MAGE:
-                ap_cost = 2
+        from game.combat_config import CombatConfig
+
+        ap_cost = CombatConfig.get_attack_ap_cost(self.unit_class.value)
                 
         if self.action_points >= ap_cost and not self.has_acted:
             self.action_points -= ap_cost
