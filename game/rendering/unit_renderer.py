@@ -10,6 +10,13 @@ from game.entities.knight import KnightClass
 from game.hex_layout import HexLayout
 from game.visibility import VisibilityState
 from game.asset_manager import AssetManager
+from .unit_render_strategies import (
+    ArcherRenderStrategy,
+    CavalryRenderStrategy,
+    MageRenderStrategy,
+    UnitRenderStrategy,
+    WarriorRenderStrategy,
+)
 
 
 class UnitRenderer:
@@ -36,6 +43,14 @@ class UnitRenderer:
             'facing_arrow': (255, 255, 255),
             'routing_indicator': (255, 200, 0),
             'disrupted_indicator': (255, 100, 0)
+        }
+
+        # Mapping of unit classes to rendering strategies
+        self.unit_render_strategies: dict[KnightClass, UnitRenderStrategy] = {
+            KnightClass.WARRIOR: WarriorRenderStrategy(),
+            KnightClass.ARCHER: ArcherRenderStrategy(),
+            KnightClass.CAVALRY: CavalryRenderStrategy(),
+            KnightClass.MAGE: MageRenderStrategy(),
         }
     
     def render_units(self, game_state):
@@ -130,24 +145,9 @@ class UnitRenderer:
             pygame.draw.circle(self.screen, (64, 64, 64), (center_x, center_y), 15, 2)
             return
         
-        # Draw specific unit type shapes
-        if unit.unit_class == KnightClass.WARRIOR:
-            pygame.draw.rect(self.screen, player_color, (center_x - 20, center_y - 20, 40, 40))
-            pygame.draw.rect(self.screen, (0, 0, 0), (center_x - 20, center_y - 20, 40, 40), 2)
-        
-        elif unit.unit_class == KnightClass.ARCHER:
-            pygame.draw.polygon(self.screen, player_color,
-                              [(center_x, center_y - 25), (center_x - 20, center_y + 20), (center_x + 20, center_y + 20)])
-            pygame.draw.polygon(self.screen, (0, 0, 0),
-                              [(center_x, center_y - 25), (center_x - 20, center_y + 20), (center_x + 20, center_y + 20)], 2)
-        
-        elif unit.unit_class == KnightClass.CAVALRY:
-            pygame.draw.ellipse(self.screen, player_color, (center_x - 25, center_y - 15, 50, 30))
-            pygame.draw.ellipse(self.screen, (0, 0, 0), (center_x - 25, center_y - 15, 50, 30), 2)
-        
-        elif unit.unit_class == KnightClass.MAGE:
-            pygame.draw.circle(self.screen, player_color, (center_x, center_y), 22)
-            pygame.draw.circle(self.screen, (0, 0, 0), (center_x, center_y), 22, 2)
+        strategy = self.unit_render_strategies.get(unit.unit_class)
+        if strategy:
+            strategy.render(self.screen, player_color, center_x, center_y)
     
     def _render_health_bar(self, unit, screen_x: float, screen_y: float):
         """Render health bar above unit."""
