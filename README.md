@@ -34,6 +34,7 @@ A turn-based tactical strategy game featuring medieval combat on a hexagonal gri
 - **Battle Mode**: Custom battles with configurable settings
 - **Multiplayer**: Hot-seat multiplayer support
 - **AI Opponents**: Computer-controlled enemies
+- **Campaign Mode**: Basic Poland map with army movement
 
 ## Installation
 
