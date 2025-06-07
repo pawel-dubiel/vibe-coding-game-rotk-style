@@ -8,6 +8,9 @@ from game.ui.game_mode_select import GameModeSelectScreen
 from game.ui.main_menu import MainMenu, PauseMenu, MenuOption
 from game.ui.test_scenario_menu import TestScenarioMenu
 from game.ui.save_load_menu import SaveLoadMenu, SaveLoadAction
+from game.ui.campaign_screen import CampaignScreen
+from game.ui.country_selection import CountrySelectionScreen
+from game.ui.map_editor import MapEditorScreen
 from game.test_scenarios import TestScenarios
 from game.save_manager import SaveManager
 
@@ -25,6 +28,9 @@ class Game:
         self.in_setup = False
         self.in_game = False
         self.in_test_scenarios = False
+        self.in_country_selection = False
+        self.in_campaign = False
+        self.in_map_editor = False
         self.paused = False
         
         # UI screens
@@ -34,6 +40,9 @@ class Game:
         self.battle_setup_screen = BattleSetupScreen(self.screen)
         self.test_scenario_menu = TestScenarioMenu(self.screen)
         self.save_load_menu = SaveLoadMenu(self.screen)
+        self.country_selection_screen = CountrySelectionScreen(self.screen)
+        self.campaign_screen = CampaignScreen(self.screen)
+        self.map_editor_screen = MapEditorScreen(self.screen)
         
         # Save manager
         self.save_manager = SaveManager()
@@ -60,6 +69,12 @@ class Game:
                 self._handle_battle_setup()
             elif self.in_test_scenarios:
                 self._handle_test_scenarios()
+            elif self.in_country_selection:
+                self._handle_country_selection()
+            elif self.in_campaign:
+                self._handle_campaign()
+            elif self.in_map_editor:
+                self._handle_map_editor()
             elif self.in_game:
                 self._handle_game(dt)
             
@@ -103,6 +118,14 @@ class Game:
                     if option == MenuOption.NEW_GAME:
                         self.in_main_menu = False
                         self.in_mode_select = True
+                    elif option == MenuOption.CAMPAIGN:
+                        self.in_main_menu = False
+                        self.in_country_selection = True
+                        self.country_selection_screen.show()
+                    elif option == MenuOption.MAP_EDITOR:
+                        self.in_main_menu = False
+                        self.in_map_editor = True
+                        self.map_editor_screen.show()
                     elif option == MenuOption.LOAD_GAME:
                         self.save_load_menu.show(SaveLoadAction.LOAD)
                     elif option == MenuOption.OPTIONS:
@@ -285,6 +308,89 @@ class Game:
         
         self.screen.fill((0, 0, 0))
         self.test_scenario_menu.draw()
+    
+    def _handle_country_selection(self):
+        """Handle country selection screen"""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            else:
+                result = self.country_selection_screen.handle_event(event)
+                if result:
+                    if result.get('action') == 'back':
+                        # Go back to main menu
+                        self.in_country_selection = False
+                        self.in_main_menu = True
+                        self.country_selection_screen.hide()
+                    elif result.get('action') == 'start_campaign':
+                        # Start campaign with selected country
+                        selected_country = result['country']
+                        country_data = result['country_data']
+                        
+                        # Initialize campaign with selected country
+                        from game.campaign.campaign_state import CampaignState
+                        campaign_state = CampaignState(selected_country, country_data)
+                        self.campaign_screen.campaign_state = campaign_state
+                        
+                        # Transition to campaign
+                        self.in_country_selection = False
+                        self.in_campaign = True
+                        self.country_selection_screen.hide()
+                        self.campaign_screen.show()
+        
+        self.country_selection_screen.draw()
+    
+    def _handle_map_editor(self):
+        """Handle map editor mode"""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            else:
+                result = self.map_editor_screen.handle_event(event)
+                if result:
+                    if result.get('action') == 'back':
+                        # Go back to main menu
+                        self.in_map_editor = False
+                        self.in_main_menu = True
+                        self.map_editor_screen.hide()
+        
+        self.map_editor_screen.draw()
+        
+    def _handle_campaign(self):
+        """Handle campaign mode"""
+        dt = self.clock.get_time() / 1000.0  # Get delta time
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            else:
+                result = self.campaign_screen.handle_event(event)
+                if result:
+                    if result.get('action') == 'back_to_menu':
+                        # Go back to main menu
+                        self.in_campaign = False
+                        self.in_main_menu = True
+                        self.campaign_screen.hide()
+                        
+        # Update campaign state (for AI turns)
+        self.campaign_screen.update(dt)
+        
+        # Check if a battle should start
+        if self.campaign_screen.ready_for_battle:
+            battle_config = self.campaign_screen.get_battle_config()
+            if battle_config:
+                # Pass the full battle config including campaign battle data 
+                # (attacker_army, defender_army, etc.) to GameState
+                self.game_state = GameState(battle_config, vs_ai=True)
+                # Connect renderer to game state
+                self.game_state.renderer = self.renderer
+                
+                # Transition to battle
+                self.in_campaign = False
+                self.in_game = True
+                self.campaign_screen.ready_for_battle = False
+                
+        self.campaign_screen.draw()
 
 if __name__ == "__main__":
     game = Game()

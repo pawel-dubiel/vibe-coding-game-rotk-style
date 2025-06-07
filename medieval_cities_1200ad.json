@@ -1,0 +1,1794 @@
+{
+  "cities": [
+    {
+      "name": "Aachen",
+      "modern_name": "Aachen",
+      "latitude": 50.7753,
+      "longitude": 6.0839,
+      "country": "holy_roman_empire",
+      "city_type": "capital",
+      "estimated_population": 10000,
+      "description": "Imperial city and coronation site"
+    },
+    {
+      "name": "Paris",
+      "modern_name": "Paris",
+      "latitude": 48.8566,
+      "longitude": 2.3522,
+      "country": "france",
+      "city_type": "capital",
+      "estimated_population": 100000,
+      "description": "Capital of the Capetian Kingdom"
+    },
+    {
+      "name": "London",
+      "modern_name": "London",
+      "latitude": 51.5074,
+      "longitude": -0.1278,
+      "country": "england",
+      "city_type": "capital",
+      "estimated_population": 80000,
+      "description": "Capital and largest city"
+    },
+    {
+      "name": "Konstantinoupolis",
+      "modern_name": "Constantinople",
+      "latitude": 41.0082,
+      "longitude": 28.9784,
+      "country": "byzantium",
+      "city_type": "capital",
+      "estimated_population": 400000,
+      "description": "Eastern Roman capital"
+    },
+    {
+      "name": "Palermo",
+      "modern_name": "Palermo",
+      "latitude": 38.1157,
+      "longitude": 13.3615,
+      "country": "sicily",
+      "city_type": "capital",
+      "estimated_population": 150000,
+      "description": "Norman Sicily capital"
+    },
+    {
+      "name": "al-Qāhirah",
+      "modern_name": "Cairo",
+      "latitude": 30.0444,
+      "longitude": 31.2357,
+      "country": "ayyubids",
+      "city_type": "capital",
+      "estimated_population": 200000,
+      "description": "Ayyubid capital"
+    },
+    {
+      "name": "Córdoba",
+      "modern_name": "Cordoba",
+      "latitude": 37.8882,
+      "longitude": -4.7794,
+      "country": "almohads",
+      "city_type": "major_city",
+      "estimated_population": 100000,
+      "description": "Major Andalusian city"
+    },
+    {
+      "name": "Venezia",
+      "modern_name": "Venice",
+      "latitude": 45.4408,
+      "longitude": 12.3155,
+      "country": "venice",
+      "city_type": "capital",
+      "estimated_population": 100000,
+      "description": "Maritime republic"
+    },
+    {
+      "name": "Milano",
+      "modern_name": "Milan",
+      "latitude": 45.4642,
+      "longitude": 9.1900,
+      "country": "milan",
+      "city_type": "major_city",
+      "estimated_population": 75000,
+      "description": "Lombard center"
+    },
+    {
+      "name": "Köln",
+      "modern_name": "Cologne",
+      "latitude": 50.9375,
+      "longitude": 6.9603,
+      "country": "holy_roman_empire",
+      "city_type": "major_city",
+      "estimated_population": 40000,
+      "description": "Rhine trading center"
+    },
+    {
+      "name": "Kraków",
+      "modern_name": "Krakow",
+      "latitude": 50.0647,
+      "longitude": 19.9450,
+      "country": "poland",
+      "city_type": "capital",
+      "estimated_population": 18000,
+      "description": "Polish capital"
+    },
+    {
+      "name": "Kiev",
+      "modern_name": "Kiev",
+      "latitude": 50.4501,
+      "longitude": 30.5234,
+      "country": "kiev",
+      "city_type": "capital",
+      "estimated_population": 50000,
+      "description": "Principal Russian city"
+    },
+    {
+      "name": "Novgorod",
+      "modern_name": "Novgorod",
+      "latitude": 58.5215,
+      "longitude": 31.2714,
+      "country": "novgorod",
+      "city_type": "major_city",
+      "estimated_population": 30000,
+      "description": "Trading republic"
+    },
+    {
+      "name": "Wien",
+      "modern_name": "Vienna",
+      "latitude": 48.2082,
+      "longitude": 16.3738,
+      "country": "holy_roman_empire",
+      "city_type": "major_city",
+      "estimated_population": 20000,
+      "description": "Eastern frontier"
+    },
+    {
+      "name": "Esztergom",
+      "modern_name": "Esztergom",
+      "latitude": 47.7928,
+      "longitude": 18.7415,
+      "country": "hungary",
+      "city_type": "capital",
+      "estimated_population": 15000,
+      "description": "Hungarian royal seat"
+    },
+    {
+      "name": "Roskilde",
+      "modern_name": "Roskilde",
+      "latitude": 55.6419,
+      "longitude": 12.0803,
+      "country": "denmark",
+      "city_type": "capital",
+      "estimated_population": 10000,
+      "description": "Danish royal seat"
+    },
+    {
+      "name": "Toledo",
+      "modern_name": "Toledo",
+      "latitude": 39.8628,
+      "longitude": -4.0273,
+      "country": "castile",
+      "city_type": "capital",
+      "estimated_population": 30000,
+      "description": "Castilian capital"
+    },
+    {
+      "name": "Roma",
+      "modern_name": "Rome",
+      "latitude": 41.9028,
+      "longitude": 12.4964,
+      "country": "papal_states",
+      "city_type": "capital",
+      "estimated_population": 35000,
+      "description": "Papal seat"
+    },
+    {
+      "name": "Thessaloniki",
+      "modern_name": "Thessaloniki",
+      "latitude": 40.6401,
+      "longitude": 22.9444,
+      "country": "byzantium",
+      "city_type": "major_city",
+      "estimated_population": 100000,
+      "description": "Second Byzantine city"
+    },
+    {
+      "name": "Genova",
+      "modern_name": "Genoa",
+      "latitude": 44.4056,
+      "longitude": 8.9463,
+      "country": "genoa",
+      "city_type": "capital",
+      "estimated_population": 60000,
+      "description": "Maritime republic"
+    },
+    {
+      "name": "Firenze",
+      "modern_name": "Florence",
+      "latitude": 43.7696,
+      "longitude": 11.2558,
+      "country": "florence",
+      "city_type": "major_city",
+      "estimated_population": 50000,
+      "description": "Banking center"
+    },
+    {
+      "name": "Barcelona",
+      "modern_name": "Barcelona",
+      "latitude": 41.3851,
+      "longitude": 2.1734,
+      "country": "aragon",
+      "city_type": "major_city",
+      "estimated_population": 25000,
+      "description": "Aragonese port"
+    },
+    {
+      "name": "Tunis",
+      "modern_name": "Tunis",
+      "latitude": 36.8065,
+      "longitude": 10.1815,
+      "country": "almohads",
+      "city_type": "major_city",
+      "estimated_population": 100000,
+      "description": "Almohad stronghold"
+    },
+    {
+      "name": "Fās",
+      "modern_name": "Fez",
+      "latitude": 34.0181,
+      "longitude": -5.0078,
+      "country": "almohads",
+      "city_type": "major_city",
+      "estimated_population": 120000,
+      "description": "Moroccan center"
+    },
+    {
+      "name": "Rouen",
+      "modern_name": "Rouen",
+      "latitude": 49.4431,
+      "longitude": 1.0993,
+      "country": "france",
+      "city_type": "major_city",
+      "estimated_population": 30000,
+      "description": "Capital of Normandy"
+    },
+    {
+      "name": "Toulouse",
+      "modern_name": "Toulouse",
+      "latitude": 43.6047,
+      "longitude": 1.4442,
+      "country": "france",
+      "city_type": "major_city",
+      "estimated_population": 25000,
+      "description": "Capital of Languedoc"
+    },
+    {
+      "name": "Lyon",
+      "modern_name": "Lyon",
+      "latitude": 45.7640,
+      "longitude": 4.8357,
+      "country": "france",
+      "city_type": "major_city",
+      "estimated_population": 20000,
+      "description": "Trading center on the Rhône"
+    },
+    {
+      "name": "Marseille",
+      "modern_name": "Marseille",
+      "latitude": 43.2965,
+      "longitude": 5.3698,
+      "country": "france",
+      "city_type": "port",
+      "estimated_population": 20000,
+      "description": "Major Mediterranean port"
+    },
+    {
+      "name": "Bordeaux",
+      "modern_name": "Bordeaux",
+      "latitude": 44.8378,
+      "longitude": -0.5792,
+      "country": "france",
+      "city_type": "port",
+      "estimated_population": 15000,
+      "description": "Important Atlantic port"
+    },
+    {
+      "name": "Winchester",
+      "modern_name": "Winchester",
+      "latitude": 51.0632,
+      "longitude": -1.3080,
+      "country": "england",
+      "city_type": "major_city",
+      "estimated_population": 8000,
+      "description": "Former capital of Wessex"
+    },
+    {
+      "name": "York",
+      "modern_name": "York",
+      "latitude": 53.9600,
+      "longitude": -1.0873,
+      "country": "england",
+      "city_type": "major_city",
+      "estimated_population": 15000,
+      "description": "Major northern city"
+    },
+    {
+      "name": "Canterbury",
+      "modern_name": "Canterbury",
+      "latitude": 51.2802,
+      "longitude": 1.0789,
+      "country": "england",
+      "city_type": "major_city",
+      "estimated_population": 6000,
+      "description": "Archbishopric seat"
+    },
+    {
+      "name": "Norwich",
+      "modern_name": "Norwich",
+      "latitude": 52.6309,
+      "longitude": 1.2974,
+      "country": "england",
+      "city_type": "major_city",
+      "estimated_population": 10000,
+      "description": "Wool trading center"
+    },
+    {
+      "name": "Regensburg",
+      "modern_name": "Regensburg",
+      "latitude": 49.0134,
+      "longitude": 12.1016,
+      "country": "holy_roman_empire",
+      "city_type": "major_city",
+      "estimated_population": 25000,
+      "description": "Important Danube trading city"
+    },
+    {
+      "name": "Nürnberg",
+      "modern_name": "Nuremberg",
+      "latitude": 49.4521,
+      "longitude": 11.0767,
+      "country": "holy_roman_empire",
+      "city_type": "major_city",
+      "estimated_population": 15000,
+      "description": "Imperial city and trading center"
+    },
+    {
+      "name": "Augsburg",
+      "modern_name": "Augsburg",
+      "latitude": 48.3705,
+      "longitude": 10.8978,
+      "country": "holy_roman_empire",
+      "city_type": "major_city",
+      "estimated_population": 18000,
+      "description": "Free imperial city"
+    },
+    {
+      "name": "Magdeburg",
+      "modern_name": "Magdeburg",
+      "latitude": 52.1205,
+      "longitude": 11.6276,
+      "country": "holy_roman_empire",
+      "city_type": "major_city",
+      "estimated_population": 30000,
+      "description": "Archbishopric and trading center"
+    },
+    {
+      "name": "Wrocław",
+      "modern_name": "Wroclaw",
+      "latitude": 51.1079,
+      "longitude": 17.0385,
+      "country": "poland",
+      "city_type": "major_city",
+      "estimated_population": 10000,
+      "description": "Silesian trading center"
+    },
+    {
+      "name": "Gdańsk",
+      "modern_name": "Gdansk",
+      "latitude": 54.3520,
+      "longitude": 18.6466,
+      "country": "poland",
+      "city_type": "port",
+      "estimated_population": 8000,
+      "description": "Baltic port city"
+    },
+    {
+      "name": "Poznań",
+      "modern_name": "Poznan",
+      "latitude": 52.4064,
+      "longitude": 16.9252,
+      "country": "poland",
+      "city_type": "major_city",
+      "estimated_population": 8000,
+      "description": "Western Polish stronghold"
+    },
+    {
+      "name": "Buda",
+      "modern_name": "Budapest",
+      "latitude": 47.4979,
+      "longitude": 19.0402,
+      "country": "hungary",
+      "city_type": "major_city",
+      "estimated_population": 12000,
+      "description": "Royal fortress city"
+    },
+    {
+      "name": "Pécs",
+      "modern_name": "Pecs",
+      "latitude": 46.0727,
+      "longitude": 18.2330,
+      "country": "hungary",
+      "city_type": "major_city",
+      "estimated_population": 8000,
+      "description": "Southern Hungarian center"
+    },
+    {
+      "name": "Ribe",
+      "modern_name": "Ribe",
+      "latitude": 55.3297,
+      "longitude": 8.7729,
+      "country": "denmark",
+      "city_type": "port",
+      "estimated_population": 5000,
+      "description": "Oldest Danish town"
+    },
+    {
+      "name": "Aarhus",
+      "modern_name": "Aarhus",
+      "latitude": 56.1629,
+      "longitude": 10.2039,
+      "country": "denmark",
+      "city_type": "major_city",
+      "estimated_population": 6000,
+      "description": "Major Jutland city"
+    },
+    {
+      "name": "Napoli",
+      "modern_name": "Naples",
+      "latitude": 40.8518,
+      "longitude": 14.2681,
+      "country": "sicily",
+      "city_type": "major_city",
+      "estimated_population": 30000,
+      "description": "Southern Italian port"
+    },
+    {
+      "name": "Santiago",
+      "modern_name": "Santiago de Compostela",
+      "latitude": 42.8805,
+      "longitude": -8.5456,
+      "country": "leon",
+      "city_type": "major_city",
+      "estimated_population": 15000,
+      "description": "Major pilgrimage destination"
+    },
+    {
+      "name": "Sevilla",
+      "modern_name": "Seville",
+      "latitude": 37.3891,
+      "longitude": -5.9845,
+      "country": "almohads",
+      "city_type": "major_city",
+      "estimated_population": 80000,
+      "description": "Major Andalusian city"
+    },
+    {
+      "name": "Smolensk",
+      "modern_name": "Smolensk",
+      "latitude": 54.7818,
+      "longitude": 32.0401,
+      "country": "smolensk",
+      "city_type": "major_city",
+      "estimated_population": 15000,
+      "description": "Important border fortress"
+    },
+    {
+      "name": "Vladimir",
+      "modern_name": "Vladimir",
+      "latitude": 56.1366,
+      "longitude": 40.3966,
+      "country": "vladimir",
+      "city_type": "capital",
+      "estimated_population": 20000,
+      "description": "Capital of Vladimir-Suzdal"
+    },
+    {
+      "name": "al-Iskandarīyah",
+      "modern_name": "Alexandria",
+      "latitude": 31.2001,
+      "longitude": 29.9187,
+      "country": "ayyubids",
+      "city_type": "port",
+      "estimated_population": 50000,
+      "description": "Major Mediterranean port"
+    },
+    {
+      "name": "Marrākush",
+      "modern_name": "Marrakech",
+      "latitude": 31.6295,
+      "longitude": -7.9811,
+      "country": "almohads",
+      "city_type": "capital",
+      "estimated_population": 100000,
+      "description": "Almohad capital"
+    },
+    {
+      "name": "Lübeck",
+      "modern_name": "Lübeck",
+      "latitude": 53.8667,
+      "longitude": 10.6833,
+      "country": "holy_roman_empire",
+      "city_type": "port",
+      "estimated_population": 12000,
+      "description": "Hanseatic League leader"
+    },
+    {
+      "name": "Hamburg",
+      "modern_name": "Hamburg",
+      "latitude": 53.5488,
+      "longitude": 9.9872,
+      "country": "holy_roman_empire",
+      "city_type": "port",
+      "estimated_population": 8000,
+      "description": "North Sea trading port"
+    },
+    {
+      "name": "Bremen",
+      "modern_name": "Bremen",
+      "latitude": 53.0793,
+      "longitude": 8.8017,
+      "country": "holy_roman_empire",
+      "city_type": "port",
+      "estimated_population": 7000,
+      "description": "Hanseatic port city"
+    },
+    {
+      "name": "Pisa",
+      "modern_name": "Pisa",
+      "latitude": 43.7228,
+      "longitude": 10.4017,
+      "country": "pisa",
+      "city_type": "major_city",
+      "estimated_population": 40000,
+      "description": "Maritime republic"
+    },
+    {
+      "name": "Siena",
+      "modern_name": "Siena",
+      "latitude": 43.3188,
+      "longitude": 11.3307,
+      "country": "siena",
+      "city_type": "major_city",
+      "estimated_population": 20000,
+      "description": "Tuscan banking center"
+    },
+    {
+      "name": "Bologna",
+      "modern_name": "Bologna",
+      "latitude": 44.4949,
+      "longitude": 11.3426,
+      "country": "papal_states",
+      "city_type": "major_city",
+      "estimated_population": 25000,
+      "description": "University city"
+    },
+    {
+      "name": "Verona",
+      "modern_name": "Verona",
+      "latitude": 45.4384,
+      "longitude": 10.9916,
+      "country": "verona",
+      "city_type": "major_city",
+      "estimated_population": 18000,
+      "description": "Strategic Alpine gateway"
+    },
+    {
+      "name": "Padova",
+      "modern_name": "Padua",
+      "latitude": 45.4064,
+      "longitude": 11.8768,
+      "country": "padua",
+      "city_type": "major_city",
+      "estimated_population": 15000,
+      "description": "Venetian ally"
+    },
+    {
+      "name": "Mantova",
+      "modern_name": "Mantua",
+      "latitude": 45.1564,
+      "longitude": 10.7914,
+      "country": "mantua",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Lombard city-state"
+    },
+    {
+      "name": "Brescia",
+      "modern_name": "Brescia",
+      "latitude": 45.5416,
+      "longitude": 10.2118,
+      "country": "brescia",
+      "city_type": "medium_city",
+      "estimated_population": 12000,
+      "description": "Lombard trading city"
+    },
+    {
+      "name": "Cremona",
+      "modern_name": "Cremona",
+      "latitude": 45.1333,
+      "longitude": 10.0333,
+      "country": "cremona",
+      "city_type": "medium_city",
+      "estimated_population": 10000,
+      "description": "Po Valley center"
+    },
+    {
+      "name": "Lucca",
+      "modern_name": "Lucca",
+      "latitude": 43.8439,
+      "longitude": 10.5030,
+      "country": "lucca",
+      "city_type": "medium_city",
+      "estimated_population": 12000,
+      "description": "Tuscan republic"
+    },
+    {
+      "name": "Pistoia",
+      "modern_name": "Pistoia",
+      "latitude": 43.9334,
+      "longitude": 10.9167,
+      "country": "pistoia",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Tuscan city-state"
+    },
+    {
+      "name": "Arezzo",
+      "modern_name": "Arezzo",
+      "latitude": 43.4633,
+      "longitude": 11.8796,
+      "country": "arezzo",
+      "city_type": "medium_city",
+      "estimated_population": 9000,
+      "description": "Central Italian city"
+    },
+    {
+      "name": "Ancona",
+      "modern_name": "Ancona",
+      "latitude": 43.6158,
+      "longitude": 13.5189,
+      "country": "ancona",
+      "city_type": "port",
+      "estimated_population": 12000,
+      "description": "Adriatic port republic"
+    },
+    {
+      "name": "Ravenna",
+      "modern_name": "Ravenna",
+      "latitude": 44.4184,
+      "longitude": 12.2035,
+      "country": "ravenna",
+      "city_type": "medium_city",
+      "estimated_population": 10000,
+      "description": "Former Byzantine stronghold"
+    },
+    {
+      "name": "Bari",
+      "modern_name": "Bari",
+      "latitude": 41.1171,
+      "longitude": 16.8719,
+      "country": "sicily",
+      "city_type": "port",
+      "estimated_population": 15000,
+      "description": "Apulian port"
+    },
+    {
+      "name": "Brindisi",
+      "modern_name": "Brindisi",
+      "latitude": 40.6328,
+      "longitude": 17.9419,
+      "country": "sicily",
+      "city_type": "port",
+      "estimated_population": 8000,
+      "description": "Gateway to the East"
+    },
+    {
+      "name": "Montpellier",
+      "modern_name": "Montpellier",
+      "latitude": 43.6108,
+      "longitude": 3.8767,
+      "country": "france",
+      "city_type": "medium_city",
+      "estimated_population": 12000,
+      "description": "Mediterranean trading city"
+    },
+    {
+      "name": "Nîmes",
+      "modern_name": "Nîmes",
+      "latitude": 43.8367,
+      "longitude": 4.3601,
+      "country": "france",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Southern French city"
+    },
+    {
+      "name": "Narbonne",
+      "modern_name": "Narbonne",
+      "latitude": 43.1839,
+      "longitude": 3.0036,
+      "country": "france",
+      "city_type": "medium_city",
+      "estimated_population": 10000,
+      "description": "Mediterranean port"
+    },
+    {
+      "name": "Carcassonne",
+      "modern_name": "Carcassonne",
+      "latitude": 43.2130,
+      "longitude": 2.3491,
+      "country": "france",
+      "city_type": "fortress",
+      "estimated_population": 6000,
+      "description": "Fortified Languedoc city"
+    },
+    {
+      "name": "Poitiers",
+      "modern_name": "Poitiers",
+      "latitude": 46.5802,
+      "longitude": 0.3404,
+      "country": "france",
+      "city_type": "medium_city",
+      "estimated_population": 12000,
+      "description": "Western French center"
+    },
+    {
+      "name": "Orléans",
+      "modern_name": "Orléans",
+      "latitude": 47.9029,
+      "longitude": 1.9093,
+      "country": "france",
+      "city_type": "medium_city",
+      "estimated_population": 15000,
+      "description": "Loire Valley city"
+    },
+    {
+      "name": "Reims",
+      "modern_name": "Reims",
+      "latitude": 49.2628,
+      "longitude": 4.0347,
+      "country": "france",
+      "city_type": "major_city",
+      "estimated_population": 18000,
+      "description": "Coronation city"
+    },
+    {
+      "name": "Troyes",
+      "modern_name": "Troyes",
+      "latitude": 48.2973,
+      "longitude": 4.0744,
+      "country": "france",
+      "city_type": "medium_city",
+      "estimated_population": 14000,
+      "description": "Champagne fair city"
+    },
+    {
+      "name": "Metz",
+      "modern_name": "Metz",
+      "latitude": 49.1193,
+      "longitude": 6.1757,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 12000,
+      "description": "Imperial city on Moselle"
+    },
+    {
+      "name": "Trier",
+      "modern_name": "Trier",
+      "latitude": 49.7596,
+      "longitude": 6.6441,
+      "country": "holy_roman_empire",
+      "city_type": "major_city",
+      "estimated_population": 15000,
+      "description": "Archbishopric on Moselle"
+    },
+    {
+      "name": "Mainz",
+      "modern_name": "Mainz",
+      "latitude": 49.9929,
+      "longitude": 8.2473,
+      "country": "holy_roman_empire",
+      "city_type": "major_city",
+      "estimated_population": 20000,
+      "description": "Electoral archbishopric"
+    },
+    {
+      "name": "Worms",
+      "modern_name": "Worms",
+      "latitude": 49.6325,
+      "longitude": 8.3589,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 10000,
+      "description": "Imperial diet city"
+    },
+    {
+      "name": "Speyer",
+      "modern_name": "Speyer",
+      "latitude": 49.3233,
+      "longitude": 8.4317,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Imperial cathedral city"
+    },
+    {
+      "name": "Strasbourg",
+      "modern_name": "Strasbourg",
+      "latitude": 48.5734,
+      "longitude": 7.7521,
+      "country": "holy_roman_empire",
+      "city_type": "major_city",
+      "estimated_population": 16000,
+      "description": "Rhine trading center"
+    },
+    {
+      "name": "Basel",
+      "modern_name": "Basel",
+      "latitude": 47.5596,
+      "longitude": 7.5886,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Rhine bend city"
+    },
+    {
+      "name": "Konstanz",
+      "modern_name": "Constance",
+      "latitude": 47.6779,
+      "longitude": 9.1732,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 7000,
+      "description": "Lake Constance city"
+    },
+    {
+      "name": "Ulm",
+      "modern_name": "Ulm",
+      "latitude": 48.3984,
+      "longitude": 9.9916,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 9000,
+      "description": "Danube trading city"
+    },
+    {
+      "name": "Würzburg",
+      "modern_name": "Würzburg",
+      "latitude": 49.7913,
+      "longitude": 9.9534,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 12000,
+      "description": "Franconian bishopric"
+    },
+    {
+      "name": "Bamberg",
+      "modern_name": "Bamberg",
+      "latitude": 49.8988,
+      "longitude": 10.9027,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 10000,
+      "description": "Imperial bishopric"
+    },
+    {
+      "name": "Erfurt",
+      "modern_name": "Erfurt",
+      "latitude": 50.9848,
+      "longitude": 11.0299,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 12000,
+      "description": "Thuringian trading center"
+    },
+    {
+      "name": "Leipzig",
+      "modern_name": "Leipzig",
+      "latitude": 51.3397,
+      "longitude": 12.3731,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Saxon trading city"
+    },
+    {
+      "name": "Dresden",
+      "modern_name": "Dresden",
+      "latitude": 51.0504,
+      "longitude": 13.7373,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Elbe river city"
+    },
+    {
+      "name": "Praha",
+      "modern_name": "Prague",
+      "latitude": 50.0755,
+      "longitude": 14.4378,
+      "country": "bohemia",
+      "city_type": "capital",
+      "estimated_population": 25000,
+      "description": "Bohemian royal seat"
+    },
+    {
+      "name": "Brno",
+      "modern_name": "Brno",
+      "latitude": 49.1951,
+      "longitude": 16.6068,
+      "country": "bohemia",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Moravian center"
+    },
+    {
+      "name": "Salzburg",
+      "modern_name": "Salzburg",
+      "latitude": 47.8095,
+      "longitude": 13.0550,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 10000,
+      "description": "Alpine archbishopric"
+    },
+    {
+      "name": "Innsbruck",
+      "modern_name": "Innsbruck",
+      "latitude": 47.2692,
+      "longitude": 11.4041,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 5000,
+      "description": "Alpine pass city"
+    },
+    {
+      "name": "Linz",
+      "modern_name": "Linz",
+      "latitude": 48.3069,
+      "longitude": 14.2858,
+      "country": "holy_roman_empire",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Danube trading post"
+    },
+    {
+      "name": "Bratislava",
+      "modern_name": "Bratislava",
+      "latitude": 48.1486,
+      "longitude": 17.1077,
+      "country": "hungary",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Danube frontier city"
+    },
+    {
+      "name": "Szeged",
+      "modern_name": "Szeged",
+      "latitude": 46.2530,
+      "longitude": 20.1414,
+      "country": "hungary",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Southern Hungarian city"
+    },
+    {
+      "name": "Debrecen",
+      "modern_name": "Debrecen",
+      "latitude": 47.5316,
+      "longitude": 21.6273,
+      "country": "hungary",
+      "city_type": "medium_city",
+      "estimated_population": 5000,
+      "description": "Eastern Hungarian center"
+    },
+    {
+      "name": "Bergen",
+      "modern_name": "Bergen",
+      "latitude": 60.3913,
+      "longitude": 5.3221,
+      "country": "norway",
+      "city_type": "port",
+      "estimated_population": 8000,
+      "description": "Western Norwegian port"
+    },
+    {
+      "name": "Trondheim",
+      "modern_name": "Trondheim",
+      "latitude": 63.4305,
+      "longitude": 10.3951,
+      "country": "norway",
+      "city_type": "major_city",
+      "estimated_population": 6000,
+      "description": "Norwegian royal seat"
+    },
+    {
+      "name": "Oslo",
+      "modern_name": "Oslo",
+      "latitude": 59.9139,
+      "longitude": 10.7522,
+      "country": "norway",
+      "city_type": "medium_city",
+      "estimated_population": 4000,
+      "description": "Emerging Norwegian city"
+    },
+    {
+      "name": "Stockholm",
+      "modern_name": "Stockholm",
+      "latitude": 59.3293,
+      "longitude": 18.0686,
+      "country": "sweden",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Swedish trading center"
+    },
+    {
+      "name": "Visby",
+      "modern_name": "Visby",
+      "latitude": 57.6348,
+      "longitude": 18.2948,
+      "country": "sweden",
+      "city_type": "port",
+      "estimated_population": 8000,
+      "description": "Gotland trading port"
+    },
+    {
+      "name": "Uppsala",
+      "modern_name": "Uppsala",
+      "latitude": 59.8586,
+      "longitude": 17.6389,
+      "country": "sweden",
+      "city_type": "medium_city",
+      "estimated_population": 4000,
+      "description": "Swedish religious center"
+    },
+    {
+      "name": "Kalmar",
+      "modern_name": "Kalmar",
+      "latitude": 56.6634,
+      "longitude": 16.3567,
+      "country": "sweden",
+      "city_type": "medium_city",
+      "estimated_population": 3000,
+      "description": "Baltic trading city"
+    },
+    {
+      "name": "Lund",
+      "modern_name": "Lund",
+      "latitude": 55.7047,
+      "longitude": 13.1910,
+      "country": "denmark",
+      "city_type": "medium_city",
+      "estimated_population": 5000,
+      "description": "Scanian archbishopric"
+    },
+    {
+      "name": "Odense",
+      "modern_name": "Odense",
+      "latitude": 55.4038,
+      "longitude": 10.4024,
+      "country": "denmark",
+      "city_type": "medium_city",
+      "estimated_population": 4000,
+      "description": "Funen island center"
+    },
+    {
+      "name": "Aalborg",
+      "modern_name": "Aalborg",
+      "latitude": 57.0488,
+      "longitude": 9.9217,
+      "country": "denmark",
+      "city_type": "medium_city",
+      "estimated_population": 3000,
+      "description": "Northern Jutland city"
+    },
+    {
+      "name": "Sandomierz",
+      "modern_name": "Sandomierz",
+      "latitude": 50.6832,
+      "longitude": 21.7500,
+      "country": "poland",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Vistula trading post"
+    },
+    {
+      "name": "Lublin",
+      "modern_name": "Lublin",
+      "latitude": 51.2465,
+      "longitude": 22.5684,
+      "country": "poland",
+      "city_type": "medium_city",
+      "estimated_population": 5000,
+      "description": "Eastern Polish center"
+    },
+    {
+      "name": "Płock",
+      "modern_name": "Płock",
+      "latitude": 52.5463,
+      "longitude": 19.7065,
+      "country": "poland",
+      "city_type": "medium_city",
+      "estimated_population": 4000,
+      "description": "Mazovian stronghold"
+    },
+    {
+      "name": "Kalisz",
+      "modern_name": "Kalisz",
+      "latitude": 51.7613,
+      "longitude": 18.0859,
+      "country": "poland",
+      "city_type": "medium_city",
+      "estimated_population": 3000,
+      "description": "Greater Poland city"
+    },
+    {
+      "name": "Opole",
+      "modern_name": "Opole",
+      "latitude": 50.6751,
+      "longitude": 17.9213,
+      "country": "poland",
+      "city_type": "medium_city",
+      "estimated_population": 4000,
+      "description": "Upper Silesian center"
+    },
+    {
+      "name": "Przemyśl",
+      "modern_name": "Przemyśl",
+      "latitude": 49.7839,
+      "longitude": 22.7681,
+      "country": "poland",
+      "city_type": "fortress",
+      "estimated_population": 3000,
+      "description": "Eastern border fortress"
+    },
+    {
+      "name": "Ryazan",
+      "modern_name": "Ryazan",
+      "latitude": 54.6269,
+      "longitude": 39.6916,
+      "country": "ryazan",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Russian principality center"
+    },
+    {
+      "name": "Tver",
+      "modern_name": "Tver",
+      "latitude": 56.8431,
+      "longitude": 35.9221,
+      "country": "tver",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Upper Volga city"
+    },
+    {
+      "name": "Suzdal",
+      "modern_name": "Suzdal",
+      "latitude": 56.4186,
+      "longitude": 40.4461,
+      "country": "vladimir",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Ancient Russian center"
+    },
+    {
+      "name": "Rostov",
+      "modern_name": "Rostov Veliky",
+      "latitude": 57.1816,
+      "longitude": 39.4161,
+      "country": "vladimir",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Lake Nero city"
+    },
+    {
+      "name": "Yaroslavl",
+      "modern_name": "Yaroslavl",
+      "latitude": 57.6261,
+      "longitude": 39.8845,
+      "country": "vladimir",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Volga trading city"
+    },
+    {
+      "name": "Pskov",
+      "modern_name": "Pskov",
+      "latitude": 57.8136,
+      "longitude": 28.3496,
+      "country": "pskov",
+      "city_type": "medium_city",
+      "estimated_population": 12000,
+      "description": "Northwestern Russian republic"
+    },
+    {
+      "name": "Polotsk",
+      "modern_name": "Polotsk",
+      "latitude": 55.4871,
+      "longitude": 28.7856,
+      "country": "polotsk",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Dvina river principality"
+    },
+    {
+      "name": "Chernigov",
+      "modern_name": "Chernihiv",
+      "latitude": 51.4982,
+      "longitude": 31.2893,
+      "country": "chernigov",
+      "city_type": "medium_city",
+      "estimated_population": 10000,
+      "description": "Dnieper principality"
+    },
+    {
+      "name": "Pereyaslavl",
+      "modern_name": "Pereiaslav",
+      "latitude": 50.0711,
+      "longitude": 31.4666,
+      "country": "pereyaslavl",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Southern Russian city"
+    },
+    {
+      "name": "Galicia",
+      "modern_name": "Halych",
+      "latitude": 49.1250,
+      "longitude": 24.7238,
+      "country": "galicia",
+      "city_type": "capital",
+      "estimated_population": 12000,
+      "description": "Galician principality capital"
+    },
+    {
+      "name": "Volhynia",
+      "modern_name": "Volodymyr",
+      "latitude": 50.8497,
+      "longitude": 24.3244,
+      "country": "volhynia",
+      "city_type": "capital",
+      "estimated_population": 8000,
+      "description": "Volhynian principality capital"
+    },
+    {
+      "name": "Zaragoza",
+      "modern_name": "Zaragoza",
+      "latitude": 41.6488,
+      "longitude": -0.8891,
+      "country": "aragon",
+      "city_type": "capital",
+      "estimated_population": 20000,
+      "description": "Aragonese capital"
+    },
+    {
+      "name": "Valencia",
+      "modern_name": "Valencia",
+      "latitude": 39.4699,
+      "longitude": -0.3763,
+      "country": "valencia",
+      "city_type": "major_city",
+      "estimated_population": 15000,
+      "description": "Eastern Spanish port"
+    },
+    {
+      "name": "Palma",
+      "modern_name": "Palma",
+      "latitude": 39.5696,
+      "longitude": 2.6502,
+      "country": "aragon",
+      "city_type": "port",
+      "estimated_population": 8000,
+      "description": "Balearic island capital"
+    },
+    {
+      "name": "Burgos",
+      "modern_name": "Burgos",
+      "latitude": 42.3440,
+      "longitude": -3.6969,
+      "country": "castile",
+      "city_type": "major_city",
+      "estimated_population": 12000,
+      "description": "Castilian stronghold"
+    },
+    {
+      "name": "León",
+      "modern_name": "León",
+      "latitude": 42.5987,
+      "longitude": -5.5671,
+      "country": "leon",
+      "city_type": "capital",
+      "estimated_population": 15000,
+      "description": "Leonese capital"
+    },
+    {
+      "name": "Salamanca",
+      "modern_name": "Salamanca",
+      "latitude": 40.9701,
+      "longitude": -5.6635,
+      "country": "leon",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "University city"
+    },
+    {
+      "name": "Valladolid",
+      "modern_name": "Valladolid",
+      "latitude": 41.6518,
+      "longitude": -4.7245,
+      "country": "castile",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Castilian court city"
+    },
+    {
+      "name": "Segovia",
+      "modern_name": "Segovia",
+      "latitude": 40.9429,
+      "longitude": -4.1088,
+      "country": "castile",
+      "city_type": "medium_city",
+      "estimated_population": 7000,
+      "description": "Central Spanish city"
+    },
+    {
+      "name": "Ávila",
+      "modern_name": "Ávila",
+      "latitude": 40.6565,
+      "longitude": -4.6815,
+      "country": "castile",
+      "city_type": "fortress",
+      "estimated_population": 5000,
+      "description": "Walled city"
+    },
+    {
+      "name": "Cádiz",
+      "modern_name": "Cádiz",
+      "latitude": 36.5167,
+      "longitude": -6.2833,
+      "country": "almohads",
+      "city_type": "port",
+      "estimated_population": 10000,
+      "description": "Atlantic port"
+    },
+    {
+      "name": "Granada",
+      "modern_name": "Granada",
+      "latitude": 37.1773,
+      "longitude": -3.5986,
+      "country": "almohads",
+      "city_type": "major_city",
+      "estimated_population": 60000,
+      "description": "Southern Andalusian city"
+    },
+    {
+      "name": "Málaga",
+      "modern_name": "Málaga",
+      "latitude": 36.7213,
+      "longitude": -4.4214,
+      "country": "almohads",
+      "city_type": "port",
+      "estimated_population": 15000,
+      "description": "Mediterranean port"
+    },
+    {
+      "name": "Almería",
+      "modern_name": "Almería",
+      "latitude": 36.8381,
+      "longitude": -2.4597,
+      "country": "almohads",
+      "city_type": "port",
+      "estimated_population": 12000,
+      "description": "Eastern Andalusian port"
+    },
+    {
+      "name": "Jaén",
+      "modern_name": "Jaén",
+      "latitude": 37.7793,
+      "longitude": -3.7848,
+      "country": "almohads",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Andalusian fortress city"
+    },
+    {
+      "name": "Murcia",
+      "modern_name": "Murcia",
+      "latitude": 37.9922,
+      "longitude": -1.1307,
+      "country": "murcia",
+      "city_type": "medium_city",
+      "estimated_population": 10000,
+      "description": "Southeastern Spanish city"
+    },
+    {
+      "name": "Badajoz",
+      "modern_name": "Badajoz",
+      "latitude": 38.8794,
+      "longitude": -6.9707,
+      "country": "almohads",
+      "city_type": "fortress",
+      "estimated_population": 8000,
+      "description": "Western border fortress"
+    },
+    {
+      "name": "Coimbra",
+      "modern_name": "Coimbra",
+      "latitude": 40.2033,
+      "longitude": -8.4103,
+      "country": "portugal",
+      "city_type": "capital",
+      "estimated_population": 10000,
+      "description": "Portuguese capital"
+    },
+    {
+      "name": "Porto",
+      "modern_name": "Porto",
+      "latitude": 41.1579,
+      "longitude": -8.6291,
+      "country": "portugal",
+      "city_type": "port",
+      "estimated_population": 8000,
+      "description": "Northern Portuguese port"
+    },
+    {
+      "name": "Braga",
+      "modern_name": "Braga",
+      "latitude": 41.5518,
+      "longitude": -8.4229,
+      "country": "portugal",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Portuguese archbishopric"
+    },
+    {
+      "name": "Lisboa",
+      "modern_name": "Lisbon",
+      "latitude": 38.7223,
+      "longitude": -9.1393,
+      "country": "portugal",
+      "city_type": "port",
+      "estimated_population": 15000,
+      "description": "Atlantic port city"
+    },
+    {
+      "name": "Évora",
+      "modern_name": "Évora",
+      "latitude": 38.5714,
+      "longitude": -7.9036,
+      "country": "portugal",
+      "city_type": "medium_city",
+      "estimated_population": 5000,
+      "description": "Central Portuguese city"
+    },
+    {
+      "name": "Silves",
+      "modern_name": "Silves",
+      "latitude": 37.1913,
+      "longitude": -8.4389,
+      "country": "almohads",
+      "city_type": "medium_city",
+      "estimated_population": 8000,
+      "description": "Algarve center"
+    },
+    {
+      "name": "Dublin",
+      "modern_name": "Dublin",
+      "latitude": 53.3498,
+      "longitude": -6.2603,
+      "country": "ireland",
+      "city_type": "port",
+      "estimated_population": 10000,
+      "description": "Norse-Irish trading center"
+    },
+    {
+      "name": "Cork",
+      "modern_name": "Cork",
+      "latitude": 51.8985,
+      "longitude": -8.4756,
+      "country": "ireland",
+      "city_type": "port",
+      "estimated_population": 5000,
+      "description": "Southern Irish port"
+    },
+    {
+      "name": "Waterford",
+      "modern_name": "Waterford",
+      "latitude": 52.2593,
+      "longitude": -7.1101,
+      "country": "ireland",
+      "city_type": "port",
+      "estimated_population": 4000,
+      "description": "Norse-founded port"
+    },
+    {
+      "name": "Limerick",
+      "modern_name": "Limerick",
+      "latitude": 52.6638,
+      "longitude": -8.6267,
+      "country": "ireland",
+      "city_type": "medium_city",
+      "estimated_population": 3000,
+      "description": "Shannon river city"
+    },
+    {
+      "name": "Chester",
+      "modern_name": "Chester",
+      "latitude": 53.1906,
+      "longitude": -2.8926,
+      "country": "england",
+      "city_type": "fortress",
+      "estimated_population": 6000,
+      "description": "Welsh border fortress"
+    },
+    {
+      "name": "Bristol",
+      "modern_name": "Bristol",
+      "latitude": 51.4545,
+      "longitude": -2.5879,
+      "country": "england",
+      "city_type": "port",
+      "estimated_population": 8000,
+      "description": "Western English port"
+    },
+    {
+      "name": "Southampton",
+      "modern_name": "Southampton",
+      "latitude": 50.9097,
+      "longitude": -1.4044,
+      "country": "england",
+      "city_type": "port",
+      "estimated_population": 5000,
+      "description": "Channel port"
+    },
+    {
+      "name": "Portsmouth",
+      "modern_name": "Portsmouth",
+      "latitude": 50.8058,
+      "longitude": -1.0872,
+      "country": "england",
+      "city_type": "port",
+      "estimated_population": 3000,
+      "description": "Naval port"
+    },
+    {
+      "name": "Exeter",
+      "modern_name": "Exeter",
+      "latitude": 50.7184,
+      "longitude": -3.5339,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 5000,
+      "description": "Southwestern English city"
+    },
+    {
+      "name": "Gloucester",
+      "modern_name": "Gloucester",
+      "latitude": 51.8642,
+      "longitude": -2.2381,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Severn valley city"
+    },
+    {
+      "name": "Worcester",
+      "modern_name": "Worcester",
+      "latitude": 52.1936,
+      "longitude": -2.2200,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 4000,
+      "description": "Midlands cathedral city"
+    },
+    {
+      "name": "Hereford",
+      "modern_name": "Hereford",
+      "latitude": 52.0567,
+      "longitude": -2.7150,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 3000,
+      "description": "Welsh border city"
+    },
+    {
+      "name": "Shrewsbury",
+      "modern_name": "Shrewsbury",
+      "latitude": 52.7069,
+      "longitude": -2.7528,
+      "country": "england",
+      "city_type": "fortress",
+      "estimated_population": 4000,
+      "description": "Shropshire stronghold"
+    },
+    {
+      "name": "Coventry",
+      "modern_name": "Coventry",
+      "latitude": 52.4068,
+      "longitude": -1.5197,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 5000,
+      "description": "Midlands trading center"
+    },
+    {
+      "name": "Leicester",
+      "modern_name": "Leicester",
+      "latitude": 52.6369,
+      "longitude": -1.1398,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 4000,
+      "description": "East Midlands city"
+    },
+    {
+      "name": "Nottingham",
+      "modern_name": "Nottingham",
+      "latitude": 52.9548,
+      "longitude": -1.1581,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 5000,
+      "description": "Trent valley city"
+    },
+    {
+      "name": "Derby",
+      "modern_name": "Derby",
+      "latitude": 52.9225,
+      "longitude": -1.4746,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 3000,
+      "description": "Peak district city"
+    },
+    {
+      "name": "Lincoln",
+      "modern_name": "Lincoln",
+      "latitude": 53.2244,
+      "longitude": -0.5375,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 6000,
+      "description": "Lincolnshire cathedral city"
+    },
+    {
+      "name": "Stamford",
+      "modern_name": "Stamford",
+      "latitude": 52.6500,
+      "longitude": -0.4833,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 3000,
+      "description": "Stone-built market town"
+    },
+    {
+      "name": "Cambridge",
+      "modern_name": "Cambridge",
+      "latitude": 52.2053,
+      "longitude": 0.1218,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 4000,
+      "description": "University town"
+    },
+    {
+      "name": "Oxford",
+      "modern_name": "Oxford",
+      "latitude": 51.7520,
+      "longitude": -1.2577,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 5000,
+      "description": "University town"
+    },
+    {
+      "name": "Reading",
+      "modern_name": "Reading",
+      "latitude": 51.4543,
+      "longitude": -0.9781,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 3000,
+      "description": "Thames valley town"
+    },
+    {
+      "name": "St. Albans",
+      "modern_name": "St. Albans",
+      "latitude": 51.7500,
+      "longitude": -0.3333,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 3000,
+      "description": "Abbey town"
+    },
+    {
+      "name": "Bury St Edmunds",
+      "modern_name": "Bury St Edmunds",
+      "latitude": 52.2467,
+      "longitude": 0.7133,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 4000,
+      "description": "Suffolk abbey town"
+    },
+    {
+      "name": "Ipswich",
+      "modern_name": "Ipswich",
+      "latitude": 52.0567,
+      "longitude": 1.1484,
+      "country": "england",
+      "city_type": "port",
+      "estimated_population": 5000,
+      "description": "East Anglian port"
+    },
+    {
+      "name": "Colchester",
+      "modern_name": "Colchester",
+      "latitude": 51.8917,
+      "longitude": 0.9036,
+      "country": "england",
+      "city_type": "medium_city",
+      "estimated_population": 4000,
+      "description": "Essex wool town"
+    },
+    {
+      "name": "Rochester",
+      "modern_name": "Rochester",
+      "latitude": 51.3878,
+      "longitude": 0.5014,
+      "country": "england",
+      "city_type": "fortress",
+      "estimated_population": 3000,
+      "description": "Medway fortress"
+    },
+    {
+      "name": "Dover",
+      "modern_name": "Dover",
+      "latitude": 51.1279,
+      "longitude": 1.3134,
+      "country": "england",
+      "city_type": "fortress",
+      "estimated_population": 2000,
+      "description": "Channel fortress"
+    },
+    {
+      "name": "Hastings",
+      "modern_name": "Hastings",
+      "latitude": 50.8549,
+      "longitude": 0.5736,
+      "country": "england",
+      "city_type": "port",
+      "estimated_population": 2000,
+      "description": "Cinque port"
+    },
+    {
+      "name": "Sandwich",
+      "modern_name": "Sandwich",
+      "latitude": 51.2756,
+      "longitude": 1.3386,
+      "country": "england",
+      "city_type": "port",
+      "estimated_population": 3000,
+      "description": "Cinque port"
+    },
+    {
+      "name": "Rye",
+      "modern_name": "Rye",
+      "latitude": 50.9500,
+      "longitude": 0.7331,
+      "country": "england",
+      "city_type": "port",
+      "estimated_population": 2000,
+      "description": "Cinque port"
+    }
+  ]
+}

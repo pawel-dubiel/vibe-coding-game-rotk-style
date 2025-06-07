@@ -1,22 +1,40 @@
 """Test that attack targeting respects fog of war"""
 import pygame
-pygame.init()
-
+import pytest
 from game.game_state import GameState
 from game.entities.unit_factory import UnitFactory
 from game.entities.knight import KnightClass
 
 
+@pytest.fixture(autouse=True)
+def setup_and_teardown():
+    """Setup and teardown for each test to ensure isolation"""
+    # Setup: Initialize pygame freshly for each test
+    pygame.quit()  # Ensure clean state
+    pygame.init()
+    
+    yield  # Run the test
+    
+    # Teardown: Clean up pygame state
+    pygame.quit()
+
+
 def test_attack_targeting_respects_fog():
     """Test that invisible units cannot be targeted"""
-    # Create game state
+    # Create game state with fresh initialization
     game_state = GameState(battle_config={
         'board_size': (20, 20),
         'knights': 0,
         'castles': 0
     })
+    
+    # Ensure completely fresh state
     game_state.knights = []
     game_state.castles = []
+    
+    # Force fog of war reinitialization to ensure clean state
+    from game.visibility import FogOfWar
+    game_state.fog_of_war = FogOfWar(game_state.board_width, game_state.board_height, 2)
     
     # Create archer for player 1
     archer = UnitFactory.create_unit("Archer", KnightClass.ARCHER, 5, 5)
@@ -65,22 +83,28 @@ def test_attack_targeting_respects_fog():
 
 def test_charge_targeting_respects_fog():
     """Test that cavalry charge targeting respects fog of war"""
-    # Create game state
+    # Create game state with fresh initialization
     game_state = GameState(battle_config={
         'board_size': (20, 20),
         'knights': 0,
         'castles': 0
     })
+    
+    # Ensure completely fresh state
     game_state.knights = []
     game_state.castles = []
     
-    # Create cavalry for player 1
-    cavalry = UnitFactory.create_unit("Cavalry", KnightClass.CAVALRY, 5, 5)
+    # Force fog of war reinitialization to ensure clean state
+    from game.visibility import FogOfWar
+    game_state.fog_of_war = FogOfWar(game_state.board_width, game_state.board_height, 2)
+    
+    # Create cavalry for player 1 - place on plains to avoid terrain issues
+    cavalry = UnitFactory.create_unit("Cavalry", KnightClass.CAVALRY, 10, 10)
     cavalry.player_id = 1
     
     # Create adjacent enemies
     # Visible enemy (within vision range)
-    visible_enemy = UnitFactory.create_unit("Visible", KnightClass.WARRIOR, 6, 5)
+    visible_enemy = UnitFactory.create_unit("Visible", KnightClass.WARRIOR, 11, 10)
     visible_enemy.player_id = 2
     
     # Create another cavalry unit far away to block vision to an enemy behind it
@@ -102,7 +126,7 @@ def test_charge_targeting_respects_fog():
     charge_targets = game_state._get_charge_targets()
     
     # Should only include visible adjacent enemy
-    assert (6, 5) in charge_targets  # Visible enemy
+    assert (11, 10) in charge_targets  # Visible enemy
     # Note: Can't charge non-adjacent enemies anyway
     
     print("✓ Cavalry charge targeting respects fog of war")
@@ -110,14 +134,20 @@ def test_charge_targeting_respects_fog():
 
 def test_partially_visible_units_not_targetable():
     """Test that partially visible units (unidentified) cannot be targeted"""
-    # Create game state
+    # Create game state with fresh initialization
     game_state = GameState(battle_config={
         'board_size': (20, 20),
         'knights': 0,
         'castles': 0
     })
+    
+    # Ensure completely fresh state
     game_state.knights = []
     game_state.castles = []
+    
+    # Force fog of war reinitialization to ensure clean state
+    from game.visibility import FogOfWar
+    game_state.fog_of_war = FogOfWar(game_state.board_width, game_state.board_height, 2)
     
     # Create archer
     archer = UnitFactory.create_unit("Archer", KnightClass.ARCHER, 5, 5)
