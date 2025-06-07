@@ -268,11 +268,14 @@ def convert_cities_to_hex_coordinates(cities: List[Dict], bounds: GeographicBoun
         # Convert city lat/lon to tile coordinates at the same zoom level
         city_tile_x, city_tile_y = fetcher.deg2num_float(lat, lon, zoom)
         
-        # Get map bounds in tile coordinates using the same function
+        # Get map bounds in tile coordinates. Use integer tile numbers here
+        # because the tile image fetched by ``fetch_area_tiles`` is aligned to
+        # full tile boundaries.  Using the same integer bounds ensures that
+        # city positions line up perfectly with the generated terrain map.
         # IMPORTANT: In tile coordinates, Y increases from north to south!
         # So north latitude gives us the MIN tile Y, south latitude gives us MAX tile Y
-        west_x, south_y = fetcher.deg2num_float(bounds.south_lat, bounds.west_lon, zoom)
-        east_x, north_y = fetcher.deg2num_float(bounds.north_lat, bounds.east_lon, zoom)
+        west_x, south_y = fetcher.deg2num(bounds.south_lat, bounds.west_lon, zoom)
+        east_x, north_y = fetcher.deg2num(bounds.north_lat, bounds.east_lon, zoom)
         
         # Correct the min/max for the inverted Y axis
         min_tile_x = west_x
