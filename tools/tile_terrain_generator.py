@@ -53,6 +53,14 @@ class MapTileFetcher:
         x = int((lon_deg + 180.0) / 360.0 * n)
         y = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
         return x, y
+
+    def deg2num_float(self, lat_deg: float, lon_deg: float, zoom: int) -> Tuple[float, float]:
+        """Convert lat/lon to fractional tile coordinates"""
+        lat_rad = math.radians(lat_deg)
+        n = 2.0 ** zoom
+        x = (lon_deg + 180.0) / 360.0 * n
+        y = (1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n
+        return x, y
     
     def num2deg(self, x: int, y: int, zoom: int) -> Tuple[float, float]:
         """Convert tile numbers to lat/lon"""
@@ -256,15 +264,15 @@ def convert_cities_to_hex_coordinates(cities: List[Dict], bounds: GeographicBoun
         """Advanced coordinate mapping that matches the tile system exactly"""
         # Use the same deg2num function as the tile fetcher to ensure consistency
         fetcher = MapTileFetcher()
-        
+
         # Convert city lat/lon to tile coordinates at the same zoom level
-        city_tile_x, city_tile_y = fetcher.deg2num(lat, lon, zoom)
+        city_tile_x, city_tile_y = fetcher.deg2num_float(lat, lon, zoom)
         
         # Get map bounds in tile coordinates using the same function
         # IMPORTANT: In tile coordinates, Y increases from north to south!
         # So north latitude gives us the MIN tile Y, south latitude gives us MAX tile Y
-        west_x, south_y = fetcher.deg2num(bounds.south_lat, bounds.west_lon, zoom)
-        east_x, north_y = fetcher.deg2num(bounds.north_lat, bounds.east_lon, zoom)
+        west_x, south_y = fetcher.deg2num_float(bounds.south_lat, bounds.west_lon, zoom)
+        east_x, north_y = fetcher.deg2num_float(bounds.north_lat, bounds.east_lon, zoom)
         
         # Correct the min/max for the inverted Y axis
         min_tile_x = west_x
