@@ -268,30 +268,36 @@ def convert_cities_to_hex_coordinates(cities: List[Dict], bounds: GeographicBoun
         # Convert city lat/lon to tile coordinates at the same zoom level
         city_tile_x, city_tile_y = fetcher.deg2num_float(lat, lon, zoom)
         
-        # Get map bounds in tile coordinates. Use integer tile numbers here
-        # because the tile image fetched by ``fetch_area_tiles`` is aligned to
-        # full tile boundaries.  Using the same integer bounds ensures that
-        # city positions line up perfectly with the generated terrain map.
-        # IMPORTANT: In tile coordinates, Y increases from north to south!
-        # So north latitude gives us the MIN tile Y, south latitude gives us MAX tile Y
-        west_x, south_y = fetcher.deg2num(bounds.south_lat, bounds.west_lon, zoom)
-        east_x, north_y = fetcher.deg2num(bounds.north_lat, bounds.east_lon, zoom)
+        # Get map bounds in FRACTIONAL tile coordinates for accurate normalization
+        # The tile image is fetched with integer boundaries, but our geographic bounds
+        # correspond to fractional tile positions. We must use the fractional bounds
+        # to correctly normalize city positions.
+        west_tile_x_float, south_tile_y_float = fetcher.deg2num_float(bounds.south_lat, bounds.west_lon, zoom)
+        east_tile_x_float, north_tile_y_float = fetcher.deg2num_float(bounds.north_lat, bounds.east_lon, zoom)
         
-        # Correct the min/max for the inverted Y axis
-        min_tile_x = west_x
-        max_tile_x = east_x
-        min_tile_y = north_y  # North is MIN Y in tile coords
-        max_tile_y = south_y  # South is MAX Y in tile coords
+        # For reference, get the integer bounds used for image fetching
+        west_x_int, south_y_int = fetcher.deg2num(bounds.south_lat, bounds.west_lon, zoom)
+        east_x_int, north_y_int = fetcher.deg2num(bounds.north_lat, bounds.east_lon, zoom)
         
-        # Ensure we handle the tile coordinate space correctly
-        # Note: tile Y increases from north to south
-        tile_x_normalized = (city_tile_x - min_tile_x) / (max_tile_x - min_tile_x) if max_tile_x != min_tile_x else 0
-        tile_y_normalized = (city_tile_y - min_tile_y) / (max_tile_y - min_tile_y) if max_tile_y != min_tile_y else 0
+        # The image spans from integer tile boundaries
+        # But we need to map cities relative to the fractional geographic bounds
+        # Calculate the offset between fractional bounds and image bounds
+        x_offset = west_tile_x_float - west_x_int
+        y_offset = north_tile_y_float - north_y_int  # Remember Y is inverted
         
-        # Convert to hex grid coordinates with proper rounding
-        # Use round() instead of int() for better distribution
-        hex_x = round(tile_x_normalized * (hex_grid_width - 1))
-        hex_y = round(tile_y_normalized * (hex_grid_height - 1))
+        # Image dimensions in tiles
+        image_tiles_x = east_x_int - west_x_int + 1
+        image_tiles_y = south_y_int - north_y_int + 1
+        
+        # Normalize city position within the image space
+        # First normalize to image tile space
+        city_x_in_image = (city_tile_x - west_x_int) / image_tiles_x
+        city_y_in_image = (city_tile_y - north_y_int) / image_tiles_y
+        
+        # Convert to hex grid coordinates
+        # Multiply by grid size (not grid size - 1) for proper scaling
+        hex_x = int(city_x_in_image * hex_grid_width)
+        hex_y = int(city_y_in_image * hex_grid_height)
         
         # Clamp to grid bounds
         hex_x = max(0, min(hex_x, hex_grid_width - 1))
@@ -646,23 +652,42 @@ def main():
         # Convert to hex-based terrain map
         print("\n🧩 Converting to hex grid...")
         
-        # Calculate hex grid dimensions
-        center_lat = (bounds.north_lat + bounds.south_lat) / 2
-        km_per_deg_lat = 111.32
-        km_per_deg_lon = 111.32 * math.cos(math.radians(center_lat))
+        # --- FIXED CALCULATION ---
+        # Calculate hex grid dimensions properly accounting for Web Mercator projection
         
+        # First calculate the hex width based on real-world km
+        center_lat = (bounds.north_lat + bounds.south_lat) / 2
+        km_per_deg_lon = 111.32 * math.cos(math.radians(center_lat))
         total_width_km = (bounds.east_lon - bounds.west_lon) * km_per_deg_lon
-        total_height_km = (bounds.north_lat - bounds.south_lat) * km_per_deg_lat
         
         hex_grid_width = int(round(total_width_km / args.hex_size_km))
-        hex_grid_height = int(round(total_height_km / args.hex_size_km))
+        
+        # For height, we need to account for Mercator projection properly
+        # Calculate the exact fractional tile spans
+        fetcher = MapTileFetcher()
+        west_tile_x, south_tile_y = fetcher.deg2num_float(bounds.south_lat, bounds.west_lon, args.zoom)
+        east_tile_x, north_tile_y = fetcher.deg2num_float(bounds.north_lat, bounds.east_lon, args.zoom)
+        
+        # Calculate exact tile spans (fractional)
+        exact_tiles_x = east_tile_x - west_tile_x
+        exact_tiles_y = south_tile_y - north_tile_y  # Remember Y is inverted
+        
+        # Use the exact tile aspect ratio to calculate hex height
+        exact_aspect_ratio = exact_tiles_y / exact_tiles_x
+        hex_grid_height = int(round(hex_grid_width * exact_aspect_ratio))
+        
+        # Get image dimensions for reporting
+        img_width, img_height = map_image.size
+        # --- END FIXED CALCULATION ---
         
         print(f"   Map dimensions: {hex_grid_width}×{hex_grid_height} hexes")
-        print(f"   Actual hex size: {total_width_km/hex_grid_width:.1f}×{total_height_km/hex_grid_height:.1f}km")
+        print(f"   Image dimensions: {img_width}×{img_height} pixels")
+        print(f"   Exact tile spans: {exact_tiles_x:.3f} × {exact_tiles_y:.3f}")
+        print(f"   Exact aspect ratio: {exact_aspect_ratio:.3f}")
+        print(f"   Hex size: ~{total_width_km/hex_grid_width:.1f}km width")
         
         # Create terrain map by analyzing full hex areas
         terrain_map = {}
-        img_width, img_height = map_image.size
         
         for hex_y in range(hex_grid_height):
             if hex_y % 20 == 0:
