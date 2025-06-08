@@ -1,51 +1,6 @@
 # Tools
 
-## OSM Terrain Generator
-
-Generates accurate campaign maps using OpenStreetMap data.
-
-### Usage
-
-```bash
-python osm_terrain_generator.py --bounds="west,south,east,north" --hex-size-km=30 -o output.json
-```
-
-### Europe + North Africa Coordinates
-
-**Full Europe + North Africa:**
-```bash
-python osm_terrain_generator.py --bounds="-15,25,45,72" --hex-size-km=30 -o medieval_europe.json
-```
-
-**Real working example:**
-```bash
-cd /Users/pawel/work/game
-python tools/osm_terrain_generator.py --bounds="-15,25,45,72" --hex-size-km=30 -o medieval_europe_full.json
-```
-
-**Result**: 148×174 hexes at exactly 29.9×30.1km per hex
-
-**Central Europe (detailed):**
-```bash
-python osm_terrain_generator.py --bounds="-5,40,35,65" --hex-size-km=20 -o central_europe.json
-```
-
-**Mediterranean Basin:**
-```bash
-python osm_terrain_generator.py --bounds="-10,30,40,50" --hex-size-km=25 -o mediterranean.json
-```
-
-**Poland Only (may timeout - try smaller regions):**
-```bash
-python osm_terrain_generator.py --bounds="14,49,24,55" --hex-size-km=15 -o poland.json
-```
-
-**Warsaw Region (reliable OSM data):**
-```bash
-python osm_terrain_generator.py --bounds="20.8,52.1,21.2,52.3" --hex-size-km=5 -o warsaw.json
-```
-
-### Geographic Bounds Reference
+ß### Geographic Bounds Reference
 
 **Europe + North Africa:**
 - **West**: -15° (Atlantic coast)
