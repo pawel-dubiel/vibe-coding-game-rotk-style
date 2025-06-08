@@ -1,6 +1,6 @@
-# Hex Strategy Game
+# Medieval Hex Strategy Game
 
-A turn-based tactical strategy game featuring medieval combat on a hexagonal grid, with terrain effects, fog of war, and unit management.
+A comprehensive turn-based strategy game featuring medieval combat on hexagonal grids, with both tactical battles and grand campaign modes. Experience historically accurate medieval Europe with real-world terrain, authentic city positioning, and strategic depth.
 
 ## Features
 
@@ -22,7 +22,8 @@ A turn-based tactical strategy game featuring medieval combat on a hexagonal gri
 - **Terrain Features**: Rivers, roads, bridges, villages, and fortifications
 - **Movement Costs**: Different terrains affect movement speed
 - **Height Advantage**: Units on hills gain combat bonuses for ranged attacks
-- **Dynamic Generation**: Realistic terrain using Perlin noise algorithms
+- **Real-World Maps**: Generate campaign maps from OpenStreetMap data
+- **Historical Cities**: 179 medieval cities with accurate positioning
 
 ### Special Abilities
 - **Cavalry Charges**: Devastating charges that can push enemies back
@@ -31,7 +32,10 @@ A turn-based tactical strategy game featuring medieval combat on a hexagonal gri
 - **Morale System**: Units can rout when taking heavy casualties
 
 ### Game Modes
+- **Campaign Mode**: Grand strategy with historical maps and medieval cities
 - **Battle Mode**: Custom battles with configurable settings
+- **Test Scenarios**: Pre-configured scenarios for testing mechanics
+- **Map Editor**: Create and edit custom maps
 - **Multiplayer**: Hot-seat multiplayer support
 - **AI Opponents**: Computer-controlled enemies
 
@@ -40,6 +44,8 @@ A turn-based tactical strategy game featuring medieval combat on a hexagonal gri
 ### Requirements
 - Python 3.10+
 - Pygame 2.6+
+- Pillow (PIL) - for map tile processing
+- Internet connection - for downloading OpenStreetMap tiles
 
 ### Setup
 ```bash
@@ -57,7 +63,7 @@ source env/bin/activate
 env\Scripts\activate
 
 # Install dependencies
-pip install pygame
+pip install pygame pillow
 ```
 
 ## Running the Game
@@ -65,6 +71,39 @@ pip install pygame
 ```bash
 python main.py
 ```
+
+### Campaign Mode
+Experience medieval Europe with historically accurate maps and cities:
+
+1. **Select Campaign** from the main menu
+2. **Choose a Map** from generated regional maps:
+   - Europe (30km or 50km per hex)
+   - Western Europe (20km per hex) 
+   - Eastern Europe (30km per hex)
+   - British Isles (20km per hex)
+   - Holy Roman Empire (15km per hex)
+   - And more...
+3. **Select a Country** to play (Holy Roman Empire, France, England, Poland, etc.)
+4. **Manage armies** and conquer territories across authentic medieval landscapes
+
+### Generate Campaign Maps
+
+**Quick generation of all predefined maps:**
+```bash
+python tools/generate_campaign_maps.py
+```
+
+**See available maps:**
+```bash
+python tools/generate_campaign_maps.py --list
+```
+
+**Generate custom regions:**
+```bash
+python tools/tile_terrain_generator.py --bounds=14,49,24,55 --hex-size-km 30
+```
+
+See `/tools/README.md` for detailed map generation guide.
 
 ### Command Line Options
 - `--mode [battle|menu]`: Start in specific mode
@@ -114,21 +153,35 @@ Each unit class has different AP pools:
 
 ```
 game/
-├── main.py              # Entry point
+├── main.py                     # Entry point
+├── map_definitions.json        # Predefined map regions
 ├── game/
-│   ├── game_state.py    # Core game state management
-│   ├── renderer.py      # Visual rendering
-│   ├── input_handler.py # Input processing
-│   ├── hex_utils.py     # Hexagonal grid utilities
-│   ├── terrain.py       # Terrain system
-│   ├── visibility.py    # Fog of war implementation
-│   ├── pathfinding.py   # Movement algorithms
-│   ├── entities/        # Units and buildings
-│   ├── behaviors/       # Unit behaviors (movement, combat, etc.)
-│   ├── components/      # Unit components (stats, facing, generals)
-│   ├── ui/             # User interface elements
-│   └── ai/             # AI implementation
-└── tests/              # Unit tests
+│   ├── game_state.py          # Core game state management
+│   ├── renderer.py            # Visual rendering
+│   ├── input_handler.py       # Input processing
+│   ├── hex_utils.py           # Hexagonal grid utilities
+│   ├── terrain.py             # Terrain system
+│   ├── visibility.py          # Fog of war implementation
+│   ├── pathfinding.py         # Movement algorithms
+│   ├── campaign/              # Campaign mode
+│   │   ├── campaign_state.py  # Campaign game state
+│   │   ├── campaign_renderer.py # Campaign map rendering
+│   │   └── data/              # Generated campaign maps
+│   ├── entities/              # Units and buildings
+│   ├── behaviors/             # Unit behaviors (movement, combat, etc.)
+│   ├── components/            # Unit components (stats, facing, generals)
+│   ├── ui/                    # User interface elements
+│   │   ├── campaign_screen.py      # Campaign UI
+│   │   ├── campaign_map_select.py  # Map selection UI
+│   │   ├── country_selection.py    # Country selection UI
+│   │   └── ...                     # Other UI screens
+│   └── ai/                    # AI implementation
+├── tools/                     # Map generation tools
+│   ├── generate_campaign_maps.py   # Batch map generator
+│   ├── tile_terrain_generator.py   # Core map generation
+│   └── README.md                   # Tool documentation
+├── medieval_cities_1200ad.json    # Historical city database
+└── tests/                     # Unit tests
 ```
 
 ## Development
@@ -149,6 +202,8 @@ The game uses a component-based architecture:
 - **Pathfinding**: A* and Dijkstra algorithms for movement
 - **Vision System**: Line-of-sight calculations with terrain blocking
 - **Combat Resolution**: Deterministic combat with morale effects
+- **Map Generation**: Real-world terrain from OpenStreetMap tile data
+- **Historical Data**: Medieval cities with accurate positioning and statistics
 
 ## Contributing
 
@@ -166,11 +221,14 @@ Please follow these guidelines:
 
 ## Future Features
 
-- Campaign mode with persistent armies
+- ✅ ~~Campaign mode with persistent armies~~ **IMPLEMENTED**
+- ✅ ~~Map editor~~ **IMPLEMENTED** 
+- ✅ ~~Real-world map generation~~ **IMPLEMENTED**
+- Enhanced AI for campaign mode
 - More unit types and abilities
 - Multiplayer networking support
-- Map editor
-- Mod support
+- Diplomacy system for campaign mode
+- Mod support and custom scenarios
 
 ## License
 
