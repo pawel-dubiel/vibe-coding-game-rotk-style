@@ -5,6 +5,8 @@ from enum import Enum
 
 class MenuOption(Enum):
     NEW_GAME = "new_game"
+    CAMPAIGN = "campaign"
+    MAP_EDITOR = "map_editor"
     LOAD_GAME = "load_game"
     SAVE_GAME = "save_game"
     OPTIONS = "options"
@@ -34,6 +36,8 @@ class MainMenu:
         self.buttons: Dict[MenuOption, pygame.Rect] = {}
         self.button_states: Dict[MenuOption, bool] = {
             MenuOption.NEW_GAME: True,
+            MenuOption.CAMPAIGN: True,
+            MenuOption.MAP_EDITOR: True,
             MenuOption.LOAD_GAME: True,
             MenuOption.SAVE_GAME: False,  # Disabled in main menu
             MenuOption.OPTIONS: True,
@@ -53,6 +57,8 @@ class MainMenu:
         # Main menu buttons
         menu_options = [
             MenuOption.NEW_GAME,
+            MenuOption.CAMPAIGN,
+            MenuOption.MAP_EDITOR,
             MenuOption.LOAD_GAME,
             MenuOption.TEST_SCENARIOS,
             MenuOption.OPTIONS,
@@ -125,6 +131,8 @@ class MainMenu:
     def _get_button_text(self, option: MenuOption) -> str:
         text_map = {
             MenuOption.NEW_GAME: "New Game",
+            MenuOption.CAMPAIGN: "Campaign",
+            MenuOption.MAP_EDITOR: "Map Editor",
             MenuOption.LOAD_GAME: "Load Game",
             MenuOption.SAVE_GAME: "Save Game",
             MenuOption.OPTIONS: "Options",

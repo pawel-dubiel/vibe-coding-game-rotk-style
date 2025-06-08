@@ -19,12 +19,19 @@ class GameState(IGameState):
             self.board_width = battle_config['board_size'][0]
             self.board_height = battle_config['board_size'][1]
             self.knights_per_player = battle_config['knights']
-            self.castles_per_player = battle_config['castles']
+            self.castles_per_player = battle_config.get('castles', 1)
+            # Store campaign battle info if present
+            self.is_campaign_battle = battle_config.get('campaign_battle', False)
+            self.attacker_army = battle_config.get('attacker_army')
+            self.defender_army = battle_config.get('defender_army')
         else:
             self.board_width = 16
             self.board_height = 12
             self.knights_per_player = 3
             self.castles_per_player = 1
+            self.is_campaign_battle = False
+            self.attacker_army = None
+            self.defender_army = None
         
         self.tile_size = 64
         
@@ -111,8 +118,12 @@ class GameState(IGameState):
         return 1 if self.vs_ai else self.current_player
     
     def _init_game(self):
-        
-        # Place castles
+        # Check if this is a campaign battle
+        if self.is_campaign_battle and self.attacker_army and self.defender_army:
+            self._init_campaign_battle()
+            return
+            
+        # Place castles (normal battle)
         castle_spacing = self.board_height // (self.castles_per_player + 1)
         for i in range(self.castles_per_player):
             y_pos = castle_spacing * (i + 1)
@@ -168,6 +179,127 @@ class GameState(IGameState):
             
         # Initialize fog of war visibility
         self._update_all_fog_of_war()
+    
+    def _init_campaign_battle(self):
+        """Initialize battle from campaign armies"""
+        # Names for units
+        attacker_names = ["Captain", "Lieutenant", "Sergeant", "Corporal", "Soldier", 
+                         "Warrior", "Fighter", "Guardian", "Defender", "Champion"]
+        defender_names = ["Commander", "Major", "Knight", "Veteran", "Elite",
+                         "Protector", "Sentinel", "Warden", "Keeper", "Marshal"]
+        
+        # Place attacking army (player 1) on the left
+        unit_count = 0
+        y_start = self.board_height // 4
+        
+        # Place knights
+        for i in range(self.attacker_army.knights):
+            y_pos = y_start + (unit_count % (self.board_height // 2))
+            x_pos = 3 + (unit_count // (self.board_height // 2))
+            valid_pos = self._find_valid_position_near(x_pos, y_pos, max_distance=3)
+            if valid_pos:
+                x_pos, y_pos = valid_pos
+                knight = UnitFactory.create_unit(
+                    attacker_names[unit_count % len(attacker_names)], 
+                    KnightClass.WARRIOR, x_pos, y_pos
+                )
+                knight.player_id = 1
+                self.knights.append(knight)
+                unit_count += 1
+                
+        # Place archers
+        for i in range(self.attacker_army.archers):
+            y_pos = y_start + (unit_count % (self.board_height // 2))
+            x_pos = 3 + (unit_count // (self.board_height // 2))
+            valid_pos = self._find_valid_position_near(x_pos, y_pos, max_distance=3)
+            if valid_pos:
+                x_pos, y_pos = valid_pos
+                archer = UnitFactory.create_unit(
+                    attacker_names[unit_count % len(attacker_names)], 
+                    KnightClass.ARCHER, x_pos, y_pos
+                )
+                archer.player_id = 1
+                self.knights.append(archer)
+                unit_count += 1
+                
+        # Place cavalry
+        for i in range(self.attacker_army.cavalry):
+            y_pos = y_start + (unit_count % (self.board_height // 2))
+            x_pos = 3 + (unit_count // (self.board_height // 2))
+            valid_pos = self._find_valid_position_near(x_pos, y_pos, max_distance=3)
+            if valid_pos:
+                x_pos, y_pos = valid_pos
+                cavalry = UnitFactory.create_unit(
+                    attacker_names[unit_count % len(attacker_names)], 
+                    KnightClass.CAVALRY, x_pos, y_pos
+                )
+                cavalry.player_id = 1
+                self.knights.append(cavalry)
+                unit_count += 1
+                
+        # Place defending army (player 2) on the right
+        unit_count = 0
+        
+        # Place knights
+        for i in range(self.defender_army.knights):
+            y_pos = y_start + (unit_count % (self.board_height // 2))
+            x_pos = self.board_width - 4 - (unit_count // (self.board_height // 2))
+            valid_pos = self._find_valid_position_near(x_pos, y_pos, max_distance=3)
+            if valid_pos:
+                x_pos, y_pos = valid_pos
+                knight = UnitFactory.create_unit(
+                    defender_names[unit_count % len(defender_names)], 
+                    KnightClass.WARRIOR, x_pos, y_pos
+                )
+                knight.player_id = 2
+                self.knights.append(knight)
+                unit_count += 1
+                
+        # Place archers
+        for i in range(self.defender_army.archers):
+            y_pos = y_start + (unit_count % (self.board_height // 2))
+            x_pos = self.board_width - 4 - (unit_count // (self.board_height // 2))
+            valid_pos = self._find_valid_position_near(x_pos, y_pos, max_distance=3)
+            if valid_pos:
+                x_pos, y_pos = valid_pos
+                archer = UnitFactory.create_unit(
+                    defender_names[unit_count % len(defender_names)], 
+                    KnightClass.ARCHER, x_pos, y_pos
+                )
+                archer.player_id = 2
+                self.knights.append(archer)
+                unit_count += 1
+                
+        # Place cavalry
+        for i in range(self.defender_army.cavalry):
+            y_pos = y_start + (unit_count % (self.board_height // 2))
+            x_pos = self.board_width - 4 - (unit_count // (self.board_height // 2))
+            valid_pos = self._find_valid_position_near(x_pos, y_pos, max_distance=3)
+            if valid_pos:
+                x_pos, y_pos = valid_pos
+                cavalry = UnitFactory.create_unit(
+                    defender_names[unit_count % len(defender_names)], 
+                    KnightClass.CAVALRY, x_pos, y_pos
+                )
+                cavalry.player_id = 2
+                self.knights.append(cavalry)
+                unit_count += 1
+                
+        # Check initial cavalry disruption for all units
+        from game.entities.unit_helpers import check_cavalry_disruption_for_terrain
+        for knight in self.knights:
+            check_cavalry_disruption_for_terrain(knight, self)
+            
+        # Initialize fog of war visibility
+        self._update_all_fog_of_war()
+        
+        # Set a message about the battle
+        attacker_name = self.attacker_army.country if hasattr(self.attacker_army, 'country') else 'Attacker'
+        defender_name = self.defender_army.country if hasattr(self.defender_army, 'country') else 'Defender'
+        self.message_system.add_message(
+            f"{attacker_name.title()} attacks {defender_name.title()}!",
+            priority=2
+        )
     
     def _find_valid_position_near(self, x: int, y: int, max_distance: int = 3) -> Optional[tuple[int, int]]:
         """Find a valid position near the given position where terrain is passable.
