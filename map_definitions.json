@@ -1,0 +1,134 @@
+{
+  "map_definitions": [
+    {
+      "name": "Europe 30km",
+      "description": "Full Europe at 30km per hex resolution",
+      "bounds": {
+        "west": -10,
+        "east": 40,
+        "south": 35,
+        "north": 70
+      },
+      "hex_size_km": 30,
+      "zoom": 6,
+      "filename_prefix": "europe_30km"
+    },
+    {
+      "name": "Europe 50km",
+      "description": "Full Europe at 50km per hex resolution",
+      "bounds": {
+        "west": -10,
+        "east": 40,
+        "south": 35,
+        "north": 70
+      },
+      "hex_size_km": 50,
+      "zoom": 7,
+      "filename_prefix": "europe_50km"
+    },
+    {
+      "name": "Central Europe + Baltic 25km",
+      "description": "Central Europe including Baltic region at 25km per hex",
+      "bounds": {
+        "west": 5,
+        "east": 30,
+        "south": 45,
+        "north": 60
+      },
+      "hex_size_km": 25,
+      "zoom": 9,
+      "filename_prefix": "central_europe_baltic_25km"
+    },
+    {
+      "name": "Western Europe 20km",
+      "description": "Western Europe (France, England, Low Countries) at 20km per hex",
+      "bounds": {
+        "west": -5,
+        "east": 10,
+        "south": 42,
+        "north": 55
+      },
+      "hex_size_km": 20,
+      "zoom": 8,
+      "filename_prefix": "western_europe_20km"
+    },
+    {
+      "name": "Eastern Europe 30km",
+      "description": "Eastern Europe (Poland, Hungary, Balkans) at 30km per hex",
+      "bounds": {
+        "west": 12,
+        "east": 30,
+        "south": 40,
+        "north": 55
+      },
+      "hex_size_km": 30,
+      "zoom": 8,
+      "filename_prefix": "eastern_europe_30km"
+    },
+    {
+      "name": "Mediterranean 35km",
+      "description": "Mediterranean basin including North Africa at 35km per hex",
+      "bounds": {
+        "west": -10,
+        "east": 35,
+        "south": 30,
+        "north": 47
+      },
+      "hex_size_km": 35,
+      "zoom": 8,
+      "filename_prefix": "mediterranean_35km"
+    },
+    {
+      "name": "Holy Roman Empire 15km",
+      "description": "Holy Roman Empire region at high detail (15km per hex)",
+      "bounds": {
+        "west": 5,
+        "east": 17,
+        "south": 45,
+        "north": 55
+      },
+      "hex_size_km": 15,
+      "zoom": 10,
+      "filename_prefix": "holy_roman_empire_15km"
+    },
+    {
+      "name": "British Isles 20km",
+      "description": "British Isles at 20km per hex resolution",
+      "bounds": {
+        "west": -11,
+        "east": 2,
+        "south": 49,
+        "north": 61
+      },
+      "hex_size_km": 20,
+      "zoom": 9,
+      "filename_prefix": "british_isles_20km"
+    },
+    {
+      "name": "Iberian Peninsula 25km",
+      "description": "Spain and Portugal at 25km per hex",
+      "bounds": {
+        "west": -10,
+        "east": 4,
+        "south": 35,
+        "north": 44
+      },
+      "hex_size_km": 25,
+      "zoom": 9,
+      "filename_prefix": "iberian_peninsula_25km"
+    },
+    {
+      "name": "Scandinavia 40km",
+      "description": "Nordic countries at 40km per hex",
+      "bounds": {
+        "west": 4,
+        "east": 32,
+        "south": 55,
+        "north": 71
+      },
+      "hex_size_km": 40,
+      "zoom": 7,
+      "filename_prefix": "scandinavia_40km"
+    }
+  ]
+}

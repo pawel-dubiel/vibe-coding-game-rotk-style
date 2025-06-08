@@ -80,10 +80,11 @@ class Army:
 class CampaignState:
     """Manages the campaign game state"""
     
-    def __init__(self, player_country: str = None, country_data: Dict = None):
+    def __init__(self, player_country: str = None, country_data: Dict = None, map_file: str = None):
         self.player_country = player_country
         self.current_country = player_country
         self.turn_number = 1
+        self.map_file = map_file
         
         # Data containers
         self.countries: Dict[str, Country] = {}
@@ -119,7 +120,19 @@ class CampaignState:
     def _load_campaign_data(self):
         """Load campaign data from JSON file"""
         try:
-            data_path = os.path.join(os.path.dirname(__file__), 'medieval_europe.json')
+            # Use specified map file or default
+            if self.map_file:
+                data_path = self.map_file
+            else:
+                # Try new data directory first, then fallback to old location
+                data_dir_path = os.path.join(os.path.dirname(__file__), 'data', 'medieval_europe.json')
+                old_path = os.path.join(os.path.dirname(__file__), 'medieval_europe.json')
+                
+                if os.path.exists(data_dir_path):
+                    data_path = data_dir_path
+                else:
+                    data_path = old_path
+            
             with open(data_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 

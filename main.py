@@ -10,6 +10,7 @@ from game.ui.test_scenario_menu import TestScenarioMenu
 from game.ui.save_load_menu import SaveLoadMenu, SaveLoadAction
 from game.ui.campaign_screen import CampaignScreen
 from game.ui.country_selection import CountrySelectionScreen
+from game.ui.campaign_map_select import CampaignMapSelectScreen
 from game.ui.map_editor import MapEditorScreen
 from game.test_scenarios import TestScenarios
 from game.save_manager import SaveManager
@@ -29,6 +30,7 @@ class Game:
         self.in_game = False
         self.in_test_scenarios = False
         self.in_country_selection = False
+        self.in_campaign_map_select = False
         self.in_campaign = False
         self.in_map_editor = False
         self.paused = False
@@ -41,6 +43,7 @@ class Game:
         self.test_scenario_menu = TestScenarioMenu(self.screen)
         self.save_load_menu = SaveLoadMenu(self.screen)
         self.country_selection_screen = CountrySelectionScreen(self.screen)
+        self.campaign_map_select_screen = CampaignMapSelectScreen(self.screen)
         self.campaign_screen = CampaignScreen(self.screen)
         self.map_editor_screen = MapEditorScreen(self.screen)
         
@@ -49,6 +52,7 @@ class Game:
         
         # Game configuration
         self.vs_ai = True  # Default to single player
+        self.selected_campaign_map = None  # Store selected campaign map
         
         self.game_state = None
         self.renderer = CoreRenderer(self.screen)
@@ -71,6 +75,8 @@ class Game:
                 self._handle_test_scenarios()
             elif self.in_country_selection:
                 self._handle_country_selection()
+            elif self.in_campaign_map_select:
+                self._handle_campaign_map_select()
             elif self.in_campaign:
                 self._handle_campaign()
             elif self.in_map_editor:
@@ -120,8 +126,8 @@ class Game:
                         self.in_mode_select = True
                     elif option == MenuOption.CAMPAIGN:
                         self.in_main_menu = False
-                        self.in_country_selection = True
-                        self.country_selection_screen.show()
+                        self.in_campaign_map_select = True
+                        self.campaign_map_select_screen.show()
                     elif option == MenuOption.MAP_EDITOR:
                         self.in_main_menu = False
                         self.in_map_editor = True
@@ -318,18 +324,19 @@ class Game:
                 result = self.country_selection_screen.handle_event(event)
                 if result:
                     if result.get('action') == 'back':
-                        # Go back to main menu
+                        # Go back to map selection
                         self.in_country_selection = False
-                        self.in_main_menu = True
+                        self.in_campaign_map_select = True
                         self.country_selection_screen.hide()
+                        self.campaign_map_select_screen.show()
                     elif result.get('action') == 'start_campaign':
                         # Start campaign with selected country
                         selected_country = result['country']
                         country_data = result['country_data']
                         
-                        # Initialize campaign with selected country
+                        # Initialize campaign with selected country and map
                         from game.campaign.campaign_state import CampaignState
-                        campaign_state = CampaignState(selected_country, country_data)
+                        campaign_state = CampaignState(selected_country, country_data, self.selected_campaign_map)
                         self.campaign_screen.campaign_state = campaign_state
                         
                         # Transition to campaign
@@ -339,6 +346,31 @@ class Game:
                         self.campaign_screen.show()
         
         self.country_selection_screen.draw()
+    
+    def _handle_campaign_map_select(self):
+        """Handle campaign map selection screen"""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            else:
+                result = self.campaign_map_select_screen.handle_event(event)
+                if result:
+                    if result.get('action') == 'cancel':
+                        # Go back to main menu
+                        self.in_campaign_map_select = False
+                        self.in_main_menu = True
+                        self.campaign_map_select_screen.hide()
+                    elif result.get('action') == 'select_map':
+                        # Store selected map and proceed to country selection
+                        self.selected_campaign_map = result['map']['filepath']
+                        self.in_campaign_map_select = False
+                        self.in_country_selection = True
+                        self.campaign_map_select_screen.hide()
+                        # Update country selection with the selected map
+                        self.country_selection_screen.set_map_file(self.selected_campaign_map)
+                        self.country_selection_screen.show()
+        
+        self.campaign_map_select_screen.draw()
     
     def _handle_map_editor(self):
         """Handle map editor mode"""

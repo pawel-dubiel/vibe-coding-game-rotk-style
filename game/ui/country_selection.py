@@ -20,6 +20,7 @@ class CountrySelectionScreen:
         self.country_buttons = {}
         self.back_button = None
         self.start_button = None
+        self.current_map_file = None  # Store the current map file
         
         # Colors
         self.colors = {
@@ -32,14 +33,21 @@ class CountrySelectionScreen:
             'description': (200, 200, 200)
         }
         
-        # Load country data
+        # Load default country data (will be updated when map is selected)
         self._load_country_data()
         self._setup_ui()
         
-    def _load_country_data(self):
+    def _load_country_data(self, map_file: str = None):
         """Load country data from JSON file"""
         try:
-            data_path = os.path.join(os.path.dirname(__file__), '..', 'campaign', 'medieval_europe.json')
+            if map_file:
+                data_path = map_file
+            else:
+                # Fallback to default
+                data_path = os.path.join(os.path.dirname(__file__), '..', 'campaign', 'data', 'medieval_europe.json')
+                if not os.path.exists(data_path):
+                    data_path = os.path.join(os.path.dirname(__file__), '..', 'campaign', 'medieval_europe.json')
+            
             with open(data_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 self.countries = data['countries']
@@ -281,3 +289,10 @@ class CountrySelectionScreen:
         """Hide the country selection screen"""
         self.visible = False
         self.selected_country = None
+    
+    def set_map_file(self, map_file: str):
+        """Set the map file and reload countries"""
+        self.current_map_file = map_file
+        self._load_country_data(map_file)
+        self._setup_ui()  # Rebuild UI with new countries
+        self.selected_country = None  # Reset selection

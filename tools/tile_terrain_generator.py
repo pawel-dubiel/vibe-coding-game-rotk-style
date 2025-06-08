@@ -5,7 +5,9 @@ Tile-based Terrain Generator for Large Regions
 This approach downloads map tiles and analyzes their colors to classify terrain.
 Much more reliable than Overpass API for large areas.
 
-Usage: python tile_terrain_generator.py --bounds west,south,east,north --hex-size-km 30
+Usage: 
+  python tile_terrain_generator.py --bounds west,south,east,north --hex-size-km 30
+  python tile_terrain_generator.py  # Generate all maps from map_definitions.json
 """
 
 import json
@@ -604,23 +606,237 @@ def export_to_json(terrain_map: Dict, width: int, height: int, hex_size_km: floa
         for city_type, count in sorted(city_types.items(), key=lambda x: x[1], reverse=True):
             print(f"   {city_type}: {count} cities")
 
+def load_map_definitions():
+    """Load map definitions from JSON file"""
+    definitions_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'map_definitions.json')
+    
+    try:
+        with open(definitions_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"❌ Map definitions file not found: {definitions_file}")
+        return {}
+    except json.JSONDecodeError as e:
+        print(f"❌ Error parsing map definitions: {e}")
+        return {}
+
+def generate_all_maps_from_definitions(args):
+    """Generate all maps from map_definitions.json"""
+    print("🗺️  No bounds specified, generating all maps from map_definitions.json")
+    
+    # Load definitions
+    definitions_data = load_map_definitions()
+    if not definitions_data:
+        return 1
+    
+    map_definitions = definitions_data.get('map_definitions', [])
+    if not map_definitions:
+        print("❌ No map definitions found")
+        return 1
+    
+    print(f"📋 Found {len(map_definitions)} map definitions")
+    
+    success_count = 0
+    
+    for i, map_def in enumerate(map_definitions, 1):
+        print(f"\n📍 Progress: {i}/{len(map_definitions)} - {map_def['name']}")
+        
+        # Create bounds
+        bounds_data = map_def['bounds']
+        bounds = GeographicBounds(
+            bounds_data['west'], 
+            bounds_data['east'], 
+            bounds_data['south'], 
+            bounds_data['north']
+        )
+        
+        # Override args with map-specific settings
+        hex_size_km = map_def['hex_size_km']
+        zoom = map_def['zoom']
+        
+        # Generate auto filename
+        campaign_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'game', 'campaign', 'data')
+        os.makedirs(campaign_data_dir, exist_ok=True)
+        
+        # Calculate dimensions for filename
+        center_lat = (bounds.north_lat + bounds.south_lat) / 2
+        km_per_deg_lon = 111.32 * math.cos(math.radians(center_lat))
+        total_width_km = (bounds.east_lon - bounds.west_lon) * km_per_deg_lon
+        hex_grid_width = int(round(total_width_km / hex_size_km))
+        
+        fetcher = MapTileFetcher()
+        west_tile_x, south_tile_y = fetcher.deg2num_float(bounds.south_lat, bounds.west_lon, zoom)
+        east_tile_x, north_tile_y = fetcher.deg2num_float(bounds.north_lat, bounds.east_lon, zoom)
+        exact_tiles_x = east_tile_x - west_tile_x
+        exact_tiles_y = south_tile_y - north_tile_y
+        exact_aspect_ratio = exact_tiles_y / exact_tiles_x
+        hex_grid_height = int(round(hex_grid_width * exact_aspect_ratio))
+        
+        filename = f"map_{bounds.west_lon:.0f}w_{bounds.east_lon:.0f}e_{bounds.south_lat:.0f}s_{bounds.north_lat:.0f}n_{hex_size_km:.0f}km_{hex_grid_width}x{hex_grid_height}.json"
+        output_path = os.path.join(campaign_data_dir, filename)
+        
+        try:
+            # Generate the map
+            print(f"   Bounds: {bounds.west_lon:.1f}°W to {bounds.east_lon:.1f}°E, {bounds.south_lat:.1f}°S to {bounds.north_lat:.1f}°N")
+            print(f"   Zoom level: {zoom}")
+            print(f"   Target hex size: {hex_size_km}km")
+            
+            fetcher = MapTileFetcher()
+            classifier = TileTerrainClassifier()
+            
+            # Fetch tiles for the area
+            map_image = fetcher.fetch_area_tiles(bounds, zoom=zoom)
+            
+            if map_image:
+                print(f"🖼️  Generated map image: {map_image.size[0]}×{map_image.size[1]} pixels")
+                
+                if args.save_image:
+                    image_path = output_path.replace('.json', '_tiles.png')
+                    map_image.save(image_path)
+                    print(f"💾 Saved tile image as {image_path}")
+                
+                # Convert to hex-based terrain map
+                print("🧩 Converting to hex grid...")
+                
+                img_width, img_height = map_image.size
+                
+                print(f"   Map dimensions: {hex_grid_width}×{hex_grid_height} hexes")
+                print(f"   Image dimensions: {img_width}×{img_height} pixels")
+                print(f"   Hex size: ~{total_width_km/hex_grid_width:.1f}km width")
+                
+                # Create terrain map by analyzing full hex areas
+                terrain_map = {}
+                
+                for hex_y in range(hex_grid_height):
+                    if hex_y % 20 == 0:
+                        print(f"   Processing row {hex_y}/{hex_grid_height}")
+                    
+                    for hex_x in range(hex_grid_width):
+                        # Calculate the full area covered by this hex
+                        hex_pixel_width = img_width / hex_grid_width
+                        hex_pixel_height = img_height / hex_grid_height
+                        
+                        # Define hex boundaries
+                        left = int(hex_x * hex_pixel_width)
+                        right = int((hex_x + 1) * hex_pixel_width)
+                        top = int(hex_y * hex_pixel_height)
+                        bottom = int((hex_y + 1) * hex_pixel_height)
+                        
+                        # Ensure we don't go out of bounds
+                        right = min(right, img_width - 1)
+                        bottom = min(bottom, img_height - 1)
+                        
+                        # Sample multiple points within the hex area
+                        terrain_votes = {}
+                        sample_count = 0
+                        
+                        # Sample every 2nd or 4th pixel to get good coverage without being too slow
+                        step = max(1, min(3, int(hex_pixel_width / 6)))
+                        
+                        for y in range(top, bottom, step):
+                            for x in range(left, right, step):
+                                try:
+                                    r, g, b = map_image.getpixel((x, y))
+                                    terrain_type = classifier.classify_pixel(r, g, b)
+                                    terrain_votes[terrain_type] = terrain_votes.get(terrain_type, 0) + 1
+                                    sample_count += 1
+                                except IndexError:
+                                    # Skip out-of-bounds pixels
+                                    continue
+                        
+                        # Choose the most common terrain type
+                        if terrain_votes:
+                            terrain_type = max(terrain_votes, key=terrain_votes.get)
+                        else:
+                            # Fallback to center pixel if no samples
+                            pixel_x = int((hex_x + 0.5) * img_width / hex_grid_width)
+                            pixel_y = int((hex_y + 0.5) * img_height / hex_grid_height)
+                            r, g, b = map_image.getpixel((pixel_x, pixel_y))
+                            terrain_type = classifier.classify_pixel(r, g, b)
+                        
+                        terrain_map[(hex_x, hex_y)] = terrain_type
+                
+                # Export to JSON
+                print(f"💾 Exporting to {output_path}...")
+                export_to_json(terrain_map, hex_grid_width, hex_grid_height, hex_size_km, output_path, bounds, 
+                              zoom, map_image, classifier)
+                
+                print(f"✅ {map_def['name']} generation complete!")
+                print(f"   Generated: {output_path}")
+                print(f"   Map size: {hex_grid_width}×{hex_grid_height} hexes")
+                print(f"   Terrain hexes: {len(terrain_map)}")
+                
+                success_count += 1
+                
+            else:
+                print(f"❌ Failed to fetch enough tiles for {map_def['name']}")
+                
+        except Exception as e:
+            print(f"❌ Error generating {map_def['name']}: {e}")
+        
+        # Add delay between maps to be respectful to tile servers
+        if i < len(map_definitions):
+            import time
+            print("   ⏳ Waiting 2 seconds before next map...")
+            time.sleep(2)
+    
+    # Summary
+    print(f"\n📊 Generation Summary:")
+    print(f"   Total maps: {len(map_definitions)}")
+    print(f"   Successful: {success_count}")
+    print(f"   Failed: {len(map_definitions) - success_count}")
+    
+    if success_count == len(map_definitions):
+        print("✅ All maps generated successfully!")
+        return 0
+    else:
+        print("⚠️  Some maps failed to generate")
+        return 1
+
 def main():
     """Main entry point for tile-based terrain generation"""
     import argparse
     
     parser = argparse.ArgumentParser(description='Generate terrain map from OpenStreetMap tiles')
-    parser.add_argument('--bounds', required=True,
-                       help='Geographic bounds as west,south,east,north (e.g., 14,49,24,55)')
+    parser.add_argument('--bounds', 
+                       help='Geographic bounds as west,south,east,north (e.g., 14,49,24,55 or -- -10,35,40,70 for negative values). If not provided, will generate all maps from map_definitions.json')
     parser.add_argument('--zoom', type=int, default=10,
                        help='Map zoom level (8-12 recommended for detailed terrain, default: 10)')
-    parser.add_argument('-o', '--output', default='terrain_tiles.json',
-                       help='Output JSON file (default: terrain_tiles.json)')
+    parser.add_argument('-o', '--output', default=None,
+                       help='Output JSON file (default: auto-generated based on parameters)')
     parser.add_argument('--hex-size-km', type=float, default=30,
                        help='Target hex size in kilometers (default: 30)')
     parser.add_argument('--save-image', action='store_true',
                        help='Save the combined tile image for inspection')
+    parser.add_argument('--list-maps', action='store_true',
+                       help='List available map definitions from map_definitions.json and exit')
     
     args = parser.parse_args()
+    
+    # List maps mode
+    if args.list_maps:
+        definitions_data = load_map_definitions()
+        if not definitions_data:
+            return 1
+        
+        map_definitions = definitions_data.get('map_definitions', [])
+        if not map_definitions:
+            print("❌ No map definitions found")
+            return 1
+        
+        print("📋 Available map definitions:")
+        for i, map_def in enumerate(map_definitions, 1):
+            bounds = map_def['bounds']
+            print(f"   {i:2d}. {map_def['name']}")
+            print(f"       {map_def['description']}")
+            print(f"       Bounds: {bounds['west']}°W to {bounds['east']}°E, {bounds['south']}°S to {bounds['north']}°N")
+            print(f"       Resolution: {map_def['hex_size_km']}km/hex, zoom {map_def['zoom']}")
+            print()
+        return 0
+    
+    # If no bounds provided, use map definitions to generate all maps
+    if not args.bounds:
+        return generate_all_maps_from_definitions(args)
     
     # Parse bounds
     try:
@@ -629,6 +845,30 @@ def main():
     except ValueError:
         print("❌ Error: bounds must be in format 'west,south,east,north' (e.g., 14,49,24,55)")
         return 1
+    
+    # Auto-generate output filename if not provided
+    if args.output is None:
+        # Calculate map dimensions for filename
+        center_lat = (bounds.north_lat + bounds.south_lat) / 2
+        km_per_deg_lon = 111.32 * math.cos(math.radians(center_lat))
+        total_width_km = (bounds.east_lon - bounds.west_lon) * km_per_deg_lon
+        hex_grid_width = int(round(total_width_km / args.hex_size_km))
+        
+        # Calculate height using Mercator projection
+        fetcher = MapTileFetcher()
+        west_tile_x, south_tile_y = fetcher.deg2num_float(bounds.south_lat, bounds.west_lon, args.zoom)
+        east_tile_x, north_tile_y = fetcher.deg2num_float(bounds.north_lat, bounds.east_lon, args.zoom)
+        exact_tiles_x = east_tile_x - west_tile_x
+        exact_tiles_y = south_tile_y - north_tile_y
+        exact_aspect_ratio = exact_tiles_y / exact_tiles_x
+        hex_grid_height = int(round(hex_grid_width * exact_aspect_ratio))
+        
+        # Create descriptive filename
+        campaign_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'game', 'campaign', 'data')
+        os.makedirs(campaign_data_dir, exist_ok=True)
+        
+        filename = f"map_{west:.0f}w_{east:.0f}e_{south:.0f}s_{north:.0f}n_{args.hex_size_km:.0f}km_{hex_grid_width}x{hex_grid_height}.json"
+        args.output = os.path.join(campaign_data_dir, filename)
     
     print("🗺️  Tile-Based Terrain Generator")
     print(f"   Bounds: {west:.1f}°W to {east:.1f}°E, {south:.1f}°S to {north:.1f}°N")
