@@ -219,25 +219,7 @@ Please follow these guidelines:
 - Cavalry charge mechanics need balancing
 - AI decision-making could be improved
 
-## Future Features
-
-- ✅ ~~Campaign mode with persistent armies~~ **IMPLEMENTED**
-- ✅ ~~Map editor~~ **IMPLEMENTED** 
-- ✅ ~~Real-world map generation~~ **IMPLEMENTED**
-- Enhanced AI for campaign mode
-- More unit types and abilities
-- Multiplayer networking support
-- Diplomacy system for campaign mode
-- Mod support and custom scenarios
-
 ## License
+ MIT
+ 
 
-[Your License Here]
-
-## Credits
-
-Created by [Your Name]
-
-Special thanks to:
-- Pygame community for the graphics framework
-- Hex grid algorithms from Red Blob Games
