@@ -1,6 +1,6 @@
 import pytest
 import pygame
-from game.campaign.campaign_state import CampaignState, Faction, Army
+from game.campaign.campaign_state import CampaignState, Country, Army
 from game.campaign.campaign_renderer import CampaignRenderer
 from game.ui.campaign_screen import CampaignScreen
 from game.hex_utils import HexCoord

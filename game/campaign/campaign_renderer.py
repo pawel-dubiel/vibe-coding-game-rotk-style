@@ -453,3 +453,12 @@ class CampaignRenderer:
         # Use hex_layout to convert pixel to hex
         col, row = hex_layout.pixel_to_hex(world_x, world_y)
         return HexCoord(col, row)
+    
+    def hex_to_screen(self, hex_coord: HexCoord, hex_layout: HexLayout) -> Tuple[float, float]:
+        """Convert hex coordinates to screen coordinates"""
+        # Get world position
+        world_x, world_y = hex_layout.hex_to_pixel(hex_coord.q, hex_coord.r)
+        # Apply camera transform
+        screen_x = world_x + self.camera_x
+        screen_y = world_y + self.camera_y
+        return (screen_x, screen_y)
