@@ -6,6 +6,11 @@ from dataclasses import dataclass
 from enum import Enum
 from game.hex_utils import HexCoord, HexGrid
 from game.hex_layout import HexLayout
+from .end_turn_steps import EndTurnProcessor
+from .end_turn_steps.income_step import IncomeCollectionStep
+from .end_turn_steps.movement_step import MovementResetStep
+from .end_turn_steps.population_step import PopulationCalculationStep
+from .city_specialization import CitySpecialization
 # Campaign module has its own terrain system
 
 
@@ -97,6 +102,11 @@ class CampaignState:
         self.map_data: Dict = {}
         self.terrain_map: Dict[tuple, CampaignTerrainType] = {}
         
+        # End-turn processing
+        self.per_country_processor = EndTurnProcessor()  # Runs every country turn
+        self.per_turn_processor = EndTurnProcessor()     # Runs once per full turn
+        self._setup_end_turn_steps()
+        
         # UI state
         self.selected_army: Optional[str] = None
         self.selected_city: Optional[str] = None
@@ -116,6 +126,15 @@ class CampaignState:
         else:
             # Default initialization for testing
             self._init_default_campaign()
+    
+    def _setup_end_turn_steps(self):
+        """Register all end-turn processing steps."""
+        # Per-country steps (run every country turn)
+        self.per_country_processor.register_step(MovementResetStep())
+        self.per_country_processor.register_step(IncomeCollectionStep())
+        
+        # Per-turn steps (run once per full turn cycle)
+        self.per_turn_processor.register_step(PopulationCalculationStep())
     
     def _load_campaign_data(self):
         """Load campaign data from JSON file"""
@@ -254,7 +273,7 @@ class CampaignState:
                     income=200,
                     castle_level=3,
                     population=25000,
-                    specialization='military',
+                    specialization=CitySpecialization.MILITARY.value,
                     description=f'Capital of {country.name}'
                 )
             
@@ -304,24 +323,39 @@ class CampaignState:
         return [a for a in self.armies.values() if a.country == country]
         
     def end_turn(self):
-        """Process end of turn"""
-        # Collect income from cities for current country
-        current_country_cities = self.get_country_cities(self.current_country)
-        for city in current_country_cities:
-            self.country_treasury[self.current_country] += city.income
-                
-        # Reset movement for current country's armies
-        for army in self.armies.values():
-            if army.country == self.current_country:
-                army.movement_points = army.max_movement_points
-            
-        # Next country's turn (cycle through all countries)
+        """Process end of turn using the modular step framework."""
+        # Execute per-country steps (every country turn)
+        per_country_context = self.per_country_processor.execute(
+            campaign_state=self,
+            current_country_id=self.current_country,
+            turn_number=self.turn_number
+        )
+        
+        # Determine if this completes a full turn cycle
         countries = list(self.countries.keys())
         current_index = countries.index(self.current_country)
-        self.current_country = countries[(current_index + 1) % len(countries)]
+        next_index = (current_index + 1) % len(countries)
         
-        if current_index == len(countries) - 1:
+        # A full turn cycle is complete when we're about to go back to index 0
+        is_turn_cycle_complete = next_index == 0
+        
+        # Switch to next country
+        self.current_country = countries[next_index]
+        
+        per_turn_context = None
+        if is_turn_cycle_complete:
+            # Execute per-turn steps (only after all countries have had their turn)
+            per_turn_context = self.per_turn_processor.execute(
+                campaign_state=self,
+                current_country_id=self.current_country,  # This is now the first country again
+                turn_number=self.turn_number
+            )
             self.turn_number += 1
+        
+        return {
+            'per_country': per_country_context,
+            'per_turn': per_turn_context
+        }
             
     def move_army(self, army_id: str, target_hex: HexCoord) -> bool:
         """Move an army to a new hex position"""
