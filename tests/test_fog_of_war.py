@@ -30,6 +30,7 @@ class TestFogOfWar:
     
     def setup_method(self):
         """Setup test environment"""
+        pygame.font.init()  # Initialize font module for tests
         self.game_state = GameState(battle_config={
             'board_size': (10, 10),
             'knights': 0,

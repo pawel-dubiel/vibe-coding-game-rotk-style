@@ -1,4 +1,4 @@
-"""Pathfinding abstractions for game movement"""
+"Pathfinding abstractions for game movement"
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Optional, Dict, Set
 from dataclasses import dataclass
@@ -31,7 +31,8 @@ class PathFinder(ABC):
     
     @abstractmethod
     def find_path(self, start: Tuple[int, int], end: Tuple[int, int], 
-                  game_state, unit=None, max_cost: Optional[float] = None) -> Optional[List[Tuple[int, int]]]:
+                  game_state, unit=None, max_cost: Optional[float] = None,
+                  cost_function=None) -> Optional[List[Tuple[int, int]]]:
         """Find a path from start to end, or None if no path exists
         
         Args:
@@ -40,6 +41,7 @@ class PathFinder(ABC):
             game_state: Current game state for checking passability
             unit: Unit requesting the path (for unit-specific constraints)
             max_cost: Maximum allowed path cost (e.g., available AP)
+            cost_function: Optional function to calculate movement cost
             
         Returns:
             List of positions from start to end (excluding start), or None
@@ -64,7 +66,7 @@ class PathFinder(ABC):
         # In hex grid, all adjacent moves have same cost (no diagonals)
         # But we still apply terrain modifiers
         return max(1.0, terrain_cost)
-    
+
     def _is_position_valid(self, pos: Tuple[int, int], game_state, unit) -> bool:
         """Check if a position is valid for pathfinding"""
         x, y = pos
@@ -133,15 +135,20 @@ class AStarPathFinder(PathFinder):
         self._cached_hex_grid = None  # Lazy-initialized
     
     def find_path(self, start: Tuple[int, int], end: Tuple[int, int], 
-                  game_state, unit=None, max_cost: Optional[float] = None) -> Optional[List[Tuple[int, int]]]:
+                  game_state, unit=None, max_cost: Optional[float] = None,
+                  cost_function=None) -> Optional[List[Tuple[int, int]]]:
         """Find optimal path using A* algorithm"""
         
-        # Check cache first
-        cache_key = (start, end, unit.unit_class if unit else None, max_cost)
-        if hasattr(self, '_path_cache') and cache_key in self._path_cache:
-            cached_path, cached_generation = self._path_cache[cache_key]
-            if cached_generation == self._cache_generation:
-                return cached_path
+        # Use provided cost function or default
+        get_cost = cost_function if cost_function else self._get_movement_cost
+        
+        # Check cache first (skip cache if custom cost function is used)
+        if cost_function is None:
+            cache_key = (start, end, unit.unit_class if unit else None, max_cost)
+            if hasattr(self, '_path_cache') and cache_key in self._path_cache:
+                cached_path, cached_generation = self._path_cache[cache_key]
+                if cached_generation == self._cache_generation:
+                    return cached_path
         
         # Check if start and end are valid
         if not self._is_position_valid(end, game_state, unit):
@@ -174,7 +181,8 @@ class AStarPathFinder(PathFinder):
             # Found the goal
             if current.position == end:
                 path = self._reconstruct_path(current)
-                if hasattr(self, '_path_cache'):
+                # Only cache if using default cost function
+                if cost_function is None and hasattr(self, '_path_cache'):
                     self._path_cache[cache_key] = (path, self._cache_generation)
                 return path
             
@@ -192,8 +200,13 @@ class AStarPathFinder(PathFinder):
                 if not self._is_position_valid(neighbor_pos, game_state, unit):
                     continue
                 
-                # Calculate costs
-                movement_cost = self._get_movement_cost(current.position, neighbor_pos, game_state, unit)
+                # Calculate costs using selected function
+                movement_cost = get_cost(current.position, neighbor_pos, game_state, unit)
+                
+                # Handle blocked paths (infinite cost)
+                if movement_cost == float('inf'):
+                    continue
+                    
                 tentative_g = current.g_cost + movement_cost
                 
                 # Check if exceeds max cost
@@ -222,7 +235,7 @@ class AStarPathFinder(PathFinder):
                 heapq.heappush(open_set, neighbor_node)
         
         # No path found
-        if hasattr(self, '_path_cache'):
+        if cost_function is None and hasattr(self, '_path_cache'):
             self._path_cache[cache_key] = (None, self._cache_generation)
         return None
 
@@ -270,8 +283,12 @@ class DijkstraPathFinder(PathFinder):
         self._cached_hex_grid = None  # For performance optimization
     
     def find_path(self, start: Tuple[int, int], end: Tuple[int, int], 
-                  game_state, unit=None, max_cost: Optional[float] = None) -> Optional[List[Tuple[int, int]]]:
+                  game_state, unit=None, max_cost: Optional[float] = None,
+                  cost_function=None) -> Optional[List[Tuple[int, int]]]:
         """Find path using Dijkstra's algorithm (no heuristic)"""
+        
+        # Use provided cost function or default
+        get_cost = cost_function if cost_function else self._get_movement_cost
         
         # Check if end is valid
         if not self._is_position_valid(end, game_state, unit):
@@ -313,7 +330,12 @@ class DijkstraPathFinder(PathFinder):
                     continue
                 
                 # Calculate cost
-                movement_cost = self._get_movement_cost(current_pos, neighbor_pos, game_state, unit)
+                movement_cost = get_cost(current_pos, neighbor_pos, game_state, unit)
+                
+                # Handle blocked paths
+                if movement_cost == float('inf'):
+                    continue
+                    
                 new_cost = current_cost + movement_cost
                 
                 # Check if exceeds max cost
@@ -330,12 +352,15 @@ class DijkstraPathFinder(PathFinder):
         return None
     
     def find_all_reachable(self, start: Tuple[int, int], game_state, unit=None, 
-                          max_cost: float = None) -> Dict[Tuple[int, int], float]:
+                          max_cost: float = None, cost_function=None) -> Dict[Tuple[int, int], float]:
         """Find all reachable positions within cost limit
         
         Returns:
             Dictionary mapping positions to their minimum cost from start
         """
+        # Use provided cost function or default
+        get_cost = cost_function if cost_function else self._get_movement_cost
+        
         costs: Dict[Tuple[int, int], float] = {start: 0}
         queue = [(0, start)]
         visited: Set[Tuple[int, int]] = set()
@@ -357,7 +382,12 @@ class DijkstraPathFinder(PathFinder):
                     continue
                 
                 # Calculate cost
-                movement_cost = self._get_movement_cost(current_pos, neighbor_pos, game_state, unit)
+                movement_cost = get_cost(current_pos, neighbor_pos, game_state, unit)
+                
+                # Handle blocked paths
+                if movement_cost == float('inf'):
+                    continue
+                    
                 new_cost = current_cost + movement_cost
                 
                 # Check if exceeds max cost

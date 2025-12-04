@@ -138,9 +138,9 @@ class TestMovementPathfinding:
         """Test that custom pathfinder implementations can be plugged in"""
         # Verify the interface allows custom implementations
         class CustomPathFinder(AStarPathFinder):
-            def find_path(self, start, end, game_state, unit=None, max_cost=None):
+            def find_path(self, start, end, game_state, unit=None, max_cost=None, **kwargs):
                 # Custom implementation that always prefers y=0 row
-                path = super().find_path(start, end, game_state, unit, max_cost)
+                path = super().find_path(start, end, game_state, unit, max_cost, **kwargs)
                 return path
         
         movement = MovementBehavior(pathfinder=CustomPathFinder())

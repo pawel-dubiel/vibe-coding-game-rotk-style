@@ -36,10 +36,17 @@ def test_attack_targeting_respects_fog():
     from game.visibility import FogOfWar
     game_state.fog_of_war = FogOfWar(game_state.board_width, game_state.board_height, 2)
     
+    # Ensure terrain is clear for vision
+    from game.terrain import TerrainType
+    if game_state.terrain_map:
+        # Clear path between 5,5 and 7,5
+        game_state.terrain_map.set_terrain(5, 5, TerrainType.PLAINS)
+        game_state.terrain_map.set_terrain(6, 5, TerrainType.PLAINS)
+        game_state.terrain_map.set_terrain(7, 5, TerrainType.PLAINS)
+    
     # Create archer for player 1
     archer = UnitFactory.create_unit("Archer", KnightClass.ARCHER, 5, 5)
-    archer.player_id = 1
-    
+    archer.player_id = 1    
     # Create enemies at different distances
     # Visible enemy (within vision range)
     visible_enemy = UnitFactory.create_unit("Visible", KnightClass.WARRIOR, 7, 5)

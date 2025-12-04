@@ -119,32 +119,23 @@ class MovementBehavior(Behavior):
         if not self.can_execute(unit, game_state):
             return []
             
-        # Use pathfinder with custom cost calculation
-        # We need to wrap the pathfinder to use our AP cost calculation
-        original_get_cost = self.pathfinder._get_movement_cost
-        
+        # Define custom cost function for ZOC
         def custom_get_cost(from_pos, to_pos, game_state, unit):
             base = self.get_ap_cost(from_pos, to_pos, unit, game_state)
             if self._zoc_transition_blocked(from_pos, to_pos, unit, game_state):
                 return float('inf')
             return base
         
-        # Temporarily replace the cost function
-        self.pathfinder._get_movement_cost = custom_get_cost
-        
-        try:
-            # Find path with AP limit
-            path = self.pathfinder.find_path(
-                start=(unit.x, unit.y),
-                end=(target_x, target_y),
-                game_state=game_state,
-                unit=unit,
-                max_cost=unit.action_points
-            )
-            return path or []
-        finally:
-            # Restore original cost function
-            self.pathfinder._get_movement_cost = original_get_cost
+        # Find path with AP limit and custom cost function
+        path = self.pathfinder.find_path(
+            start=(unit.x, unit.y),
+            end=(target_x, target_y),
+            game_state=game_state,
+            unit=unit,
+            max_cost=unit.action_points,
+            cost_function=custom_get_cost
+        )
+        return path or []
     
     def get_possible_moves(self, unit, game_state) -> List[Tuple[int, int]]:
         """Calculate possible movement positions using pathfinding algorithm"""
@@ -162,41 +153,33 @@ class MovementBehavior(Behavior):
         if unit.is_routing:
             return self._get_routing_moves(unit, game_state)
             
+        # Define custom cost function for ZOC
+        def custom_get_cost(from_pos, to_pos, game_state, unit):
+            base_cost = self.get_ap_cost(from_pos, to_pos, unit, game_state)
+            if self._zoc_transition_blocked(from_pos, to_pos, unit, game_state):
+                return float('inf')
+            return base_cost
+
         # Use Dijkstra pathfinder to find all reachable positions
         if isinstance(self.pathfinder, DijkstraPathFinder):
-            # We need to wrap the pathfinder to use our AP cost calculation
-            original_get_cost = self.pathfinder._get_movement_cost
+            # Find all reachable positions within AP limit using custom cost function
+            reachable = self.pathfinder.find_all_reachable(
+                start=(unit.x, unit.y),
+                game_state=game_state,
+                unit=unit,
+                max_cost=unit.action_points,
+                cost_function=custom_get_cost
+            )
             
-            def custom_get_cost(from_pos, to_pos, game_state, unit):
-                base_cost = self.get_ap_cost(from_pos, to_pos, unit, game_state)
-                if self._zoc_transition_blocked(from_pos, to_pos, unit, game_state):
-                    return float('inf')
-                return base_cost
+            # Filter out starting position
+            moves = []
+            for pos, cost in reachable.items():
+                if pos != (unit.x, unit.y) and cost <= unit.action_points:
+                    # Units can move into enemy ZOC to engage - no restrictions on entering ZOC
+                    # ZOC only restricts movement when you're already IN enemy ZOC
+                    moves.append(pos)
             
-            # Temporarily replace the cost function
-            self.pathfinder._get_movement_cost = custom_get_cost
-            
-            try:
-                # Find all reachable positions within AP limit
-                reachable = self.pathfinder.find_all_reachable(
-                    start=(unit.x, unit.y),
-                    game_state=game_state,
-                    unit=unit,
-                    max_cost=unit.action_points
-                )
-                
-                # Filter out starting position
-                moves = []
-                for pos, cost in reachable.items():
-                    if pos != (unit.x, unit.y) and cost <= unit.action_points:
-                        # Units can move into enemy ZOC to engage - no restrictions on entering ZOC
-                        # ZOC only restricts movement when you're already IN enemy ZOC
-                        moves.append(pos)
-                
-                return moves
-            finally:
-                # Restore original cost function
-                self.pathfinder._get_movement_cost = original_get_cost
+            return moves
         else:
             # For other pathfinders, use a simple range-based approach
             moves = []
@@ -212,24 +195,14 @@ class MovementBehavior(Behavior):
                     0 <= y < game_state.board_height and
                     (x, y) != (unit.x, unit.y)):
                     
-                    # Use pathfinder to check if reachable with ZOC rules
-                    original_get_cost = self.pathfinder._get_movement_cost
-
-                    def custom_get_cost(from_pos, to_pos, game_state, unit):
-                        base = self.get_ap_cost(from_pos, to_pos, unit, game_state)
-                        if self._zoc_transition_blocked(from_pos, to_pos, unit, game_state):
-                            return float('inf')
-                        return base
-
-                    self.pathfinder._get_movement_cost = custom_get_cost
                     path = self.pathfinder.find_path(
                         start=(unit.x, unit.y),
                         end=(x, y),
                         game_state=game_state,
                         unit=unit,
-                        max_cost=unit.action_points
+                        max_cost=unit.action_points,
+                        cost_function=custom_get_cost
                     )
-                    self.pathfinder._get_movement_cost = original_get_cost
                     if path:
                         moves.append((x, y))
             return moves

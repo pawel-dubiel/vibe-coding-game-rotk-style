@@ -117,6 +117,11 @@ class TestAPSystem(unittest.TestCase):
         self.game_state.add_knight(cavalry)
         self.game_state.add_knight(target)
         
+        # Ensure terrain is suitable for charge
+        if self.game_state.terrain_map:
+            self.game_state.terrain_map.set_terrain(5, 5, TerrainType.PLAINS)
+            self.game_state.terrain_map.set_terrain(6, 5, TerrainType.PLAINS)
+        
         # Check charge AP cost
         charge_behavior = cavalry.behaviors['cavalry_charge']
         self.assertEqual(charge_behavior.get_ap_cost(), 5)

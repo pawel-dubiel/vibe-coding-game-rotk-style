@@ -350,8 +350,14 @@ class AIPlayer:
                     target = k
                     break
             if target:
-                # Simulate combat with casualties
-                damage = knight.calculate_damage(target)
+                # Simulate combat with casualties, properly considering terrain
+                attacker_terrain = None
+                target_terrain = None
+                if state_copy.terrain_map:
+                    attacker_terrain = state_copy.terrain_map.get_terrain(knight.x, knight.y)
+                    target_terrain = state_copy.terrain_map.get_terrain(target.x, target.y)
+                
+                damage = knight.calculate_damage(target, attacker_terrain, target_terrain)
                 knight.consume_attack_ap()
                 target.take_casualties(damage)
                 if target.soldiers <= 0:

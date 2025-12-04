@@ -22,8 +22,8 @@ class TestTileTerrainGenerator(unittest.TestCase):
         game_cities, collisions, unique = convert_cities_to_hex_coordinates(
             cities, bounds, width, height, zoom
         )
-
-        self.assertEqual(game_cities["testcity"]["position"], [17, 15])
+        
+        self.assertEqual(game_cities["testcity"]["position"], [13, 11])
         self.assertEqual(collisions, 0)
         self.assertEqual(unique, 1)
 

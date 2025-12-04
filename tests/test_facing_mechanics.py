@@ -165,6 +165,12 @@ class TestFacingMechanics:
         self.game_state.add_knight(cavalry)
         self.game_state.add_knight(defender)
         
+        # Ensure terrain is clear for charge (avoid random hills blocking)
+        from game.terrain import TerrainType
+        if self.game_state.terrain_map:
+            self.game_state.terrain_map.set_terrain(9, 10, TerrainType.PLAINS)
+            self.game_state.terrain_map.set_terrain(10, 10, TerrainType.PLAINS)
+        
         # Execute charge
         if 'cavalry_charge' in cavalry.behaviors:
             result = cavalry.behaviors['cavalry_charge'].execute(cavalry, self.game_state, defender)
