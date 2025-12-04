@@ -1,6 +1,6 @@
 """UI component for displaying general information"""
 import pygame
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Any
 from game.entities.unit import Unit
 from game.components.generals import General, GeneralAbilityType
 

@@ -14,7 +14,34 @@ from game.behaviors.movement_service import MovementService
 from game.animation import MoveAnimation, AttackAnimation, ArrowAnimation, PathMoveAnimation
 
 class GameState(IGameState):
+    """
+    The central coordinator of the game session.
+    
+    This class acts as the "Source of Truth" for the current game. It manages:
+    - All entities (Units/Knights, Castles)
+    - The Map (Terrain, Dimensions)
+    - Game Flow (Turn management, Victory conditions)
+    - Sub-systems (Camera, Messages, Animation)
+
+    Attributes:
+        board_width (int): Width of the map in hex columns.
+        board_height (int): Height of the map in hex rows.
+        knights (List[Unit]): All active units on the board.
+        castles (List[Castle]): All active castles/cities.
+        current_player (int): ID of the player whose turn it currently is (1 or 2).
+        terrain_map (TerrainMap): The object holding terrain data for every tile.
+        camera_manager (CameraManager): Handles zoom and pan calculations.
+    """
     def __init__(self, battle_config=None, vs_ai=True):
+        """
+        Initialize a new Game State.
+
+        Args:
+            battle_config (dict, optional): Configuration dictionary for custom battles. 
+                Should contain keys like 'board_size', 'knights', etc. 
+                Defaults to None (Standard Battle).
+            vs_ai (bool): If True, Player 2 is controlled by the AI. Defaults to True.
+        """
         if battle_config:
             self.board_width = battle_config['board_size'][0]
             self.board_height = battle_config['board_size'][1]

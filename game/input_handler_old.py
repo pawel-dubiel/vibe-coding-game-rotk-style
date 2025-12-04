@@ -47,13 +47,13 @@ class InputHandler:
                         game_state.possible_moves = []
                 elif game_state.current_action == 'attack':
                     attack_tile_x, attack_tile_y = self.hex_layout.pixel_to_hex(x, y)
-                    print(\"Attack action - Zoom:\", self.zoom_level, \"Target Hex:\", attack_tile_x, attack_tile_y)
+                    print("Attack action - Zoom:", self.zoom_level, "Target Hex:", attack_tile_x, attack_tile_y)
                     if game_state.attack_with_selected_knight_hex(attack_tile_x, attack_tile_y):
                         game_state.current_action = None
                         game_state.attack_targets = []
                 elif game_state.current_action == 'charge':
                     charge_tile_x, charge_tile_y = self.hex_layout.pixel_to_hex(x, y)
-                    print(\"Charge action - Zoom:\", self.zoom_level, \"Target Hex:\", charge_tile_x, charge_tile_y)
+                    print("Charge action - Zoom:", self.zoom_level, "Target Hex:", charge_tile_x, charge_tile_y)
                     if game_state.charge_with_selected_knight_hex(charge_tile_x, charge_tile_y):
                         game_state.current_action = None
                         game_state.attack_targets = []
@@ -61,7 +61,7 @@ class InputHandler:
                     # Use hex layout to convert click to hex coordinates
                     tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
                     # Debug output for coordinate conversion
-                    print(\"Click - Zoom:\", self.zoom_level, \"Hex:\", tile_x, tile_y)
+                    print("Click - Zoom:", self.zoom_level, "Hex:", tile_x, tile_y)
                     knight = game_state.get_knight_at(tile_x, tile_y)
                     
                     if knight:
