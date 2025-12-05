@@ -23,6 +23,7 @@ class ScenarioType(Enum):
     JSON_ARCHER_MECHANICS = "JSON: Archer Mechanics Test"
     JSON_CAVALRY_CHARGE = "JSON: Cavalry Charge Test"
     JSON_FOG_OF_WAR = "JSON: Fog of War Test"
+    JSON_CAVALRY_SCREENING = "JSON: Cavalry Screening Test"
 
 class TestScenario:
     """Base class for test scenarios
@@ -316,7 +317,8 @@ class TestScenarios:
         json_scenarios = {
             ScenarioType.JSON_ARCHER_MECHANICS: 'archer_mechanics.json',
             ScenarioType.JSON_CAVALRY_CHARGE: 'cavalry_charge.json',
-            ScenarioType.JSON_FOG_OF_WAR: 'fog_of_war.json'
+            ScenarioType.JSON_FOG_OF_WAR: 'fog_of_war.json',
+            ScenarioType.JSON_CAVALRY_SCREENING: 'cavalry_screening.json'
         }
         
         for scenario_type, filename in json_scenarios.items():

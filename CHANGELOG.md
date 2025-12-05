@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Terrain blocking uses existing fog of war line-of-sight calculations
   - Clear user feedback when shots are blocked by terrain
   - Added test scenario for archer line-of-sight mechanics
+  - Added test scenario for cavalry screening mechanics
 - Comprehensive game documentation system
   - Created docs/ folder with detailed mechanism guides
   - Complete routing system documentation with tactical implications
