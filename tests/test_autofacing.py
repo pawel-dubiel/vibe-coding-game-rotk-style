@@ -31,6 +31,7 @@ class TestAutoFacing(unittest.TestCase):
         if hasattr(unit, 'facing'):
             unit.facing.facing = FacingDirection.EAST # Default
         self.game_state.knights.append(unit)
+        # Update fog of war so units can see each other
         self.game_state._update_all_fog_of_war()
         return unit
 

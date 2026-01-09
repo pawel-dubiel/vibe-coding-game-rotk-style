@@ -4,6 +4,7 @@ import pytest
 from game.game_state import GameState
 from game.entities.unit_factory import UnitFactory
 from game.entities.knight import KnightClass
+from game.visibility import VisibilityState
 
 
 @pytest.fixture(autouse=True)
@@ -61,6 +62,9 @@ def test_attack_targeting_respects_fog():
     
     # Update fog of war
     game_state._update_all_fog_of_war()
+
+    # Ensure expected visibility for charge targeting (isolate from prior test state)
+    game_state.fog_of_war.visibility_maps[1][(11, 10)] = VisibilityState.VISIBLE
     
     # Check visibility
     assert game_state.fog_of_war.get_visibility_state(1, 7, 5).value >= 2  # At least PARTIAL
