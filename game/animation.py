@@ -210,41 +210,6 @@ class AttackAnimation(Animation):
         # Apply casualties when projectile hits (at 50% progress)
         progress = self.progress
         if progress >= 0.5 and not self.damage_applied:
-            # Calculate casualties before applying
-            initial_soldiers = self.target.soldiers
-            initial_morale = self.target.morale
-            was_routing_before = self.target.is_routing
-            
-            # Apply damage (this will trigger automatic routing checks)
-            self.target.take_casualties(self.damage, self.game_state)
-            casualties_taken = initial_soldiers - self.target.soldiers
-            
-            # Apply extra morale/cohesion penalties for shock attacks
-            if self.extra_morale_penalty > 0:
-                self.target.morale = max(0, self.target.morale - self.extra_morale_penalty)
-            if self.extra_cohesion_penalty > 0 and hasattr(self.target, 'cohesion'):
-                self.target.cohesion = max(0, self.target.cohesion - self.extra_cohesion_penalty)
-
-            if self.should_check_routing and not self.target.is_routing:
-                shock_bonus = self.extra_morale_penalty + self.extra_cohesion_penalty
-                self.target.check_routing(self.game_state, shock_bonus=shock_bonus)
-            
-            # Add routing message if unit just started routing
-            if not was_routing_before and self.target.is_routing:
-                if self.game_state:
-                    self.game_state.add_message(f"{self.target.name} breaks and starts routing!", priority=2)
-            
-            # Apply counter damage to attacker if melee (this can also cause routing)
-            if self.counter_damage > 0:
-                attacker_initial_morale = self.attacker.morale
-                was_attacker_routing = self.attacker.is_routing
-                self.attacker.take_casualties(self.counter_damage, self.game_state)
-                
-                # Message if attacker starts routing from counter-attack
-                if not was_attacker_routing and self.attacker.is_routing:
-                    if self.game_state:
-                        self.game_state.add_message(f"{self.attacker.name} breaks from counter-attack!", priority=2)
-                        
             self.damage_applied = True
         return not self.finished
 
@@ -293,8 +258,6 @@ class ArrowAnimation(Animation):
         # Apply casualties when arrows hit
         progress = self.get_progress()
         if progress >= self.arrow_speed and not self.damage_applied:
-            for target, casualties in zip(self.targets, self.damages):
-                target.take_casualties(casualties, self.game_state)
             self.damage_applied = True
         return not self.finished
     
