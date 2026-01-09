@@ -130,7 +130,7 @@ static PyObject* c_find_path(PyObject* self, PyObject* args) {
     }
     
     // 2. Parse Cost Map
-    double costs[100]; // Assuming IDs < 100
+    double costs[100]; 
     for (int i=0; i<100; i++) costs[i] = 1.0;
     
     if (PyDict_Check(cost_map_obj)) {
@@ -145,7 +145,7 @@ static PyObject* c_find_path(PyObject* self, PyObject* args) {
         }
     }
     
-    // 3. Parse Blockers (to boolean grid)
+    // 3. Parse Blockers 
     int *blocked = (int*)calloc(map_size, sizeof(int));
     if (blockers_list_obj && blockers_list_obj != Py_None) {
         PyObject *iterator = PyObject_GetIter(blockers_list_obj);
@@ -177,18 +177,14 @@ static PyObject* c_find_path(PyObject* self, PyObject* args) {
     
     int start_idx = start_y * width + start_x;
     int end_idx = end_y * width + end_x;
+    int found = 0;
     
-    // Validate bounds
     if (start_idx >= 0 && start_idx < map_size) {
         g_scores[start_idx] = 0;
-        
         MinHeap *open_set = create_heap(map_size);
         HexCoord start_hex = offset_to_axial(start_x, start_y);
         HexCoord end_hex = offset_to_axial(end_x, end_y);
-        
         heap_push(open_set, start_x, start_y, (double)hex_distance(start_hex, end_hex));
-        
-        int found = 0;
         
         int even_row_dirs[6][2] = {{-1, -1}, {0, -1}, {1, 0}, {0, 1}, {-1, 1}, {-1, 0}};
         int odd_row_dirs[6][2]  = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 0}};
@@ -204,11 +200,6 @@ static PyObject* c_find_path(PyObject* self, PyObject* args) {
                 break;
             }
             
-            // Skip if better path already found/processed
-            if (current.priority > g_scores[c_idx] + hex_distance(offset_to_axial(cx, cy), end_hex)) {
-                 // Optimization: if popped node has higher f-score than current known g + h, skip?
-                 // Standard check: if (in_closed_set[c_idx]) continue;
-            }
             if (in_closed_set[c_idx]) continue;
             in_closed_set[c_idx] = 1;
             
@@ -217,7 +208,6 @@ static PyObject* c_find_path(PyObject* self, PyObject* args) {
             for (int i=0; i<6; i++) {
                 int nx = cx + dirs[i][0];
                 int ny = cy + dirs[i][1];
-                
                 if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
                 
                 int n_idx = ny * width + nx;
