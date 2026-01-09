@@ -136,7 +136,6 @@ class UnitRenderer:
     
     def _render_unit_sprite(self, unit, screen_x: float, screen_y: float, is_identified: bool):
         """Render the unit sprite based on type and identification status."""
-        player_color = self.colors['player1'] if unit.player_id == 1 else self.colors['player2']
         center_x, center_y = int(screen_x), int(screen_y)
         
         if not is_identified:
@@ -147,7 +146,7 @@ class UnitRenderer:
         
         strategy = self.unit_render_strategies.get(unit.unit_class)
         if strategy:
-            strategy.render(self.screen, player_color, center_x, center_y)
+            strategy.render(self.screen, unit, self.asset_manager, center_x, center_y)
     
     def _render_health_bar(self, unit, screen_x: float, screen_y: float):
         """Render health bar above unit."""

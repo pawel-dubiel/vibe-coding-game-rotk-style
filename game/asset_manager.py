@@ -85,3 +85,50 @@ class AssetManager:
     def clear_cache(self):
         """Clear the image cache"""
         self.image_cache.clear()
+
+    def get_unit_icon(self, unit_class_name: str, player_id: int, facing_angle: float, size: int) -> Optional[pygame.Surface]:
+        """
+        Get a rotated unit icon
+        
+        Args:
+            unit_class_name: e.g. "warrior", "archer"
+            player_id: 1 or 2
+            facing_angle: Angle in degrees (0=East, clockwise)
+            size: Target size in pixels
+            
+        Returns:
+            Rotated pygame.Surface
+        """
+        p_prefix = "p1" if player_id == 1 else "p2"
+        filename = f"{p_prefix}_{unit_class_name.lower()}.png"
+        path = os.path.join(self.assets_path, "units", filename)
+        
+        # Cache key includes rotation and size
+        cache_key = f"unit_{filename}_{size}_{facing_angle}"
+        
+        if cache_key in self.image_cache:
+            return self.image_cache[cache_key]
+            
+        try:
+            # Load base image (unscaled) if not in cache
+            base_key = f"base_{filename}"
+            if base_key in self.image_cache:
+                image = self.image_cache[base_key]
+            else:
+                image = pygame.image.load(path).convert_alpha()
+                self.image_cache[base_key] = image
+            
+            # Scale first
+            scaled = pygame.transform.smoothscale(image, (size, size))
+            
+            # Rotate
+            # Pygame rotates CCW, our angles are CW. So use negative angle.
+            rotated = pygame.transform.rotate(scaled, -facing_angle)
+            
+            # Cache and return
+            self.image_cache[cache_key] = rotated
+            return rotated
+            
+        except (pygame.error, FileNotFoundError):
+            # Fallback if icon not generated
+            return None
