@@ -40,40 +40,43 @@ class FacingComponent:
         self._last_move_direction = None
         
     def update_facing_from_movement(self, from_x: int, from_y: int, to_x: int, to_y: int):
-        """Update facing based on movement direction"""
-        # Calculate hex direction based on offset coordinates
+        """Update facing based on movement direction (Odd-R Flat-Top Layout)"""
         dx = to_x - from_x
         dy = to_y - from_y
         
         if dx == 0 and dy == 0:
             return  # No movement
             
-        # Simple direction calculation based on deltas
-        # This handles hex grid offset coordinate system
-        if dx == 0:
-            # Pure vertical movement
-            if dy < 0:
-                self.facing = FacingDirection.NORTH_EAST if from_x % 2 == 0 else FacingDirection.NORTH_WEST
-            else:
-                self.facing = FacingDirection.SOUTH_EAST if from_x % 2 == 0 else FacingDirection.SOUTH_WEST
-        elif dy == 0:
+        if dy == 0:
             # Pure horizontal movement
             if dx > 0:
                 self.facing = FacingDirection.EAST
             else:
                 self.facing = FacingDirection.WEST
-        else:
-            # Diagonal movement - determine primary direction
+        elif dy > 0:
+            # Moving South
             if dx > 0:
-                if dy < 0:
-                    self.facing = FacingDirection.NORTH_EAST
-                else:
-                    self.facing = FacingDirection.SOUTH_EAST
+                self.facing = FacingDirection.SOUTH_EAST
+            elif dx < 0:
+                self.facing = FacingDirection.SOUTH_WEST
             else:
-                if dy < 0:
-                    self.facing = FacingDirection.NORTH_WEST
-                else:
+                # dx == 0, depends on row parity
+                if from_y % 2 == 0: # Even row, pushed left, so dx=0 is Right/East-ish
+                    self.facing = FacingDirection.SOUTH_EAST
+                else: # Odd row, pushed right, so dx=0 is Left/West-ish
                     self.facing = FacingDirection.SOUTH_WEST
+        else:
+            # Moving North
+            if dx > 0:
+                self.facing = FacingDirection.NORTH_EAST
+            elif dx < 0:
+                self.facing = FacingDirection.NORTH_WEST
+            else:
+                # dx == 0
+                if from_y % 2 == 0: # Even row
+                    self.facing = FacingDirection.NORTH_EAST
+                else: # Odd row
+                    self.facing = FacingDirection.NORTH_WEST
                 
         self._last_move_direction = (dx, dy)
     
