@@ -103,6 +103,10 @@ class TestAutoFacing(unittest.TestCase):
         # Player unit at (5, 4) (North-ish) facing North (wrong way)
         player = self._add_unit(KnightClass.WARRIOR, 5, 4, 1, "Player")
         player.facing.facing = FacingDirection.NORTH_WEST # Wrong
+        player.morale = 100
+        player.cohesion = player.max_cohesion
+        enemy.morale = 100
+        enemy.cohesion = enemy.max_cohesion
         
         # Execute attack
         self.game_state.selected_knight = player

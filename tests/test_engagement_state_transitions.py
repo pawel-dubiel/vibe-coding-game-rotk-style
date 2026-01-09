@@ -32,9 +32,23 @@ class TestEngagementStateTransitions:
         assert result['success']
         return result
 
+    def _reset_combat_state(self, *units):
+        for unit in units:
+            unit.is_routing = False
+            unit.morale = unit.stats.stats.max_morale
+            unit.cohesion = unit.max_cohesion
+
+    def _reset_positions(self, attacker, defender):
+        attacker.x = 5
+        attacker.y = 5
+        defender.x = 6
+        defender.y = 5
+
     def test_engagement_persists_when_adjacent_after_update(self):
         attacker, defender = self._prepare_melee_pair()
         self._engage_units(attacker, defender)
+        self._reset_combat_state(attacker, defender)
+        self._reset_positions(attacker, defender)
         self.game_state._update_zoc_status()
 
         assert attacker.is_engaged_in_combat
@@ -102,6 +116,8 @@ class TestEngagementStateTransitions:
         self.game_state.add_knight(defender)
 
         self._engage_units(attacker, defender)
+        self._reset_combat_state(attacker, defender)
+        self._reset_positions(attacker, defender)
 
         defender.action_points = CombatConfig.MIN_AP_FOR_BREAKAWAY
         defender.is_engaged_in_combat = True
@@ -144,6 +160,8 @@ class TestEngagementStateTransitions:
     def test_routing_enemy_does_not_exert_zoc(self):
         attacker, defender = self._prepare_melee_pair()
         self._engage_units(attacker, defender)
+        self._reset_combat_state(attacker, defender)
+        self._reset_positions(attacker, defender)
 
         defender.is_routing = True
         self.game_state._update_zoc_status()
@@ -152,6 +170,8 @@ class TestEngagementStateTransitions:
     def test_routing_unit_can_be_in_enemy_zoc(self):
         attacker, defender = self._prepare_melee_pair()
         self._engage_units(attacker, defender)
+        self._reset_combat_state(attacker, defender)
+        self._reset_positions(attacker, defender)
 
         defender.is_routing = True
         self.game_state._update_zoc_status()

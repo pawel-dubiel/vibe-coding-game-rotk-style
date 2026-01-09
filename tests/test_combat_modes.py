@@ -104,6 +104,14 @@ class TestCombatModes:
         cavalry.has_charged = True
         cavalry.has_acted = False  # Reset for second attack
         cavalry.action_points = 10  # Reset AP
+        cavalry.attacks_this_turn = 0
+        cavalry.morale = 100
+        cavalry.cohesion = cavalry.max_cohesion
+        warrior.is_routing = False
+        warrior.morale = 100
+        warrior.cohesion = warrior.max_cohesion
+        warrior.x = 6
+        warrior.y = 5
         result2 = attack_behavior.execute(cavalry, self.game_state, warrior)
         assert result2['success']
         assert result2['combat_mode'] == CombatMode.MELEE
