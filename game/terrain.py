@@ -56,7 +56,7 @@ TERRAIN_PROPERTIES = {
     TerrainType.PLAINS: TerrainProperties(1.0, 0, True, False, 1, 
         [TerrainFeature.STREAM, TerrainFeature.RIVER, TerrainFeature.ROAD, TerrainFeature.VILLAGE]),
     
-    TerrainType.LIGHT_FOREST: TerrainProperties(1.5, 3, True, False, 1,
+    TerrainType.LIGHT_FOREST: TerrainProperties(2.0, 3, True, False, 1,
         [TerrainFeature.STREAM, TerrainFeature.ROAD, TerrainFeature.RUINS]),
     
     TerrainType.FOREST: TerrainProperties(2.0, 5, True, True, 1,
@@ -83,10 +83,10 @@ TERRAIN_PROPERTIES = {
     TerrainType.SWAMP: TerrainProperties(3.0, -3, True, False, 0,
         [TerrainFeature.ROAD]),
     
-    TerrainType.MARSH: TerrainProperties(2.5, -2, True, False, 0,
+    TerrainType.MARSH: TerrainProperties(3.0, -2, True, False, 0,
         [TerrainFeature.STREAM, TerrainFeature.ROAD]),
     
-    TerrainType.DESERT: TerrainProperties(1.5, -1, True, False, 1,
+    TerrainType.DESERT: TerrainProperties(2.0, -1, True, False, 1,
         [TerrainFeature.ROAD, TerrainFeature.RUINS]),
     
     TerrainType.SNOW: TerrainProperties(2.0, 0, True, False, 2,
