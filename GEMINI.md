@@ -25,6 +25,15 @@ The project follows a component-based architecture to manage complexity and ensu
     - **`rendering/`**: Handles visual output (e.g., `UnitRenderer`, `TerrainRenderer`).
     - **`interfaces/`**: Defines abstract base classes and interfaces.
 
+### Optimization (C Extensions)
+- **`c_modules/`**: Contains C source code for performance-critical algorithms.
+    - **`c_algorithms.c`**: Implements optimized A* pathfinding and hex math.
+    - **`setup.py`**: Build script for compiling the extension.
+- **Integration**:
+    - **`game/c_pathfinding_wrapper.py`**: Python wrapper that handles data marshaling between GameState and C.
+    - **`game/config.py`**: Controls usage via `USE_C_EXTENSIONS`.
+    - **Performance**: Provides ~20x speedup for pathfinding operations.
+
 - **`tools/`**: Utility scripts for development and content generation.
     - **`generate_campaign_maps.py`**: Generates campaign maps using OpenStreetMap data.
     - **`tile_terrain_generator.py`**: Core logic for processing map tiles.

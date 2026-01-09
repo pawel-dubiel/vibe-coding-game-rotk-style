@@ -66,6 +66,23 @@ env\Scripts\activate
 pip install pygame pillow
 ```
 
+### Installation / Deployment
+
+For the game to import the module, the compiled shared object file must be in the Python path (e.g., the root directory or the `game/` directory).
+
+If you are distributing this game or setting it up on a new machine, **you must recompile the extension**. The compiled binary is specific to the Operating System, Processor Architecture, and Python version.
+
+## Performance & Optimizations
+
+This project includes high-performance C extensions for critical algorithms (like Pathfinding) that provide a **20x-30x speedup** over pure Python.
+
+### C Extensions
+- **Algorithms**: Optimized A* Pathfinding and Hex Math.
+- **Toggle**: Use `game/config.py` to enable/disable (`USE_C_EXTENSIONS = True`).
+- **Compilation**: Requires a C compiler and Python development headers.
+
+For detailed build instructions and troubleshooting, see [**c_modules/README.md**](c_modules/README.md).
+
 ## Running the Game
 
 ```bash
