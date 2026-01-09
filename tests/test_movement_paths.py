@@ -255,8 +255,6 @@ class TestMovementPaths(unittest.TestCase):
         
         # Check if animation was created (correct path to animation manager)
         print(f"Animations: {len(self.game_state.animation_coordinator.animation_manager.animations)}")
-        
-        return success
 
 
 if __name__ == '__main__':

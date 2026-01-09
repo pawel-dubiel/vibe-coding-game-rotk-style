@@ -9,6 +9,7 @@ from game.campaign.end_turn_steps.population_step import PopulationCalculationSt
 
 class TestEndTurnStep(EndTurnStep):
     """Test implementation of EndTurnStep for testing."""
+    __test__ = False
     
     def __init__(self, name: str, priority: StepPriority, dependencies=None):
         self._name = name

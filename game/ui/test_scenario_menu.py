@@ -5,6 +5,7 @@ from game.test_scenarios import TestScenarios, ScenarioType
 
 class TestScenarioMenu:
     """Menu for selecting test scenarios"""
+    __test__ = False
     
     def __init__(self, screen: pygame.Surface):
         self.screen = screen

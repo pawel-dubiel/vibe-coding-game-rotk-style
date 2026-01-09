@@ -34,6 +34,7 @@ class TestScenario:
     - Clear instructions
     - Repeatable test conditions
     """
+    __test__ = False
     
     def __init__(self, name: str, description: str):
         self.name = name
@@ -145,6 +146,7 @@ class TestScenario:
 
 class TestScenarios:
     """Manager for test scenarios"""
+    __test__ = False
     
     def __init__(self):
         self.scenarios: Dict[ScenarioType, TestScenario] = {}

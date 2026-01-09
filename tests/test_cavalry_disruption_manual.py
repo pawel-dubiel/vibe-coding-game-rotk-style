@@ -60,7 +60,5 @@ def test_cavalry_disruption_display():
     game_state.knights.append(cavalry4)
     print(f"Cavalry in castle at ({castle.center_x}, {castle.center_y}): disrupted = {cavalry4.is_disrupted}")
     
-    return game_state
-
 if __name__ == "__main__":
     test_cavalry_disruption_display()
