@@ -191,6 +191,18 @@ class AttackBehavior(Behavior):
         extra_cohesion_penalty += mode_cohesion_shock[combat_mode]
         if extra_morale_penalty > 0 or extra_cohesion_penalty > 0:
             should_check_routing = True
+
+        from game.systems.combat_resolver import CombatResolver
+        CombatResolver.resolve_attack(
+            attacker=unit,
+            target=target,
+            damage=damage,
+            counter_damage=counter_damage,
+            extra_morale_penalty=extra_morale_penalty,
+            extra_cohesion_penalty=extra_cohesion_penalty,
+            should_check_routing=should_check_routing,
+            game_state=game_state
+        )
         
         return {
             'success': True,
