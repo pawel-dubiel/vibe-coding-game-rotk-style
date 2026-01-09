@@ -155,10 +155,6 @@ class TestMovement(unittest.TestCase):
         cost = move_behavior.get_ap_cost((5, 5), (5, 6), self.warrior, self.game_state)
         self.assertEqual(cost, 1)
         
-        # Test diagonal movement (should be more expensive)
-        diagonal_cost = move_behavior.get_ap_cost((5, 5), (6, 6), self.warrior, self.game_state)
-        self.assertGreater(diagonal_cost, 1)
-        
     def test_terrain_movement_costs(self):
         """Test movement costs on different terrains"""
         move_behavior = self.warrior.behaviors['move']
@@ -195,19 +191,6 @@ class TestMovement(unittest.TestCase):
         # Cavalry should pay double in forest
         forest_cost = cavalry_move.get_ap_cost((3, 3), (4, 3), self.cavalry, self.game_state)
         self.assertEqual(forest_cost, 4)  # 2 (forest) * 2 (cavalry penalty)
-        
-    def test_diagonal_movement_penalty(self):
-        """Test diagonal movement penalty calculation"""
-        move_behavior = self.warrior.behaviors['move']
-        
-        # Orthogonal movement to plains
-        ortho_cost = move_behavior.get_ap_cost((5, 5), (5, 6), self.warrior, self.game_state)
-        
-        # Diagonal movement to plains
-        diag_cost = move_behavior.get_ap_cost((5, 5), (6, 6), self.warrior, self.game_state)
-        
-        # Diagonal should be more expensive
-        self.assertGreater(diag_cost, ortho_cost)
         
     def test_possible_moves_basic(self):
         """Test basic possible moves calculation"""
@@ -420,15 +403,6 @@ class TestMovement(unittest.TestCase):
                 self.assertIn((move_x, move_y), possible_moves, 
                              f"Adjacent move to ({move_x}, {move_y}) should be reachable")
                 
-        # Test that diagonal moves cost more than orthogonal
-        ortho_cost = move_behavior.get_ap_cost((5, 5), (5, 6), self.warrior, self.game_state)
-        diag_cost = move_behavior.get_ap_cost((5, 5), (6, 6), self.warrior, self.game_state)
-        
-        self.assertGreater(diag_cost, ortho_cost, 
-                          "Diagonal movement should cost more than orthogonal")
-        self.assertEqual(ortho_cost, 1, "Orthogonal movement should cost 1 AP")
-        self.assertEqual(diag_cost, 2, "Diagonal movement should cost 2 AP")
-            
     def test_movement_range_limits(self):
         """Test that movement doesn't exceed range limits"""
         # Test warrior with 3 movement range

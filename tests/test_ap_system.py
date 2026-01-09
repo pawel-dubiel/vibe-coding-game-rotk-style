@@ -48,10 +48,6 @@ class TestAPSystem(unittest.TestCase):
         # Forest should cost more than plains
         self.assertGreater(forest_cost, plains_cost)
         
-        # Diagonal movement should cost more than orthogonal
-        diagonal_cost = move_behavior.get_ap_cost((5, 5), (6, 6), unit, self.game_state)
-        self.assertGreaterEqual(diagonal_cost, plains_cost)
-        
     def test_movement_execution_costs_ap(self):
         """Test that executing movement actually costs AP"""
         unit = UnitFactory.create_warrior("Test", 5, 5)

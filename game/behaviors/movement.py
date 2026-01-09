@@ -35,14 +35,6 @@ class MovementBehavior(Behavior):
         if game_state.terrain_map:
             terrain_cost = float(game_state.terrain_map.get_movement_cost(to_pos[0], to_pos[1], unit))
         
-        # Diagonal movement costs more (but only if terrain is passable)
-        dx = abs(to_pos[0] - from_pos[0])
-        dy = abs(to_pos[1] - from_pos[1])
-        is_diagonal = dx > 0 and dy > 0
-        
-        if is_diagonal and terrain_cost != float('inf'):
-            terrain_cost = math.ceil(terrain_cost * 1.4)  # 40% more for diagonal, always round up
-            
         # Penalty for moving in enemy ZOC
         if unit.in_enemy_zoc:
             terrain_cost += 1  # Extra AP to disengage
