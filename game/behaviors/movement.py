@@ -135,6 +135,8 @@ class MovementBehavior(Behavior):
             max_cost=unit.action_points,
             cost_function=custom_get_cost
         )
+        if not path:
+            print(f"DEBUG: get_path_to failed for {unit.name} to ({target_x}, {target_y}). AP: {unit.action_points}")
         return path or []
     
     def get_possible_moves(self, unit, game_state) -> List[Tuple[int, int]]:

@@ -84,6 +84,7 @@ class PathFinder(ABC):
                     continue
                 # Block if enemy unit at this position
                 if other.player_id != unit.player_id and other.x == x and other.y == y:
+                    print(f"DEBUG: Position ({x}, {y}) blocked by enemy {other.name} (ID {other.player_id} vs {unit.player_id})")
                     return False
         
         return True
