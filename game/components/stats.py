@@ -11,6 +11,8 @@ class UnitStats:
     attack_per_soldier: float
     base_defense: float
     formation_width: int
+    max_cohesion: float
+    current_cohesion: float
     morale: float = 100.0
     max_morale: float = 100.0
     will: float = 100.0
@@ -29,18 +31,23 @@ class StatsComponent(Component):
         
     def take_casualties(self, amount: int) -> bool:
         """Apply casualties to the unit. Returns True if unit is destroyed."""
+        if amount < 0:
+            raise ValueError("Casualty amount must be non-negative")
+
         old_soldiers = self.stats.current_soldiers
+        if old_soldiers <= 0:
+            raise ValueError("Cannot apply casualties to a unit with no soldiers")
+
         self.stats.current_soldiers = max(0, self.stats.current_soldiers - amount)
-        
-        # Morale loss based on casualties - increased for more dramatic effect
-        casualty_percent = amount / self.stats.max_soldiers
-        morale_loss = casualty_percent * 30  # Increased from 20 to 30 for faster routing
-        
-        # Heavy casualties cause additional morale loss
-        if casualty_percent > 0.25:  # If losing more than 25% in one attack
-            morale_loss += 15  # Additional shock penalty
-            
+
+        casualty_ratio = amount / old_soldiers
+        from game.combat_config import CombatConfig
+
+        morale_loss = CombatConfig.calculate_casualty_morale_loss(casualty_ratio)
+        cohesion_loss = CombatConfig.calculate_casualty_cohesion_loss(casualty_ratio)
+
         self.stats.morale = max(0, self.stats.morale - morale_loss)
+        self.stats.current_cohesion = max(0, self.stats.current_cohesion - cohesion_loss)
         
         return self.stats.current_soldiers <= 0
         
@@ -78,5 +85,6 @@ class StatsComponent(Component):
             'soldiers': self.stats.current_soldiers,
             'max_soldiers': self.stats.max_soldiers,
             'morale': self.stats.morale,
+            'cohesion': self.stats.current_cohesion,
             'will': self.stats.will
         }

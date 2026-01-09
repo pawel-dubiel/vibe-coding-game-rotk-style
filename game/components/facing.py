@@ -153,6 +153,15 @@ class FacingComponent:
             return 10  # Extra morale loss from flank attacks
         else:
             return 0
+
+    def get_cohesion_penalty(self, attack_angle: AttackAngle) -> float:
+        """Get cohesion penalty for being attacked from bad angle"""
+        from game.combat_config import CombatConfig
+        if attack_angle.is_rear:
+            return CombatConfig.COHESION_REAR_PENALTY
+        if attack_angle.is_flank:
+            return CombatConfig.COHESION_FLANK_PENALTY
+        return 0.0
     
     def check_routing_chance(self, attack_angle: AttackAngle, 
                            current_morale: float, casualties_percent: float) -> bool:

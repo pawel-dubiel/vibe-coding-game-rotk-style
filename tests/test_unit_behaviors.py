@@ -154,10 +154,12 @@ class TestUnitBehaviors(unittest.TestCase):
         warrior = UnitFactory.create_warrior("Test", 0, 0)
         
         # Take casualties
+        initial_cohesion = warrior.cohesion
         warrior.stats.take_casualties(25)
         self.assertEqual(warrior.soldiers, 75)
         # Morale might be boosted by generals, check raw morale instead
         self.assertLess(warrior.stats.stats.morale, 100)
+        self.assertLess(warrior.cohesion, initial_cohesion)
         
         # Consume will
         self.assertTrue(warrior.stats.consume_will(50))

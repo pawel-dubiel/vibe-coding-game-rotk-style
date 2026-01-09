@@ -184,9 +184,11 @@ class PathMoveAnimation(Animation):
 
 class AttackAnimation(Animation):
     def __init__(self, attacker, target, damage, counter_damage=0, duration=0.8,
-                 attack_angle=None, extra_morale_penalty=0, should_check_routing=False,
-                 game_state=None, is_ranged=False):
+                 attack_angle=None, extra_morale_penalty=0, extra_cohesion_penalty=0,
+                 should_check_routing=False, game_state=None, is_ranged=False):
         super().__init__(duration)
+        if game_state is None:
+            raise ValueError("game_state is required for attack animations")
         self.attacker = attacker
         self.target = target
         self.damage = damage
@@ -195,6 +197,7 @@ class AttackAnimation(Animation):
         self.damage_applied = False
         self.attack_angle = attack_angle
         self.extra_morale_penalty = extra_morale_penalty
+        self.extra_cohesion_penalty = extra_cohesion_penalty
         self.should_check_routing = should_check_routing
         self.game_state = game_state
         # Determine if this should be rendered as a ranged attack
@@ -216,20 +219,15 @@ class AttackAnimation(Animation):
             self.target.take_casualties(self.damage, self.game_state)
             casualties_taken = initial_soldiers - self.target.soldiers
             
-            # Apply extra morale penalty for flank/rear attacks
+            # Apply extra morale/cohesion penalties for shock attacks
             if self.extra_morale_penalty > 0:
                 self.target.morale = max(0, self.target.morale - self.extra_morale_penalty)
-                # Recheck routing after additional morale loss
-                if not self.target.is_routing:
-                    self.target.check_routing(self.game_state)
-            
-            # Check for routing from rear/flank attacks (legacy system)
-            if self.should_check_routing and hasattr(self.target, 'facing') and casualties_taken > 0:
-                casualties_percent = casualties_taken / initial_soldiers
-                if self.target.facing.check_routing_chance(self.attack_angle, 
-                                                          self.target.morale, 
-                                                          casualties_percent):
-                    self.target._start_routing(self.game_state)
+            if self.extra_cohesion_penalty > 0 and hasattr(self.target, 'cohesion'):
+                self.target.cohesion = max(0, self.target.cohesion - self.extra_cohesion_penalty)
+
+            if self.should_check_routing and not self.target.is_routing:
+                shock_bonus = self.extra_morale_penalty + self.extra_cohesion_penalty
+                self.target.check_routing(self.game_state, shock_bonus=shock_bonus)
             
             # Add routing message if unit just started routing
             if not was_routing_before and self.target.is_routing:
@@ -279,11 +277,14 @@ class AttackAnimation(Animation):
             return self.target.x, self.target.y, True, shake_x, shake_y
 
 class ArrowAnimation(Animation):
-    def __init__(self, castle, targets, damages, duration=1.0):
+    def __init__(self, castle, targets, damages, duration=1.0, game_state=None):
         super().__init__(duration)
+        if game_state is None:
+            raise ValueError("game_state is required for arrow animations")
         self.castle = castle
         self.targets = targets
         self.damages = damages
+        self.game_state = game_state
         self.arrow_speed = 0.4
         self.damage_applied = False
     
@@ -293,7 +294,7 @@ class ArrowAnimation(Animation):
         progress = self.get_progress()
         if progress >= self.arrow_speed and not self.damage_applied:
             for target, casualties in zip(self.targets, self.damages):
-                target.take_casualties(casualties)
+                target.take_casualties(casualties, self.game_state)
             self.damage_applied = True
         return not self.finished
     

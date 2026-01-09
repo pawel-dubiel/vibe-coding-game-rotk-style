@@ -724,12 +724,14 @@ class GameState(IGameState):
                         counter_damage = result.get('counter_damage', 0)
                         attack_angle = result.get('attack_angle', None)
                         extra_morale_penalty = result.get('extra_morale_penalty', 0)
+                        extra_cohesion_penalty = result.get('extra_cohesion_penalty', 0)
                         should_check_routing = result.get('should_check_routing', False)
                         
                         # Create attack animation with facing info
                         anim = AttackAnimation(self.selected_knight, target, damage, counter_damage,
                                              attack_angle=attack_angle, 
                                              extra_morale_penalty=extra_morale_penalty,
+                                             extra_cohesion_penalty=extra_cohesion_penalty,
                                              should_check_routing=should_check_routing,
                                              game_state=self)
                         self.animation_coordinator.animation_manager.add_animation(anim)
@@ -850,12 +852,14 @@ class GameState(IGameState):
                         counter_damage = result.get('counter_damage', 0)
                         attack_angle = result.get('attack_angle', None)
                         extra_morale_penalty = result.get('extra_morale_penalty', 0)
+                        extra_cohesion_penalty = result.get('extra_cohesion_penalty', 0)
                         should_check_routing = result.get('should_check_routing', False)
                         
                         # Create attack animation with facing info
                         anim = AttackAnimation(self.selected_knight, target, damage, counter_damage,
                                              attack_angle=attack_angle, 
                                              extra_morale_penalty=extra_morale_penalty,
+                                             extra_cohesion_penalty=extra_cohesion_penalty,
                                              should_check_routing=should_check_routing,
                                              game_state=self)
                         self.animation_coordinator.animation_manager.add_animation(anim)
@@ -939,7 +943,7 @@ class GameState(IGameState):
                     
                     # Create arrow animation - animation will apply damage when arrows hit
                     if damages:
-                        anim = ArrowAnimation(castle, enemies, [d[1] for d in damages])
+                        anim = ArrowAnimation(castle, enemies, [d[1] for d in damages], game_state=self)
                         self.animation_coordinator.animation_manager.add_animation(anim)
                         
                         # Add message for castle archer volleys
@@ -1005,8 +1009,6 @@ class GameState(IGameState):
             self._rotate_selected_knight('clockwise')
         elif action == 'rotate_ccw':
             self._rotate_selected_knight('counter_clockwise')
-        elif action == 'info':
-            pass
         elif action == 'cancel':
             self.deselect_knight()
     

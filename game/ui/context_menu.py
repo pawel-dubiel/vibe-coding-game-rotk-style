@@ -122,12 +122,6 @@ class ContextMenu:
                     })
         
         actions.append({
-            'text': 'Info',
-            'action': 'info',
-            'enabled': True
-        })
-        
-        actions.append({
             'text': 'Cancel',
             'action': 'cancel',
             'enabled': True

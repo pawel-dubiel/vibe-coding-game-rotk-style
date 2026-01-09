@@ -50,7 +50,7 @@ class BreakawayBehavior(Behavior):
             final_damage = int(opportunity_damage * CombatConfig.BREAKAWAY_DAMAGE_REDUCTION)
             
             if final_damage > 0:
-                unit.take_casualties(final_damage)
+                unit.take_casualties(final_damage, game_state)
                 result['opportunity_damage'] = final_damage
                 result['message'] += f' Took {final_damage} casualties from opportunity attack.'
                 

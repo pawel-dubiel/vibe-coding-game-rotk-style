@@ -120,6 +120,8 @@ class StateSerializer:
         serialized_units = []
         
         for unit in units:
+            if not hasattr(unit, 'cohesion') or not hasattr(unit, 'max_cohesion'):
+                raise ValueError("Unit cohesion stats are required for serialization")
             unit_data = {
                 'name': unit.name,
                 'unit_class': unit.unit_class.value,
@@ -134,6 +136,8 @@ class StateSerializer:
                 'max_health': unit.max_health,
                 'morale': unit.morale,
                 'max_morale': unit.max_morale,
+                'cohesion': unit.cohesion,
+                'max_cohesion': unit.max_cohesion,
                 'is_routing': unit.is_routing,
                 'facing_direction': unit.facing.direction.value if hasattr(unit, 'facing') else 0,
                 'garrison_location': unit.garrison_location.center_x if unit.garrison_location else None,
@@ -240,6 +244,10 @@ class StateSerializer:
             unit.max_health = unit_data['max_health']
             unit.morale = unit_data['morale']
             unit.max_morale = unit_data['max_morale']
+            if 'cohesion' not in unit_data or 'max_cohesion' not in unit_data:
+                raise ValueError("Serialized unit data missing cohesion values")
+            unit.cohesion = unit_data['cohesion']
+            unit.max_cohesion = unit_data['max_cohesion']
             unit.is_routing = unit_data['is_routing']
             
             # Restore facing direction

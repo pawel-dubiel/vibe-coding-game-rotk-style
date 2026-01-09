@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from game.entities.knight import KnightClass
 from game.entities.unit_factory import UnitFactory
 from game.behaviors.combat import CombatMode
+from game.combat_config import CombatConfig
 from game.test_utils.mock_game_state import MockGameState
 
 class TestEngagementMechanics:
@@ -217,17 +218,21 @@ class TestEngagementMechanics:
         warrior = UnitFactory.create_unit("Warrior", KnightClass.WARRIOR, 5, 5)
         warrior.player_id = 1
         warrior.morale = 15  # Below routing threshold
+        warrior.cohesion = 40  # Below rally threshold
         warrior.is_routing = True  # Start routing
         
         initial_morale = warrior.morale
+        initial_cohesion = warrior.cohesion
         
         # End turn to trigger morale recovery
         warrior.end_turn()
         
         # Verify morale increased
         assert warrior.morale > initial_morale, "Morale should increase each turn"
-        expected_morale = min(100, initial_morale + 15)  # Routing units get +15 base morale per turn
-        assert warrior.morale >= expected_morale, f"Routing units should get at least +15 morale per turn. Expected: {expected_morale}, Got: {warrior.morale}"
+        expected_morale = min(100, initial_morale + CombatConfig.MORALE_REGEN_ROUTING)
+        assert warrior.morale >= expected_morale, f"Routing units should get morale regen per turn. Expected: {expected_morale}, Got: {warrior.morale}"
+        expected_cohesion = min(warrior.max_cohesion, initial_cohesion + CombatConfig.COHESION_REGEN_ROUTING)
+        assert warrior.cohesion >= expected_cohesion, "Cohesion should recover while routing"
         
         # Still routing with low morale
         assert warrior.is_routing, "Should still be routing with low morale"
@@ -237,10 +242,12 @@ class TestEngagementMechanics:
             warrior.end_turn()
             
         # Should have enough morale to potentially rally now
-        assert warrior.morale >= 40, "Should have enough morale to rally after several turns"
+        assert warrior.morale >= CombatConfig.RALLY_MORALE_THRESHOLD, "Should have enough morale to rally after several turns"
+        assert warrior.cohesion >= CombatConfig.RALLY_COHESION_THRESHOLD, "Should have enough cohesion to rally after several turns"
         
         # The rally is probabilistic, but let's test the rally threshold logic
-        warrior.morale = 50  # Set high enough morale
+        warrior.morale = CombatConfig.RALLY_MORALE_THRESHOLD + 5
+        warrior.cohesion = CombatConfig.RALLY_COHESION_THRESHOLD + 5
         warrior.is_routing = True
         
         # Test rally mechanics by calling end_turn multiple times (probabilistic)
@@ -266,7 +273,7 @@ class TestEngagementMechanics:
         damage_amount = 20
         
         # Apply damage to routing unit
-        warrior.take_casualties(damage_amount)
+        warrior.take_casualties(damage_amount, self.game_state)
         
         # Should take reduced damage (70% of normal)
         expected_damage = int(damage_amount * 0.7)  # 14 damage instead of 20
@@ -280,12 +287,14 @@ class TestEngagementMechanics:
         warrior1 = UnitFactory.create_unit("Warrior1", KnightClass.WARRIOR, 5, 5)
         warrior1.is_routing = True
         warrior1.morale = 70  # High morale
+        warrior1.cohesion = 70
         # Should have high rally chance (90%)
         
         # Test 2: Damaged unit with decent morale
         warrior2 = UnitFactory.create_unit("Warrior2", KnightClass.WARRIOR, 6, 5)
         warrior2.is_routing = True
         warrior2.morale = 50  # Decent morale
+        warrior2.cohesion = CombatConfig.RALLY_COHESION_THRESHOLD
         warrior2.stats.stats.current_soldiers = 40  # Heavily damaged (from 100)
         # Should have reduced rally chance due to damage
         
@@ -296,13 +305,13 @@ class TestEngagementMechanics:
         # Should not be able to rally even after recovery
         
         # Verify rally threshold
-        assert warrior3.morale < 40, "Unit with low morale should be below rally threshold"
+        assert warrior3.morale < CombatConfig.RALLY_MORALE_THRESHOLD, "Unit with low morale should be below rally threshold"
         
         # Test that unit below threshold stays routing even after morale recovery
         initial_morale3 = warrior3.morale
         warrior3.end_turn()
-        # Even with +15 recovery, 5 + 15 = 20, still below 40 threshold
-        assert warrior3.morale < 40, f"Even after recovery, should still be below rally threshold. Got: {warrior3.morale}"
+        # Even with routing recovery, still below threshold
+        assert warrior3.morale < CombatConfig.RALLY_MORALE_THRESHOLD, f"Even after recovery, should still be below rally threshold. Got: {warrior3.morale}"
         assert warrior3.is_routing, "Unit below rally threshold should remain routing"
     
     def test_units_can_enter_enemy_zoc(self):

@@ -97,6 +97,26 @@ class Unit:
     def morale(self, value: float):
         """Compatibility property"""
         self.stats.stats.morale = value
+
+    @property
+    def cohesion(self) -> float:
+        """Current cohesion (formation integrity)"""
+        return self.stats.stats.current_cohesion
+
+    @cohesion.setter
+    def cohesion(self, value: float):
+        """Set current cohesion"""
+        self.stats.stats.current_cohesion = value
+
+    @property
+    def max_cohesion(self) -> float:
+        """Maximum cohesion value"""
+        return self.stats.stats.max_cohesion
+
+    @max_cohesion.setter
+    def max_cohesion(self, value: float):
+        """Set maximum cohesion"""
+        self.stats.stats.max_cohesion = value
         
     @property
     def will(self) -> float:
@@ -174,8 +194,10 @@ class Unit:
             return self.generals
         return None
         
-    def take_casualties(self, amount: int, game_state=None) -> bool:
+    def take_casualties(self, amount: int, game_state) -> bool:
         """Apply casualties to unit"""
+        if game_state is None:
+            raise ValueError("game_state is required when applying casualties")
         # Routing units are harder to hit effectively (they're fleeing/scattered)
         if self.is_routing:
             amount = int(amount * 0.7)  # 30% damage reduction for routing units
@@ -184,30 +206,54 @@ class Unit:
         
         # Check for automatic routing after casualties (only if not already routing)
         if not was_destroyed and not self.is_routing:
-            self.check_routing(game_state)
+            self.check_routing(game_state, shock_bonus=0.0)
             
         return was_destroyed
     
-    def check_routing(self, game_state=None) -> bool:
-        """Check if unit should start routing based on morale and conditions"""
+    def check_routing(self, game_state, shock_bonus: float) -> bool:
+        """Check if unit should start routing based on morale, cohesion, and conditions"""
+        if game_state is None:
+            raise ValueError("game_state is required for routing checks")
+        if shock_bonus is None:
+            raise ValueError("shock_bonus is required for routing checks")
         # Already routing
         if self.is_routing:
             return True
             
-        # Units with very low morale start routing
-        routing_threshold = 20  # Start routing below 20% morale
-        
-        # Check for automatic routing conditions
-        if self.morale < routing_threshold:
+        from game.combat_config import CombatConfig
+
+        # Units with very low morale or cohesion start routing immediately
+        if (self.morale <= CombatConfig.ROUTING_HARD_MORALE_THRESHOLD or
+                self.cohesion <= CombatConfig.ROUTING_HARD_COHESION_THRESHOLD):
             self._start_routing(game_state)
             return True
             
-        # Check for morale-based probability routing (panic)
-        if self.morale < 40:  # Between 20-40% morale, chance to route
+        pressure_bonus = 0.0
+        adjacent_enemies = 0
+        adjacent_friendlies = 0
+        for other in game_state.knights:
+            if other == self or other.is_garrisoned:
+                continue
+            dx = abs(self.x - other.x)
+            dy = abs(self.y - other.y)
+            if dx <= 1 and dy <= 1 and (dx + dy > 0):
+                if other.player_id != self.player_id:
+                    adjacent_enemies += 1
+                else:
+                    adjacent_friendlies += 1
+
+        if adjacent_enemies > adjacent_friendlies:
+            pressure_bonus = CombatConfig.ROUTING_PRESSURE_BONUS
+
+        route_chance = CombatConfig.calculate_routing_chance(
+            morale=self.morale,
+            cohesion=self.cohesion,
+            pressure_bonus=pressure_bonus,
+            shock_bonus=shock_bonus
+        )
+        if route_chance > 0:
             import random
-            # Higher chance to route with lower morale
-            route_chance = (40 - self.morale) / 40  # 0% at 40 morale, 50% at 20 morale
-            if random.random() < route_chance * 0.3:  # Max 15% chance per check
+            if random.random() < (route_chance / 100.0):
                 self._start_routing(game_state)
                 return True
                 
@@ -293,35 +339,50 @@ class Unit:
         # Regenerate will
         self.stats.regenerate_will(20)
         
-        # Apply base morale regeneration (all units recover some morale each turn)
-        base_morale_regen = 10  # Base recovery per turn
-        
-        # Routing units recover morale faster when not under pressure
+        from game.combat_config import CombatConfig
+
+        # Apply base morale/cohesion regeneration
         if self.is_routing:
-            base_morale_regen = 15  # Faster recovery for routing units
-            
+            base_morale_regen = CombatConfig.MORALE_REGEN_ROUTING
+            base_cohesion_regen = CombatConfig.COHESION_REGEN_ROUTING
+        else:
+            base_morale_regen = CombatConfig.MORALE_REGEN_BASE
+            base_cohesion_regen = CombatConfig.COHESION_REGEN_BASE
+
+        if self.is_engaged_in_combat:
+            base_morale_regen *= CombatConfig.REGEN_ENGAGED_MULTIPLIER
+            base_cohesion_regen *= CombatConfig.REGEN_ENGAGED_MULTIPLIER
+
         # Apply general morale regeneration bonuses
         bonuses = self.generals.get_all_passive_bonuses(self)
         general_morale_regen = bonuses.get('morale_regen', 0)
         
         total_morale_regen = base_morale_regen + general_morale_regen
-        old_morale = self.stats.stats.morale
-        self.stats.stats.morale = min(100, self.stats.stats.morale + total_morale_regen)
+        self.stats.stats.morale = min(self.stats.stats.max_morale, self.stats.stats.morale + total_morale_regen)
+        self.stats.stats.current_cohesion = min(
+            self.stats.stats.max_cohesion,
+            self.stats.stats.current_cohesion + base_cohesion_regen
+        )
         
         # Check if routing unit recovers enough morale to stop routing
         self.has_rallied_this_turn = False
-        if self.is_routing and self.stats.stats.morale >= 40:  # Rally threshold
+        if (self.is_routing and
+                self.stats.stats.morale >= CombatConfig.RALLY_MORALE_THRESHOLD and
+                self.stats.stats.current_cohesion >= CombatConfig.RALLY_COHESION_THRESHOLD):
             # Additional rally conditions for realism
-            rally_chance = 0.7  # 70% base chance to rally even with good morale
+            rally_chance = CombatConfig.RALLY_BASE_CHANCE
             
             # Better chance to rally with higher morale
-            if self.stats.stats.morale >= 60:
-                rally_chance = 0.9  # 90% chance with high morale
+            if self.stats.stats.morale >= CombatConfig.RALLY_HIGH_MORALE_THRESHOLD:
+                rally_chance = CombatConfig.RALLY_HIGH_MORALE_CHANCE
+
+            if self.stats.stats.current_cohesion >= CombatConfig.RALLY_HIGH_COHESION_THRESHOLD:
+                rally_chance *= CombatConfig.RALLY_HIGH_COHESION_MULTIPLIER
                 
             # Reduced chance if heavily damaged
             soldier_ratio = self.soldiers / self.max_soldiers
             if soldier_ratio < 0.5:  # Less than 50% soldiers remaining
-                rally_chance *= 0.6  # Harder to rally when heavily damaged
+                rally_chance *= CombatConfig.RALLY_LOW_STRENGTH_MULTIPLIER
                 
             import random
             if random.random() < rally_chance:
@@ -341,7 +402,11 @@ class Unit:
     def has_zone_of_control(self) -> bool:
         """Check if unit exerts Zone of Control"""
         # Only non-routing units with good morale have ZOC
-        return not self.is_routing and self.morale >= 25 and self.soldiers > 0
+        from game.combat_config import CombatConfig
+        return (not self.is_routing and
+                self.morale >= CombatConfig.ZOC_MORALE_THRESHOLD and
+                self.cohesion >= CombatConfig.ZOC_COHESION_THRESHOLD and
+                self.soldiers > 0)
         
     def is_in_enemy_zoc(self, game_state) -> Tuple[bool, Optional['Unit']]:
         """Check if unit is in enemy Zone of Control"""
@@ -373,31 +438,39 @@ class Unit:
                 current_soldiers=100,
                 attack_per_soldier=1.0,
                 base_defense=30,
-                formation_width=40
+                formation_width=40,
+                max_cohesion=100.0,
+                current_cohesion=100.0
             ),
             KnightClass.ARCHER: UnitStats(
                 max_soldiers=80,
                 current_soldiers=80,
                 attack_per_soldier=1.5,
                 base_defense=20,
-                formation_width=40
+                formation_width=40,
+                max_cohesion=85.0,
+                current_cohesion=85.0
             ),
             KnightClass.CAVALRY: UnitStats(
                 max_soldiers=50,
                 current_soldiers=50,
                 attack_per_soldier=2.0,
                 base_defense=25,
-                formation_width=25
+                formation_width=25,
+                max_cohesion=90.0,
+                current_cohesion=90.0
             ),
             KnightClass.MAGE: UnitStats(
                 max_soldiers=30,
                 current_soldiers=30,
                 attack_per_soldier=3.0,
                 base_defense=15,
-                formation_width=15
+                formation_width=15,
+                max_cohesion=75.0,
+                current_cohesion=75.0
             )
         }
-        return stats_by_class.get(self.unit_class, UnitStats(100, 100, 1.0, 25, 30))
+        return stats_by_class.get(self.unit_class, UnitStats(100, 100, 1.0, 25, 30, 90.0, 90.0))
         
     # Compatibility methods for existing code
     @property
@@ -880,20 +953,26 @@ class Unit:
                 # Crushing charge against wall/castle
                 charge_damage = int(base_charge_damage * 1.5)
                 self_damage = int(self.soldiers * 0.1)
-                target.take_casualties(charge_damage)
+                target.take_casualties(charge_damage, game_state)
                 if hasattr(target, 'morale'):
                     target.morale = max(0, target.morale - 30)
-                self.take_casualties(self_damage)
+                if hasattr(target, 'cohesion'):
+                    from game.combat_config import CombatConfig
+                    target.cohesion = max(0, target.cohesion - (30 * CombatConfig.CHARGE_COHESION_MULTIPLIER))
+                self.take_casualties(self_damage, game_state)
                 message = f"Devastating charge! {target.name} crushed against the wall!"
                 
             elif obstacle_type == 'terrain':
                 # Trapped by terrain
                 charge_damage = int(base_charge_damage * 1.3)
                 self_damage = int(self.soldiers * 0.08)
-                target.take_casualties(charge_damage)
+                target.take_casualties(charge_damage, game_state)
                 if hasattr(target, 'morale'):
                     target.morale = max(0, target.morale - 25)
-                self.take_casualties(self_damage)
+                if hasattr(target, 'cohesion'):
+                    from game.combat_config import CombatConfig
+                    target.cohesion = max(0, target.cohesion - (25 * CombatConfig.CHARGE_COHESION_MULTIPLIER))
+                self.take_casualties(self_damage, game_state)
                 message = f"Crushing charge! {target.name} trapped by terrain!"
                 
             elif obstacle_type == 'unit' and obstacle_unit:
@@ -903,15 +982,21 @@ class Unit:
                 collateral_damage = int(base_charge_damage * 0.3)
                 
                 # Apply damages
-                target.take_casualties(charge_damage)
+                target.take_casualties(charge_damage, game_state)
                 if hasattr(target, 'morale'):
                     target.morale = max(0, target.morale - 20)
-                self.take_casualties(self_damage)
+                if hasattr(target, 'cohesion'):
+                    from game.combat_config import CombatConfig
+                    target.cohesion = max(0, target.cohesion - (20 * CombatConfig.CHARGE_COHESION_MULTIPLIER))
+                self.take_casualties(self_damage, game_state)
                 
                 # Collateral damage to the unit behind
-                obstacle_unit.take_casualties(collateral_damage)
+                obstacle_unit.take_casualties(collateral_damage, game_state)
                 if hasattr(obstacle_unit, 'morale'):
                     obstacle_unit.morale = max(0, obstacle_unit.morale - 15)
+                if hasattr(obstacle_unit, 'cohesion'):
+                    from game.combat_config import CombatConfig
+                    obstacle_unit.cohesion = max(0, obstacle_unit.cohesion - (15 * CombatConfig.CHARGE_COHESION_MULTIPLIER))
                 
                 message = f"Thunderous charge! {target.name} slammed into {obstacle_unit.name}!"
         else:
@@ -919,10 +1004,13 @@ class Unit:
             charge_damage = base_charge_damage
             self_damage = int(self.soldiers * 0.05)
             
-            target.take_casualties(charge_damage)
+            target.take_casualties(charge_damage, game_state)
             if hasattr(target, 'morale'):
                 target.morale = max(0, target.morale - 15)
-            self.take_casualties(self_damage)
+            if hasattr(target, 'cohesion'):
+                from game.combat_config import CombatConfig
+                target.cohesion = max(0, target.cohesion - (15 * CombatConfig.CHARGE_COHESION_MULTIPLIER))
+            self.take_casualties(self_damage, game_state)
             
             # Execute push
             target.x = push_x
@@ -933,9 +1021,15 @@ class Unit:
         # Check if target routed
         if target.soldiers <= 0:
             message += f" {target.name} destroyed!"
-        elif hasattr(target, 'morale') and target.morale <= 20:
-            target.is_routing = True
-            message += f" {target.name} is routing!"
+        elif not target.is_routing:
+            from game.combat_config import CombatConfig
+            shock_bonus = 0.0
+            if hasattr(target, 'morale'):
+                shock_bonus += max(0.0, CombatConfig.ROUTING_MORALE_THRESHOLD - target.morale)
+            if hasattr(target, 'cohesion'):
+                shock_bonus += max(0.0, CombatConfig.ROUTING_COHESION_THRESHOLD - target.cohesion)
+            if target.check_routing(game_state, shock_bonus=shock_bonus):
+                message += f" {target.name} is routing!"
         
         return True, message
 

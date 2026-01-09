@@ -370,7 +370,7 @@ class AIPlayer:
                 
                 damage = knight.calculate_damage(target, attacker_terrain, target_terrain)
                 knight.consume_attack_ap()
-                target.take_casualties(damage)
+                target.take_casualties(damage, state_copy)
                 if target.soldiers <= 0:
                     state_copy.knights.remove(target)
         
@@ -460,7 +460,7 @@ class AIPlayer:
                     knight.consume_attack_ap()
                     
                     # Add animation - animation will apply damage when projectile hits
-                    anim = AttackAnimation(knight, target, damage)
+                    anim = AttackAnimation(knight, target, damage, game_state=game_state)
                     game_state.animation_coordinator.animation_manager.add_animation(anim)
                     
                     actions_taken.append(f"{knight.name} attacked {target.name} for {damage} damage")

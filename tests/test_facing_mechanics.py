@@ -8,6 +8,7 @@ from game.entities.unit_factory import UnitFactory
 from game.entities.knight import KnightClass
 from game.components.facing import FacingDirection, AttackAngle
 from game.test_utils.mock_game_state import MockGameState
+from game.combat_config import CombatConfig
 from game.animation import AttackAnimation
 
 
@@ -149,7 +150,8 @@ class TestFacingMechanics:
             assert result['damage'] > 0
             assert result['attack_angle'] is not None
             assert result['attack_angle'].is_rear  # Should be rear attack
-            assert result['extra_morale_penalty'] == 15  # Rear attack penalty
+            expected_morale_penalty = 15 + CombatConfig.MORALE_SHOCK_MELEE
+            assert result['extra_morale_penalty'] == expected_morale_penalty
             assert result['should_check_routing'] == True
             
     def test_cavalry_charge_rear_bonus(self):

@@ -42,15 +42,21 @@ class AnimationCoordinator:
         self.animation_manager.add_animation(anim)
         return anim
     
-    def create_attack_animation(self, attacker, target, duration: float = 0.3) -> AttackAnimation:
+    def create_attack_animation(self, attacker, target, damage: int,
+                                duration: float = 0.3, game_state=None, **kwargs) -> AttackAnimation:
         """Create and add an attack animation."""
-        anim = AttackAnimation(attacker, target, duration)
+        if game_state is None:
+            raise ValueError("game_state is required for attack animations")
+        anim = AttackAnimation(attacker, target, damage, duration=duration, game_state=game_state, **kwargs)
         self.animation_manager.add_animation(anim)
         return anim
     
-    def create_arrow_animation(self, archer, target, damage: int, duration: float = 0.8) -> ArrowAnimation:
+    def create_arrow_animation(self, archer, target, damage: int,
+                               duration: float = 0.8, game_state=None) -> ArrowAnimation:
         """Create and add an arrow attack animation."""
-        anim = ArrowAnimation(archer, target, damage, duration)
+        if game_state is None:
+            raise ValueError("game_state is required for arrow animations")
+        anim = ArrowAnimation(archer, [target], [damage], duration, game_state=game_state)
         self.animation_manager.add_animation(anim)
         return anim
     

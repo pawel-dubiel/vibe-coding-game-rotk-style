@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from game.entities.unit_factory import UnitFactory
 from game.entities.knight import KnightClass
 from game.test_utils.mock_game_state import MockGameState
+from game.combat_config import CombatConfig
 from game.terrain import TerrainType
 
 class TestEnhancedAttackSystem:
@@ -91,7 +92,7 @@ class TestEnhancedAttackSystem:
         assert can_attack, "First attack should be allowed even with low morale"
         
     def test_second_attack_requires_50_percent_morale(self):
-        """Test that second attack requires 50%+ morale"""
+        """Test that second attack requires morale and cohesion thresholds"""
         # Set plains terrain
         self.game_state.terrain_map.set_terrain(5, 5, TerrainType.PLAINS)
         
@@ -100,7 +101,8 @@ class TestEnhancedAttackSystem:
         warrior = UnitFactory.create_unit("Warrior", KnightClass.WARRIOR, 4, 5)
         warrior.player_id = 1
         warrior.action_points = 20  # Plenty of AP
-        warrior.morale = 60  # Above 50%
+        warrior.morale = CombatConfig.MORALE_ATTACK_THRESHOLD + 10
+        warrior.cohesion = CombatConfig.COHESION_ATTACK_THRESHOLD + 10
         target = UnitFactory.create_unit("Target", KnightClass.WARRIOR, 5, 5)
         target.player_id = 2
         
@@ -115,17 +117,17 @@ class TestEnhancedAttackSystem:
         
         # Check second attack is allowed with good morale
         can_attack_again = attack_behavior.can_execute(warrior, self.game_state)
-        assert can_attack_again, "Second attack should be allowed with 60% morale"
+        assert can_attack_again, "Second attack should be allowed with good morale/cohesion"
         
-        # Reduce morale below 50%
-        warrior.morale = 40
+        # Reduce morale below threshold
+        warrior.morale = CombatConfig.MORALE_ATTACK_THRESHOLD - 10
         
         # Check second attack is now blocked
         can_attack_low_morale = attack_behavior.can_execute(warrior, self.game_state)
-        assert not can_attack_low_morale, "Second attack should be blocked with 40% morale"
+        assert not can_attack_low_morale, "Second attack should be blocked with low morale"
         
     def test_progressive_morale_loss_multiple_attacks(self):
-        """Test that multiple attacks cause progressive morale loss"""
+        """Test that multiple attacks cause progressive morale/cohesion loss"""
         # Set plains terrain
         self.game_state.terrain_map.set_terrain(5, 5, TerrainType.PLAINS)
         
@@ -151,24 +153,36 @@ class TestEnhancedAttackSystem:
         assert warrior.morale == initial_morale, "First attack should not cause morale loss"
         assert warrior.attacks_this_turn == 1, "Should track first attack"
         
-        # Second attack - should cause 10% morale loss (attacks_this_turn * 5 = 2 * 5 = 10)
+        # Second attack - should cause fatigue-based morale/cohesion loss
         # Note: Check base morale since displayed morale includes general bonuses
         base_morale_before_second = warrior.stats.stats.morale
+        base_cohesion_before_second = warrior.stats.stats.current_cohesion
         result2 = attack_behavior.execute(warrior, self.game_state, target)
         assert result2['success'], "Second attack should succeed"
         base_morale_after_second = warrior.stats.stats.morale
+        base_cohesion_after_second = warrior.stats.stats.current_cohesion
         morale_loss_second = base_morale_before_second - base_morale_after_second
-        assert morale_loss_second == 10, f"Second attack should cause 10 base morale loss, got {morale_loss_second}"
+        expected_morale_loss = CombatConfig.ATTACK_FATIGUE_MORALE_PER_ATTACK
+        expected_cohesion_loss = CombatConfig.ATTACK_FATIGUE_COHESION_PER_ATTACK
+        assert morale_loss_second == expected_morale_loss, f"Second attack should cause {expected_morale_loss} base morale loss, got {morale_loss_second}"
+        cohesion_loss_second = base_cohesion_before_second - base_cohesion_after_second
+        assert cohesion_loss_second == expected_cohesion_loss, f"Second attack should cause {expected_cohesion_loss} cohesion loss, got {cohesion_loss_second}"
         assert warrior.attacks_this_turn == 2, "Should track second attack"
         
-        # Third attack - should cause additional 15% morale loss (3 * 5 = 15)
+        # Third attack - should cause additional fatigue loss
         if warrior.action_points >= 4:  # If enough AP for third attack
             base_morale_before_third = warrior.stats.stats.morale
+            base_cohesion_before_third = warrior.stats.stats.current_cohesion
             result3 = attack_behavior.execute(warrior, self.game_state, target)
             assert result3['success'], "Third attack should succeed"
             base_morale_after_third = warrior.stats.stats.morale
+            base_cohesion_after_third = warrior.stats.stats.current_cohesion
             morale_loss_third = base_morale_before_third - base_morale_after_third
-            assert morale_loss_third == 15, f"Third attack should cause 15 base morale loss, got {morale_loss_third}"
+            expected_morale_loss_third = CombatConfig.ATTACK_FATIGUE_MORALE_PER_ATTACK * 2
+            expected_cohesion_loss_third = CombatConfig.ATTACK_FATIGUE_COHESION_PER_ATTACK * 2
+            assert morale_loss_third == expected_morale_loss_third, f"Third attack should cause {expected_morale_loss_third} base morale loss, got {morale_loss_third}"
+            cohesion_loss_third = base_cohesion_before_third - base_cohesion_after_third
+            assert cohesion_loss_third == expected_cohesion_loss_third, f"Third attack should cause {expected_cohesion_loss_third} cohesion loss, got {cohesion_loss_third}"
             assert warrior.attacks_this_turn == 3, "Should track third attack"
             
     def test_attack_counter_resets_each_turn(self):
@@ -308,7 +322,8 @@ class TestEnhancedAttackSystem:
             assert warrior.action_points == ap_before_second - 6, "Should consume 6 AP again"
             base_morale_after_second = warrior.stats.stats.morale
             morale_loss = base_morale_before_second - base_morale_after_second
-            assert morale_loss == 10, f"Second attack should reduce base morale by 10, got {morale_loss}"
+            expected_loss = CombatConfig.ATTACK_FATIGUE_MORALE_PER_ATTACK
+            assert morale_loss == expected_loss, f"Second attack should reduce base morale by {expected_loss}, got {morale_loss}"
             assert warrior.attacks_this_turn == 2, "Should track second attack"
 
 if __name__ == "__main__":

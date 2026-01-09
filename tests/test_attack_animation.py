@@ -10,7 +10,7 @@ class TestAttackAnimation(unittest.TestCase):
         self.warrior = UnitFactory.create_warrior("Target", 3, 1)
 
     def test_ranged_animation_arrow(self):
-        anim = AttackAnimation(self.archer, self.warrior, damage=5)
+        anim = AttackAnimation(self.archer, self.warrior, damage=5, game_state=self.game_state)
         # Start of animation
         anim.elapsed = 0.0
         anim.update(0.0)
@@ -34,7 +34,7 @@ class TestAttackAnimation(unittest.TestCase):
     def test_melee_animation_no_arrow(self):
         attacker = UnitFactory.create_warrior("Attacker", 1, 1)
         target = UnitFactory.create_warrior("Defender", 2, 1)
-        anim = AttackAnimation(attacker, target, damage=5)
+        anim = AttackAnimation(attacker, target, damage=5, game_state=self.game_state)
         anim.elapsed = anim.duration * 0.25
         anim.update(0.0)
         self.assertFalse(anim.is_ranged)

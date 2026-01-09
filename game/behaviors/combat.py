@@ -32,8 +32,12 @@ class AttackBehavior(Behavior):
         if not hasattr(unit, 'attacks_this_turn'):
             unit.attacks_this_turn = 0
             
-        if unit.attacks_this_turn > 0 and unit.morale < 50:
-            return False
+        if unit.attacks_this_turn > 0:
+            from game.combat_config import CombatConfig
+            if unit.morale < CombatConfig.MORALE_ATTACK_THRESHOLD:
+                return False
+            if hasattr(unit, 'cohesion') and unit.cohesion < CombatConfig.COHESION_ATTACK_THRESHOLD:
+                return False
             
         return True
         
@@ -129,12 +133,15 @@ class AttackBehavior(Behavior):
             
         unit.attacks_this_turn += 1
         
-        # Apply morale loss for multiple attacks (combat fatigue)
+        # Apply fatigue for multiple attacks
         if unit.attacks_this_turn > 1:
-            # Progressive morale loss: 5% for second attack, 10% for third, etc.
-            morale_loss = unit.attacks_this_turn * 5
-            # Apply to base morale stats to avoid general bonus interference
+            from game.combat_config import CombatConfig
+            fatigue_multiplier = unit.attacks_this_turn - 1
+            morale_loss = CombatConfig.ATTACK_FATIGUE_MORALE_PER_ATTACK * fatigue_multiplier
+            cohesion_loss = CombatConfig.ATTACK_FATIGUE_COHESION_PER_ATTACK * fatigue_multiplier
             unit.stats.stats.morale = max(0, unit.stats.stats.morale - morale_loss)
+            if hasattr(unit.stats.stats, 'current_cohesion'):
+                unit.stats.stats.current_cohesion = max(0, unit.stats.stats.current_cohesion - cohesion_loss)
         
         # Mark units as engaged in combat (only for melee/close combat)
         if combat_mode in [CombatMode.MELEE, CombatMode.CHARGE]:
@@ -152,15 +159,38 @@ class AttackBehavior(Behavior):
         # Check attack angle for additional effects
         attack_angle = None
         extra_morale_penalty = 0
+        extra_cohesion_penalty = 0
         should_check_routing = False
         
         if hasattr(target, 'facing'):
             attack_angle = target.facing.get_attack_angle(unit.x, unit.y, target.x, target.y)
             extra_morale_penalty = target.facing.get_morale_penalty(attack_angle)
-            
+            if hasattr(target.facing, 'get_cohesion_penalty'):
+                extra_cohesion_penalty = target.facing.get_cohesion_penalty(attack_angle)
+
             # Check for routing on rear/flank attacks
             if attack_angle.is_rear or attack_angle.is_flank:
                 should_check_routing = True
+
+        from game.combat_config import CombatConfig
+        mode_morale_shock = {
+            CombatMode.MELEE: CombatConfig.MORALE_SHOCK_MELEE,
+            CombatMode.RANGED: CombatConfig.MORALE_SHOCK_RANGED,
+            CombatMode.SKIRMISH: CombatConfig.MORALE_SHOCK_SKIRMISH,
+            CombatMode.CHARGE: CombatConfig.MORALE_SHOCK_CHARGE,
+        }
+        mode_cohesion_shock = {
+            CombatMode.MELEE: CombatConfig.COHESION_SHOCK_MELEE,
+            CombatMode.RANGED: CombatConfig.COHESION_SHOCK_RANGED,
+            CombatMode.SKIRMISH: CombatConfig.COHESION_SHOCK_SKIRMISH,
+            CombatMode.CHARGE: CombatConfig.COHESION_SHOCK_CHARGE,
+        }
+        if combat_mode not in mode_morale_shock or combat_mode not in mode_cohesion_shock:
+            raise ValueError(f"Unsupported combat mode for shock: {combat_mode}")
+        extra_morale_penalty += mode_morale_shock[combat_mode]
+        extra_cohesion_penalty += mode_cohesion_shock[combat_mode]
+        if extra_morale_penalty > 0 or extra_cohesion_penalty > 0:
+            should_check_routing = True
         
         return {
             'success': True,
@@ -170,6 +200,7 @@ class AttackBehavior(Behavior):
             'target': target,
             'attack_angle': attack_angle,
             'extra_morale_penalty': extra_morale_penalty,
+            'extra_cohesion_penalty': extra_cohesion_penalty,
             'should_check_routing': should_check_routing,
             'combat_mode': combat_mode
         }
@@ -197,6 +228,14 @@ class AttackBehavior(Behavior):
             
         # Apply morale modifier
         base_damage *= (attacker.morale / 100)  # Use property that includes general bonuses
+
+        # Apply cohesion modifier
+        if hasattr(attacker, 'cohesion'):
+            from game.combat_config import CombatConfig
+            if attacker.max_cohesion <= 0:
+                raise ValueError("max_cohesion must be positive for damage calculation")
+            cohesion_ratio = attacker.cohesion / attacker.max_cohesion
+            base_damage *= max(CombatConfig.COHESION_DAMAGE_MIN_FACTOR, cohesion_ratio)
         
         # Apply disrupted penalty
         if hasattr(attacker, 'is_disrupted') and attacker.is_disrupted:
@@ -269,6 +308,12 @@ class AttackBehavior(Behavior):
             
         # Reduced morale effect for counter-attacks
         base_damage *= (defender.stats.stats.morale / 200)
+        if hasattr(defender, 'cohesion'):
+            from game.combat_config import CombatConfig
+            if defender.max_cohesion <= 0:
+                raise ValueError("max_cohesion must be positive for counter damage calculation")
+            cohesion_ratio = defender.cohesion / defender.max_cohesion
+            base_damage *= max(CombatConfig.COHESION_DAMAGE_MIN_FACTOR, cohesion_ratio)
         
         # Calculate attacker's defense
         attacker_defense = attacker.stats.stats.base_defense
