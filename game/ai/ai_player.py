@@ -235,6 +235,20 @@ class AIPlayer:
         
         if not possible_moves:
             return self.evaluate_position(game_state), None
+            
+        # Move Ordering: Sort moves to improve Alpha-Beta efficiency
+        # 1. Attacks (prioritize higher heuristic value)
+        # 2. Strategic moves
+        def move_priority(m):
+            if m[0] == 'attack':
+                return 1000 + m[3] # Index 3 is attack value
+            return 0
+            
+        possible_moves.sort(key=move_priority, reverse=True)
+            
+        # Optimization: Prune moves if too many
+        if len(possible_moves) > 10 and depth > 1:
+            possible_moves = possible_moves[:10]
         
         best_move = None
         
