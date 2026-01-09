@@ -21,9 +21,9 @@ A comprehensive turn-based strategy game featuring medieval combat on hexagonal 
 - **15 Terrain Types**: From plains and forests to mountains and deep water
 - **Terrain Features**: Rivers, roads, bridges, villages, and fortifications
 - **Movement Costs**: Different terrains affect movement speed
-- **Height Advantage**: Units on hills gain combat bonuses for ranged attacks
+- **Height Advantage**: Units on hills gain combat bonuses for ranged attacks (e.g., 50% damage bonus for downhill ranged attacks, 50% penalty for uphill).
 - **Real-World Maps**: Generate campaign maps from OpenStreetMap data
-- **Historical Cities**: 179 medieval cities with accurate positioning
+- **Historical Cities**: 100 medieval cities with accurate positioning
 
 ### Special Abilities
 - **Cavalry Charges**: Devastating charges that can push enemies back
