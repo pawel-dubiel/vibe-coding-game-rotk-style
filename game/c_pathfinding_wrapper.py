@@ -73,20 +73,17 @@ class CPathFinder(PathFinder):
         
         # 4. Call C Extension
         try:
+            # Use -1.0 to indicate no cost limit in C implementation
+            c_max_cost = float(max_cost) if max_cost is not None else -1.0
+            
             path = c_algorithms.find_path(
                 width, height,
                 grid,
                 cost_map,
                 start, end,
-                blockers
+                blockers,
+                c_max_cost
             )
-            
-            # Check max_cost if provided
-            # The C implementation doesn't check max_cost during search (yet), 
-            # so we might need to verify path length/cost here if strictness is needed.
-            # But usually max_cost is for highlighting valid moves, not single pathfinding.
-            # For 'find_path', if a path exists, we return it. 
-            # If the user wants to limit by AP, they check path cost afterwards.
             
             return path
             
