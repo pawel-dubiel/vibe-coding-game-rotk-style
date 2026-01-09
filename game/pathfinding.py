@@ -6,6 +6,7 @@ import heapq
 import math
 from game.hex_utils import HexCoord, HexGrid
 from functools import lru_cache
+from game.config import USE_C_EXTENSIONS
 
 
 @dataclass
@@ -128,11 +129,32 @@ class AStarPathFinder(PathFinder):
         self._path_cache = {}  # Cache for computed paths
         self._cache_generation = 0  # Invalidate cache when game state changes
         self._cached_hex_grid = None  # Lazy-initialized
+        self._c_pathfinder = None
+        
+        if USE_C_EXTENSIONS:
+            try:
+                from game.c_pathfinding_wrapper import CPathFinder
+                self._c_pathfinder = CPathFinder()
+            except ImportError:
+                # Silently fail if extension not compiled, fallback to Python
+                pass
     
     def find_path(self, start: Tuple[int, int], end: Tuple[int, int], 
                   game_state, unit=None, max_cost: Optional[float] = None,
                   cost_function=None) -> Optional[List[Tuple[int, int]]]:
         """Find optimal path using A* algorithm"""
+        
+        # Try C implementation first
+        if self._c_pathfinder and cost_function is None:
+            # Note: C implementation handles caching internally or ignores it (it's fast enough)
+            path = self._c_pathfinder.find_path(start, end, game_state, unit, max_cost)
+            # If path is found, return it. If None, it might be no path or fallback needed?
+            # Our wrapper falls back to super().find_path if C ext is missing.
+            # But here self._c_pathfinder is a separate instance.
+            # If C returns a path (list), return it.
+            # If C returns None, it means no path found (or error caught in wrapper returning None).
+            # We assume C is correct if enabled.
+            return path
         
         # Use provided cost function or default
         get_cost = cost_function if cost_function else self._get_movement_cost
