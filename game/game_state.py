@@ -3,6 +3,7 @@ from typing import Optional
 from game.entities.knight import KnightClass
 from game.entities.unit_factory import UnitFactory
 from game.entities.castle import Castle
+from game.components.facing import FacingDirection
 from game.ai.ai_player import AIPlayer
 from game.ui.context_menu import ContextMenu
 from game.terrain import TerrainMap
@@ -180,6 +181,8 @@ class GameState(IGameState):
             knight_class = knight_classes[i % len(knight_classes)]
             knight = UnitFactory.create_unit(knight_names_p1[i % len(knight_names_p1)], knight_class, x_pos, y_pos)
             knight.player_id = 1
+            if hasattr(knight, 'facing'):
+                knight.facing.facing = FacingDirection.EAST
             self.knights.append(knight)
         
         # Place knights for player 2
@@ -197,6 +200,8 @@ class GameState(IGameState):
             knight_class = knight_classes[i % len(knight_classes)]
             knight = UnitFactory.create_unit(knight_names_p2[i % len(knight_names_p2)], knight_class, x_pos, y_pos)
             knight.player_id = 2
+            if hasattr(knight, 'facing'):
+                knight.facing.facing = FacingDirection.WEST
             self.knights.append(knight)
         
         # Check initial cavalry disruption for all units
@@ -231,6 +236,8 @@ class GameState(IGameState):
                     KnightClass.WARRIOR, x_pos, y_pos
                 )
                 knight.player_id = 1
+                if hasattr(knight, 'facing'):
+                    knight.facing.facing = FacingDirection.EAST
                 self.knights.append(knight)
                 unit_count += 1
                 
@@ -246,6 +253,8 @@ class GameState(IGameState):
                     KnightClass.ARCHER, x_pos, y_pos
                 )
                 archer.player_id = 1
+                if hasattr(archer, 'facing'):
+                    archer.facing.facing = FacingDirection.EAST
                 self.knights.append(archer)
                 unit_count += 1
                 
@@ -261,6 +270,8 @@ class GameState(IGameState):
                     KnightClass.CAVALRY, x_pos, y_pos
                 )
                 cavalry.player_id = 1
+                if hasattr(cavalry, 'facing'):
+                    cavalry.facing.facing = FacingDirection.EAST
                 self.knights.append(cavalry)
                 unit_count += 1
                 
@@ -279,6 +290,8 @@ class GameState(IGameState):
                     KnightClass.WARRIOR, x_pos, y_pos
                 )
                 knight.player_id = 2
+                if hasattr(knight, 'facing'):
+                    knight.facing.facing = FacingDirection.WEST
                 self.knights.append(knight)
                 unit_count += 1
                 
@@ -294,6 +307,8 @@ class GameState(IGameState):
                     KnightClass.ARCHER, x_pos, y_pos
                 )
                 archer.player_id = 2
+                if hasattr(archer, 'facing'):
+                    archer.facing.facing = FacingDirection.WEST
                 self.knights.append(archer)
                 unit_count += 1
                 
@@ -309,6 +324,8 @@ class GameState(IGameState):
                     KnightClass.CAVALRY, x_pos, y_pos
                 )
                 cavalry.player_id = 2
+                if hasattr(cavalry, 'facing'):
+                    cavalry.facing.facing = FacingDirection.WEST
                 self.knights.append(cavalry)
                 unit_count += 1
                 
