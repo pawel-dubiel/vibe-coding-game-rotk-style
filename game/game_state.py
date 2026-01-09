@@ -935,8 +935,11 @@ class GameState(IGameState):
                 if enemies:
                     damages = castle.shoot_arrows(enemies)
                     
-                    # Create arrow animation - animation will apply damage when arrows hit
+                    # Create arrow animation (damage is applied immediately)
                     if damages:
+                        from game.systems.combat_resolver import CombatResolver
+                        for enemy, casualties in damages:
+                            CombatResolver.resolve_ranged_casualties(enemy, casualties, self)
                         anim = ArrowAnimation(castle, enemies, [d[1] for d in damages], game_state=self)
                         self.animation_coordinator.animation_manager.add_animation(anim)
                         
