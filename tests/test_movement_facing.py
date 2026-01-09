@@ -25,7 +25,8 @@ class TestMovementFacing(unittest.TestCase):
         """Test unit automatically faces enemy when ending movement adjacent"""
         move_behavior = self.warrior.behaviors['move']
         
-        # Move enemy closer to warrior's movement range
+        # Move enemy adjacent to warrior's target (6, 5)
+        # Target (6, 5). Enemy at (7, 5). Dist 1.
         self.enemy.x = 7
         self.enemy.y = 5
         
@@ -34,28 +35,23 @@ class TestMovementFacing(unittest.TestCase):
         self.assertTrue(result['success'])
         self.assertTrue(result['auto_faced'])
         
-        
         # Warrior should now face east towards the enemy
         self.assertEqual(self.warrior.facing.facing, FacingDirection.EAST)
         
-    def test_auto_face_two_hexes_away(self):
-        """Test unit automatically faces enemy when ending movement 2 hexes away"""
+    def test_no_auto_face_at_distance_2(self):
+        """Test unit DOES NOT auto-face when enemy is 2 hexes away (outside ZOC)"""
         move_behavior = self.warrior.behaviors['move']
         
-        # Move enemy closer
+        # Move enemy to (8, 5). Target (6, 5). Dist 2.
         self.enemy.x = 8
         self.enemy.y = 5
         
-        # Move warrior 2 hexes from enemy
+        # Move warrior to (6, 5)
         result = move_behavior.execute(self.warrior, self.game_state, 6, 5)
         self.assertTrue(result['success'])
-        self.assertTrue(result['auto_faced'])
+        self.assertFalse(result['auto_faced'])
         
-        # Manually update position
-        self.warrior.x = 6
-        self.warrior.y = 5
-        
-        # Warrior should face east towards the enemy
+        # Warrior should face movement direction (EAST)
         self.assertEqual(self.warrior.facing.facing, FacingDirection.EAST)
         
     def test_no_auto_face_far_enemy(self):
@@ -107,25 +103,21 @@ class TestMovementFacing(unittest.TestCase):
         
     def test_auto_face_nearest_of_multiple_enemies(self):
         """Test unit faces nearest enemy when multiple are nearby"""
-        # Move first enemy farther
+        # Move first enemy farther (8, 5) -> Dist 2
         self.enemy.x = 8
         self.enemy.y = 5
         
-        # Add another enemy closer than the first
+        # Add another enemy adjacent (7, 5). Target (6, 5). Dist 1.
         closer_enemy = UnitFactory.create_archer("Closer Enemy", 7, 5)
         closer_enemy.player_id = 2
         self.game_state.add_knight(closer_enemy)
         
         move_behavior = self.warrior.behaviors['move']
         
-        # Move warrior between enemies, but closer to the archer
+        # Move warrior to (6, 5)
         result = move_behavior.execute(self.warrior, self.game_state, 6, 5)
         self.assertTrue(result['success'])
         self.assertTrue(result['auto_faced'])
-        
-        # Manually update position
-        self.warrior.x = 6
-        self.warrior.y = 5
         
         # Warrior should face east towards the closer enemy
         self.assertEqual(self.warrior.facing.facing, FacingDirection.EAST)
@@ -150,21 +142,24 @@ class TestMovementFacing(unittest.TestCase):
         
     def test_movement_updates_facing_before_auto_face(self):
         """Test that movement animation updates facing, then auto-face overrides if needed"""
-        # Place enemy to the north
-        self.enemy.x = 5
+        # Place enemy to the north-west adjacent
+        # Start (5, 5). Move North (5, 4).
+        # (5, 4) Even. Neighbors:
+        # NW: (4, 3). NE: (5, 3).
+        # Let's put enemy at (4, 3).
+        self.enemy.x = 4
         self.enemy.y = 3
         
         move_behavior = self.warrior.behaviors['move']
         
-        # Move warrior north (should face north initially, then auto-face stays north)
+        # Move warrior north (5, 4)
         result = move_behavior.execute(self.warrior, self.game_state, 5, 4)
         self.assertTrue(result['success'])
         self.assertTrue(result['auto_faced'])
         
-        
-        # Should face towards enemy (which is directly north, no diagonal)
-        # Since warrior moved from (5,5) to (5,4) and enemy is at (5,3), they are in same column
-        # This should make warrior face north-west (due to odd column hex geometry)
+        # Should face towards enemy at (4, 3)
+        # (5, 4) -> (4, 3). Even row.
+        # dx=-1, dy=-1. NORTH_WEST.
         self.assertEqual(self.warrior.facing.facing, FacingDirection.NORTH_WEST)
         
     def test_simple_move_updates_facing(self):
@@ -174,11 +169,16 @@ class TestMovementFacing(unittest.TestCase):
         
         # Test basic movements
         # Note: In hex grid with odd-r offset, vertical movement depends on column parity
+        # (5, 5) is Odd row.
+        # Move to (6, 5) -> East.
+        # Move to (5, 4) -> (5, 5) Odd -> (5, 4) Even. dy=-1, dx=0. NW.
+        # Move to (4, 5) -> West.
+        # Move to (5, 6) -> (5, 5) Odd -> (5, 6) Even. dy=1, dx=0. SW.
         test_cases = [
             ((6, 5), FacingDirection.EAST),       # Move east
-            ((5, 4), FacingDirection.NORTH_WEST),  # Move north from odd column
+            ((5, 4), FacingDirection.NORTH_WEST),  # Move north from odd row
             ((4, 5), FacingDirection.WEST),       # Move west
-            ((5, 6), FacingDirection.SOUTH_WEST),  # Move south from odd column
+            ((5, 6), FacingDirection.SOUTH_WEST),  # Move south from odd row
         ]
         
         for (target_x, target_y), expected_facing in test_cases:
