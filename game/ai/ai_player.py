@@ -270,7 +270,6 @@ class AIPlayer:
             return min_eval, best_move
     
     def _simulate_move(self, game_state, move):
-        import copy
         from game.interfaces.game_state import IGameState
         
         # Create a simplified copy without UI elements
@@ -314,43 +313,41 @@ class AIPlayer:
                 return None
         
         state_copy = SimplifiedGameState()
-        state_copy._knights = copy.deepcopy(game_state.knights)
-        state_copy._castles = copy.deepcopy(game_state.castles)
+        # FAST CLONING instead of deepcopy
+        state_copy._knights = [k.clone_for_simulation() for k in game_state.knights]
+        # Castles are mostly static in simulation, shallow copy is fine for now
+        import copy
+        state_copy._castles = copy.copy(game_state.castles)
+        
         state_copy._board_width = game_state.board_width
         state_copy._board_height = game_state.board_height
         state_copy._current_player = game_state.current_player
-        # Copy terrain_map if it exists
+        # Copy terrain_map reference (static)
         if hasattr(game_state, 'terrain_map'):
             state_copy._terrain_map = game_state.terrain_map
         
-        # Ensure castles have the needed attributes for AI evaluation
-        for castle in state_copy.castles:
-            if not hasattr(castle, 'arrow_range'):
-                castle.arrow_range = 3
-            if not hasattr(castle, 'occupied_tiles'):
-                castle.occupied_tiles = castle._get_occupied_tiles()
-            if not hasattr(castle, 'garrisoned_units'):
-                castle.garrisoned_units = []
-        
         move_type = move[0]
         knight = None
+        original_knight = move[1]
+        
         for k in state_copy.knights:
-            if k.name == move[1].name and k.x == move[1].x and k.y == move[1].y:
+            if k.name == original_knight.name and k.x == original_knight.x and k.y == original_knight.y:
                 knight = k
                 break
         
+        if not knight:
+             return state_copy
+
         if move_type == 'move':
             knight.move(move[2], move[3])
         elif move_type == 'attack':
             target = None
-            # Handle both 3-tuple and 4-tuple attack moves
             target_ref = move[2]
             for k in state_copy.knights:
                 if k.name == target_ref.name and k.x == target_ref.x and k.y == target_ref.y:
                     target = k
                     break
             if target:
-                # Simulate combat with casualties, properly considering terrain
                 attacker_terrain = None
                 target_terrain = None
                 if state_copy.terrain_map:
