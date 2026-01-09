@@ -154,6 +154,93 @@ class FogOfWar:
         
         # Fallback for units without vision behavior
         return self.vision_config.default_range
+
+    def reveal_unit_visibility(self, game_state, unit) -> None:
+        """Reveal visibility for a unit without downgrading existing fog states."""
+        if game_state is None:
+            raise ValueError("game_state is required to reveal unit visibility")
+        if unit is None:
+            raise ValueError("unit is required to reveal unit visibility")
+        if not hasattr(unit, 'player_id'):
+            raise ValueError("unit must have player_id to reveal visibility")
+        if unit.player_id not in self.visibility_maps:
+            raise ValueError(f"Unknown player_id {unit.player_id} for fog visibility")
+
+        # Cache game_state for vision behaviors that depend on terrain
+        self._cached_game_state = game_state
+        vision_range = self._get_unit_vision_range(unit)
+        if vision_range <= 0:
+            return
+
+        vision_behavior = unit.get_behavior('VisionBehavior') if hasattr(unit, 'get_behavior') else None
+        is_elevated = vision_behavior.is_elevated() if vision_behavior else False
+
+        visible_hexes = self._calculate_los_from_position(
+            game_state,
+            (unit.x, unit.y),
+            vision_range,
+            is_elevated
+        )
+
+        for hex_coords, distance in visible_hexes.items():
+            current_state = self.visibility_maps[unit.player_id][hex_coords]
+
+            if distance <= self.vision_config.full_id_range:
+                new_state = VisibilityState.VISIBLE
+            elif distance <= self.vision_config.partial_id_range:
+                new_state = VisibilityState.PARTIAL
+            else:
+                new_state = VisibilityState.EXPLORED
+
+            if new_state.value > current_state.value:
+                self.visibility_maps[unit.player_id][hex_coords] = new_state
+
+    def get_visibility_from_position(
+        self,
+        game_state,
+        unit,
+        origin: Tuple[int, int],
+        target: Tuple[int, int]
+    ) -> VisibilityState:
+        """Calculate visibility state for a target from a specific origin."""
+        if game_state is None:
+            raise ValueError("game_state is required to calculate visibility")
+        if unit is None:
+            raise ValueError("unit is required to calculate visibility")
+        if origin is None or target is None:
+            raise ValueError("origin and target are required to calculate visibility")
+
+        origin_x, origin_y = origin
+        target_x, target_y = target
+
+        if not self._is_valid_hex(origin_x, origin_y):
+            raise ValueError(f"Origin ({origin_x}, {origin_y}) is out of bounds")
+        if not self._is_valid_hex(target_x, target_y):
+            raise ValueError(f"Target ({target_x}, {target_y}) is out of bounds")
+
+        self._cached_game_state = game_state
+        vision_range = self._get_unit_vision_range(unit)
+        if vision_range <= 0:
+            return VisibilityState.HIDDEN
+
+        vision_behavior = unit.get_behavior('VisionBehavior') if hasattr(unit, 'get_behavior') else None
+        is_elevated = vision_behavior.is_elevated() if vision_behavior else False
+
+        visible_hexes = self._calculate_los_from_position(
+            game_state,
+            (origin_x, origin_y),
+            vision_range,
+            is_elevated
+        )
+
+        distance = visible_hexes.get((target_x, target_y))
+        if distance is None:
+            return VisibilityState.HIDDEN
+        if distance <= self.vision_config.full_id_range:
+            return VisibilityState.VISIBLE
+        if distance <= self.vision_config.partial_id_range:
+            return VisibilityState.PARTIAL
+        return VisibilityState.EXPLORED
         
     def _calculate_los_from_position(self, game_state, origin: Tuple[int, int], 
                                    max_range: int, is_elevated: bool = False) -> Dict[Tuple[int, int], int]:
