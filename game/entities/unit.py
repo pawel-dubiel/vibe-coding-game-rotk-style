@@ -938,3 +938,54 @@ class Unit:
             message += f" {target.name} is routing!"
         
         return True, message
+
+    def clone_for_simulation(self):
+        """Create a lightweight clone of this unit for AI simulation"""
+        import copy
+        # Create a new instance without calling __init__
+        cls = self.__class__
+        clone = cls.__new__(cls)
+        
+        # Copy essential primitive state
+        clone.name = self.name
+        clone.unit_class = self.unit_class
+        clone.position = UnitPosition(self.x, self.y)
+        clone.player_id = self.player_id
+        clone.action_points = self.action_points
+        clone.max_action_points = self.max_action_points
+        
+        # Copy turn state flags
+        clone.has_moved = self.has_moved
+        clone.has_acted = self.has_acted
+        clone.has_used_special = self.has_used_special
+        clone.selected = False # AI clones shouldn't be selected
+        
+        # Copy essential flags
+        clone.is_routing = self.is_routing
+        clone.is_disrupted = self.is_disrupted
+        clone.is_garrisoned = self.is_garrisoned
+        clone.is_engaged_in_combat = self.is_engaged_in_combat
+        
+        # Copy ZOC and engagement state
+        clone.in_enemy_zoc = self.in_enemy_zoc
+        clone.engaged_with = self.engaged_with # Reference to original unit (acceptable for simulation checks)
+        clone.garrison_location = self.garrison_location
+        
+        # Copy temporary modifiers
+        clone.temp_damage_multiplier = self.temp_damage_multiplier
+        clone.temp_vulnerability = self.temp_vulnerability
+        
+        # Shallow copy components that might be modified
+        # Note: StatsComponent needs to be cloned because HP/Morale changes
+        clone.stats = copy.copy(self.stats)
+        # Stats inside StatsComponent also needs to be cloned
+        if hasattr(self.stats, 'stats'):
+            clone.stats.stats = copy.copy(self.stats.stats)
+            
+        # Behaviors and Generals can be shared (read-only in simulation usually)
+        # but we need to ensure they point to the NEW unit
+        clone.behaviors = self.behaviors.copy()
+        clone.generals = self.generals # Shared for speed
+        clone.facing = copy.copy(self.facing) if hasattr(self, 'facing') else None
+        
+        return clone
