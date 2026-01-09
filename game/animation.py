@@ -66,7 +66,7 @@ class MoveAnimation(Animation):
         return t * t * (3.0 - 2.0 * t)
 
 class PathMoveAnimation(Animation):
-    def __init__(self, knight, path, step_duration=0.3, game_state=None):
+    def __init__(self, knight, path, step_duration=0.3, game_state=None, final_face_target=None):
         """Animation that follows a multi-step path"""
         total_duration = len(path) * step_duration if path else 0
         super().__init__(total_duration)
@@ -77,6 +77,7 @@ class PathMoveAnimation(Animation):
         self.position_updated = False
         self.game_state = game_state
         self.last_completed_step = -1
+        self.final_face_target = final_face_target
         
         # Store the initial position
         self.start_x = knight.x
@@ -89,22 +90,43 @@ class PathMoveAnimation(Animation):
         if self.path and hasattr(self.knight, 'facing'):
             progress = self.get_progress()
             total_steps = len(self.path)
-            current_step_float = progress * total_steps
-            current_step = int(current_step_float)
             
-            # Update facing when we complete a step
-            if current_step > self.last_completed_step and current_step < total_steps:
-                # Get positions for facing update
-                if self.last_completed_step < 0:
-                    from_x, from_y = self.start_x, self.start_y
+            # Handle instant completion or large jumps
+            if self.finished:
+                # If we have an explicit target to face, use it
+                if self.final_face_target:
+                    target_x, target_y = self.final_face_target
+                    # Current pos is end of path
+                    curr_x, curr_y = self.path[-1]
+                    self.knight.facing.face_towards(target_x, target_y, curr_x, curr_y)
                 else:
-                    from_x, from_y = self.path[self.last_completed_step]
-                    
-                to_x, to_y = self.path[current_step]
+                    # Force update to final facing based on last segment
+                    if total_steps > 0:
+                        if total_steps == 1:
+                            from_x, from_y = self.start_x, self.start_y
+                        else:
+                            from_x, from_y = self.path[-2]
+                        
+                        to_x, to_y = self.path[-1]
+                        self.knight.facing.update_facing_from_movement(from_x, from_y, to_x, to_y)
+            else:
+                # Normal incremental update
+                current_step_float = progress * total_steps
+                current_step = int(current_step_float)
                 
-                # Update facing
-                self.knight.facing.update_facing_from_movement(from_x, from_y, to_x, to_y)
-                self.last_completed_step = current_step
+                # Update facing when we complete a step
+                if current_step > self.last_completed_step and current_step < total_steps:
+                    # Get positions for facing update
+                    if self.last_completed_step < 0:
+                        from_x, from_y = self.start_x, self.start_y
+                    else:
+                        from_x, from_y = self.path[self.last_completed_step]
+                        
+                    to_x, to_y = self.path[current_step]
+                    
+                    # Update facing
+                    self.knight.facing.update_facing_from_movement(from_x, from_y, to_x, to_y)
+                    self.last_completed_step = current_step
         
         # Update knight's actual position when animation completes
         if self.finished and not self.position_updated:

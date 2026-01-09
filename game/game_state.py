@@ -609,8 +609,12 @@ class GameState(IGameState):
                     full_path = [(self.selected_knight.x, self.selected_knight.y)] + path
                     self.movement_history[id(self.selected_knight)] = full_path
                     
+                    # Calculate final facing target (auto-face enemy)
+                    final_face_target = move_behavior.get_auto_face_target(self.selected_knight, self, tile_x, tile_y)
+                    
                     # Create path animation - shows the optimal route
-                    anim = PathMoveAnimation(self.selected_knight, path, step_duration=0.25, game_state=self)
+                    anim = PathMoveAnimation(self.selected_knight, path, step_duration=0.25, 
+                                           game_state=self, final_face_target=final_face_target)
                     self.animation_coordinator.animation_manager.add_animation(anim)
                     
                     self.possible_moves = []
@@ -663,8 +667,12 @@ class GameState(IGameState):
                     full_path = [(self.selected_knight.x, self.selected_knight.y)] + path
                     self.movement_history[id(self.selected_knight)] = full_path
                     
+                    # Calculate final facing target (auto-face enemy)
+                    final_face_target = move_behavior.get_auto_face_target(self.selected_knight, self, tile_x, tile_y)
+                    
                     # Create path animation - shows the optimal route
-                    anim = PathMoveAnimation(self.selected_knight, path, step_duration=0.25, game_state=self)
+                    anim = PathMoveAnimation(self.selected_knight, path, step_duration=0.25, 
+                                           game_state=self, final_face_target=final_face_target)
                     self.animation_coordinator.animation_manager.add_animation(anim)
                     
                     self.possible_moves = []
