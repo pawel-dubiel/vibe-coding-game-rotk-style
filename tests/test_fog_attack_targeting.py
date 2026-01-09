@@ -109,6 +109,12 @@ def test_charge_targeting_respects_fog():
     from game.visibility import FogOfWar
     game_state.fog_of_war = FogOfWar(game_state.board_width, game_state.board_height, 2)
     
+    # Ensure terrain is clear for charge targeting
+    from game.terrain import TerrainType
+    if game_state.terrain_map:
+        game_state.terrain_map.set_terrain(10, 10, TerrainType.PLAINS)
+        game_state.terrain_map.set_terrain(11, 10, TerrainType.PLAINS)
+
     # Create cavalry for player 1 - place on plains to avoid terrain issues
     cavalry = UnitFactory.create_unit("Cavalry", KnightClass.CAVALRY, 10, 10)
     cavalry.player_id = 1
