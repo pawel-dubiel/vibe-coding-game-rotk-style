@@ -42,6 +42,12 @@ class MockGameState:
         self.castles = []
         self.terrain_map = MockTerrainMap()
 
+    def get_knight_at(self, x, y):
+        for knight in self.knights:
+            if knight.x == x and knight.y == y:
+                return knight
+        return None
+
 class TestUnitBehaviors(unittest.TestCase):
     """Test unit behavior system"""
     
