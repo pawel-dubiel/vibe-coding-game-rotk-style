@@ -58,14 +58,9 @@ class PathFinder(ABC):
                 to_pos[0], to_pos[1], unit
             ))
         
-        # Hex-based movement - check if diagonal in offset coords
-        hex_grid = HexGrid()
-        from_hex = hex_grid.offset_to_axial(from_pos[0], from_pos[1])
-        to_hex = hex_grid.offset_to_axial(to_pos[0], to_pos[1])
-        
-        # In hex grid, all adjacent moves have same cost (no diagonals)
-        # But we still apply terrain modifiers
-        return max(1.0, terrain_cost)
+        final_cost = max(1.0, terrain_cost)
+        # print(f"Move {from_pos} -> {to_pos}: Raw {terrain_cost}, Final {final_cost}")
+        return final_cost
 
     def _is_position_valid(self, pos: Tuple[int, int], game_state, unit) -> bool:
         """Check if a position is valid for pathfinding"""
