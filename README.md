@@ -38,6 +38,7 @@ A comprehensive turn-based strategy game featuring medieval combat on hexagonal 
 - **Map Editor**: Create and edit custom maps
 - **Multiplayer**: Hot-seat multiplayer support
 - **AI Opponents**: Computer-controlled enemies
+- **Campaign Mode**: Basic Poland map with army movement
 
 ## Installation
 
