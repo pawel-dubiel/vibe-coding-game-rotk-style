@@ -58,6 +58,7 @@ class TestEnhancedAttackSystem:
         archer.player_id = 1
         target = UnitFactory.create_unit("Target", KnightClass.WARRIOR, 5, 5)
         target.player_id = 2
+        target.stats.stats.attack_per_soldier = 0  # Prevent counter-damage routing randomness
         
         self.game_state.add_knight(archer)
         self.game_state.add_knight(target)
@@ -80,6 +81,7 @@ class TestEnhancedAttackSystem:
         warrior.morale = 30  # Below 50%
         target = UnitFactory.create_unit("Target", KnightClass.WARRIOR, 5, 5)
         target.player_id = 2
+        target.stats.stats.attack_per_soldier = 0  # Prevent counter-damage routing randomness
         
         self.game_state.add_knight(warrior)
         self.game_state.add_knight(target)

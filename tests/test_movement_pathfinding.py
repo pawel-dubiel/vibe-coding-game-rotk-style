@@ -76,27 +76,36 @@ class TestMovementPathfinding:
     def test_movement_avoids_enemy_zoc(self):
         """Test movement behavior respects Zone of Control with pathfinding"""
         movement = MovementBehavior(pathfinder=DijkstraPathFinder())
+
+        self.unit.action_points = 4
+
+        for y in range(self.game_state.board_height):
+            for x in range(self.game_state.board_width):
+                self.game_state.terrain_map.set_terrain(x, y, TerrainType.MOUNTAINS)
+
+        for x in range(5):
+            self.game_state.terrain_map.set_terrain(x, 0, TerrainType.PLAINS)
+        self.game_state.terrain_map.set_terrain(2, 1, TerrainType.PLAINS)
         
         # Place enemy unit that creates ZOC
         enemy = Unit(name="Enemy", unit_class=KnightClass.WARRIOR, x=2, y=1)
         enemy.player_id = 2
         enemy.morale = 100  # High morale for ZOC
+        enemy.cohesion = 100
         self.game_state.add_knight(enemy)
         
         # Get possible moves
         moves = movement.get_possible_moves(self.unit, self.game_state)
-        
-        # Positions adjacent to enemy should be limited or excluded
-        # based on ZOC rules
-        adjacent_to_enemy = [(1, 1), (3, 1), (2, 0), (2, 2)]
-        
-        # If a position is in moves and adjacent to enemy, 
-        # it should be the last move (can't continue past ZOC)
-        for pos in adjacent_to_enemy:
-            if pos in moves:
-                path = movement.get_path_to(self.unit, self.game_state, pos[0], pos[1])
-                # Check that we can't move beyond this position
-                # (would need to verify ZOC stops further movement)
+
+        assert (3, 0) in moves
+        assert (4, 0) not in moves
+
+        path_to_zoc = movement.get_path_to(self.unit, self.game_state, 3, 0)
+        path_to_blocked = movement.get_path_to(self.unit, self.game_state, 4, 0)
+
+        assert path_to_zoc
+        assert path_to_zoc[-1] == (3, 0)
+        assert path_to_blocked == []
                 
     def test_pathfinder_integration_with_formation(self):
         """Test pathfinding considers formation breaking penalties"""

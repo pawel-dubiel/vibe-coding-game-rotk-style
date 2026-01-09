@@ -6,6 +6,7 @@ from game.entities.unit import Unit
 from game.entities.knight import KnightClass
 from game.visibility import VisibilityState
 from game.renderer import Renderer
+from game.terrain import TerrainType
 
 
 class TestMovementPaths(unittest.TestCase):
@@ -211,15 +212,12 @@ class TestMovementPaths(unittest.TestCase):
         
     def test_movement_creates_path(self):
         """Test that actual movement creates a path in history"""
-        # Enable debug output
-        print("\n=== Testing Movement Path Creation ===")
-        print(f"Initial movement history: {self.game_state.movement_history}")
-        print(f"Current player: {self.game_state.current_player}")
-        print(f"P2 unit position: ({self.p2_unit.x}, {self.p2_unit.y})")
-        
         # Switch to player 2
         self.game_state.current_player = 2
         self.game_state.selected_knight = self.p2_unit
+
+        self.game_state.terrain_map.set_terrain(7, 7, TerrainType.PLAINS)
+        self.game_state.terrain_map.set_terrain(6, 7, TerrainType.PLAINS)
         
         # Populate possible moves (normally done when selecting a unit)
         self.game_state.possible_moves = self.p2_unit.get_possible_moves(
@@ -228,33 +226,19 @@ class TestMovementPaths(unittest.TestCase):
             self.game_state.terrain_map,
             self.game_state
         )
-        
-        # Check if unit has movement behavior
-        if hasattr(self.p2_unit, 'behaviors'):
-            print(f"Unit behaviors: {list(self.p2_unit.behaviors.keys())}")
-        
-        # Check unit properties
-        print(f"Unit has_moved: {self.p2_unit.has_moved}")
-        print(f"Unit action_points: {self.p2_unit.action_points}")
-        print(f"Can move: {self.p2_unit.can_move()}")
-        
-        # Check possible moves
-        possible_moves = self.p2_unit.get_possible_moves(
-            self.game_state.board_width, 
-            self.game_state.board_height, 
-            self.game_state.terrain_map, 
-            self.game_state
-        )
-        print(f"Possible moves from ({self.p2_unit.x}, {self.p2_unit.y}): {len(possible_moves)} positions")
-        print(f"Target (6, 7) in possible moves: {(6, 7) in possible_moves}")
-        
-        # Try to move
-        success = self.game_state.move_selected_knight(6 * 64, 7 * 64)
-        print(f"Move success: {success}")
-        print(f"Movement history after move: {self.game_state.movement_history}")
-        
-        # Check if animation was created (correct path to animation manager)
-        print(f"Animations: {len(self.game_state.animation_coordinator.animation_manager.animations)}")
+
+        target_hex = (6, 7)
+        target_px, target_py = self.game_state.hex_layout.hex_to_pixel(*target_hex)
+        success = self.game_state.move_selected_knight(target_px, target_py)
+
+        assert success is True
+        unit_id = id(self.p2_unit)
+        assert unit_id in self.game_state.movement_history
+
+        path = self.game_state.movement_history[unit_id]
+        assert path[0] == (7, 7)
+        assert path[-1] == target_hex
+        assert len(path) >= 2
 
 
 if __name__ == '__main__':
