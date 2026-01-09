@@ -106,6 +106,19 @@ class TestUnitBehaviors(unittest.TestCase):
         self.assertTrue(result['success'])
         self.assertGreater(result['damage'], 0)
         self.assertGreater(result['counter_damage'], 0)  # Melee has counter damage
+
+    def test_routing_units_cannot_attack(self):
+        """Test routing units cannot attack"""
+        attacker = UnitFactory.create_warrior("Attacker", 5, 5)
+        attacker.player_id = 1
+        attacker.is_routing = True
+
+        defender = UnitFactory.create_warrior("Defender", 6, 5)
+        defender.player_id = 2
+
+        self.game_state.knights = [attacker, defender]
+
+        self.assertFalse(attacker.can_execute_behavior('attack', self.game_state))
         
     def test_cavalry_charge(self):
         """Test cavalry charge behavior"""

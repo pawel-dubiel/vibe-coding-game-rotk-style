@@ -24,6 +24,9 @@ class AttackBehavior(Behavior):
         """Check if unit can attack"""
         base_cost = self.get_ap_cost(unit)  # Get base cost without terrain penalty
         
+        if getattr(unit, 'is_routing', False):
+            return False
+
         # Basic requirements - remove has_acted check to allow multiple attacks
         if unit.action_points < base_cost:
             return False
