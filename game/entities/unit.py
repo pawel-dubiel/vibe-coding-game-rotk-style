@@ -410,15 +410,8 @@ class Unit:
         
     def is_in_enemy_zoc(self, game_state) -> Tuple[bool, Optional['Unit']]:
         """Check if unit is in enemy Zone of Control"""
-        for enemy in game_state.knights:
-            if (enemy.player_id != self.player_id and 
-                enemy.has_zone_of_control()):
-                # Check if adjacent (including diagonals)
-                dx = abs(self.x - enemy.x)
-                dy = abs(self.y - enemy.y)
-                if dx <= 1 and dy <= 1 and (dx + dy > 0):  # Adjacent including diagonals
-                    return True, enemy
-        return False, None
+        from game.systems.engagement import EngagementSystem
+        return EngagementSystem.is_unit_in_enemy_zoc(self, game_state)
         
     def _get_max_ap(self) -> int:
         """Get max action points for unit class"""

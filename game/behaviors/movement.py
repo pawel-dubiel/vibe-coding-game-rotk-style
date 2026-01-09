@@ -272,25 +272,15 @@ class MovementBehavior(Behavior):
 
     def _will_enter_enemy_zoc(self, x: int, y: int, unit, game_state) -> bool:
         """Check if moving to position would enter enemy ZOC"""
-        for enemy in game_state.knights:
-            if (enemy.player_id != unit.player_id and
-                enemy.has_zone_of_control()):
-                # Check if adjacent (including diagonals)
-                dx = abs(x - enemy.x)
-                dy = abs(y - enemy.y)
-                if dx <= 1 and dy <= 1 and (dx + dy > 0):  # Adjacent including diagonals
-                    return True
-        return False
+        from game.systems.engagement import EngagementSystem
+        in_zoc, _ = EngagementSystem.is_tile_in_enemy_zoc(x, y, unit, game_state)
+        return in_zoc
 
     def _is_enemy_zoc_tile(self, x: int, y: int, unit, game_state) -> bool:
         """Check if a tile is inside enemy ZOC"""
-        for enemy in game_state.knights:
-            if enemy.player_id != unit.player_id and enemy.has_zone_of_control():
-                dx = abs(x - enemy.x)
-                dy = abs(y - enemy.y)
-                if dx <= 1 and dy <= 1 and (dx + dy > 0):
-                    return True
-        return False
+        from game.systems.engagement import EngagementSystem
+        in_zoc, _ = EngagementSystem.is_tile_in_enemy_zoc(x, y, unit, game_state)
+        return in_zoc
 
     def _zoc_transition_blocked(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int],
                                 unit, game_state) -> bool:

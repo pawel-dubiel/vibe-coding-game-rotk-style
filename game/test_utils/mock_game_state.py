@@ -93,14 +93,8 @@ class MockGameState(IGameState):
     
     def _update_zoc_status(self):
         """Update Zone of Control status for all knights"""
-        for knight in self._knights:
-            in_zoc, enemy = knight.is_in_enemy_zoc(self)
-            knight.in_enemy_zoc = in_zoc
-            knight.engaged_with = enemy if in_zoc else None
-            
-            # Clear engagement status if no longer in enemy ZOC
-            if not in_zoc:
-                knight.is_engaged_in_combat = False
+        from game.systems.engagement import EngagementSystem
+        EngagementSystem.update_zoc_and_engagement(self)
     
     def get_charge_info_at(self, tile_x, tile_y):
         """Get charge information for a specific position (for UI feedback)"""
