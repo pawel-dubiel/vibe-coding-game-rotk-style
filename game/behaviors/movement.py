@@ -77,6 +77,9 @@ class MovementBehavior(Behavior):
         # Update unit position (normally done by animation, but needed for facing calculation)
         unit.x = target_x
         unit.y = target_y
+
+        if hasattr(game_state, 'fog_of_war'):
+            game_state.fog_of_war.reveal_unit_visibility(game_state, unit)
         
         # Check if we should auto-face an enemy
         should_auto_face = self._should_auto_face_enemy(target_x, target_y, unit, game_state)
@@ -337,98 +340,86 @@ class MovementBehavior(Behavior):
         
     def get_auto_face_target(self, unit, game_state, x: int, y: int) -> Optional[Tuple[int, int]]:
         """Get the coordinates of the enemy to face, if any"""
-        if self._should_auto_face_enemy(x, y, unit, game_state):
-            # Find nearest enemy
-            hex_grid = HexGrid()
-            unit_hex = hex_grid.offset_to_axial(x, y)
-            nearest_enemy = None
-            nearest_distance = float('inf')
-            
-            # Helper to check visibility
-            def is_visible(target):
-                if not hasattr(game_state, 'fog_of_war'):
-                    return True
-                # Use current player's visibility (unit's owner)
-                visibility = game_state.fog_of_war.get_visibility_state(unit.player_id, target.x, target.y)
-                
-                # Handle Enum comparison
-                vis_value = visibility.value if hasattr(visibility, 'value') else visibility
-                return vis_value == 2  # VisibilityState.VISIBLE (value 2)
+        candidates = self._get_auto_face_candidates(unit, game_state, x, y)
+        if candidates:
+            nearest_distance = min(distance for _, distance in candidates)
+            nearest_candidates = [enemy for enemy, distance in candidates if distance == nearest_distance]
 
-            candidates = []
-            
-            for enemy in game_state.knights:
-                if enemy.player_id != unit.player_id:
-                    # Check visibility
-                    if not is_visible(enemy):
-                        continue
-                        
-                    enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
-                    distance = unit_hex.distance_to(enemy_hex)
-                    
-                    if distance < nearest_distance:
-                        nearest_distance = distance
-                        candidates = [enemy]
-                    elif distance == nearest_distance:
-                        candidates.append(enemy)
-            
-            if candidates:
-                # Prioritize threats: Cavalry > Warrior > Mage > Archer
-                threat_priority = {
-                    KnightClass.CAVALRY: 4,
-                    KnightClass.WARRIOR: 3,
-                    KnightClass.MAGE: 2,
-                    KnightClass.ARCHER: 1
-                }
-                
-                # Sort candidates by threat level (highest first)
-                candidates.sort(key=lambda e: threat_priority.get(e.unit_class, 0), reverse=True)
-                nearest_enemy = candidates[0]
-            
-            if nearest_enemy:
-                return (nearest_enemy.x, nearest_enemy.y)
+            # Prioritize threats: Cavalry > Warrior > Mage > Archer
+            threat_priority = {
+                KnightClass.CAVALRY: 4,
+                KnightClass.WARRIOR: 3,
+                KnightClass.MAGE: 2,
+                KnightClass.ARCHER: 1
+            }
+
+            nearest_candidates.sort(key=lambda e: threat_priority.get(e.unit_class, 0), reverse=True)
+            nearest_enemy = nearest_candidates[0]
+            return (nearest_enemy.x, nearest_enemy.y)
         return None
 
     def _should_auto_face_enemy(self, x: int, y: int, unit, game_state) -> bool:
         """Check if unit should automatically face an enemy after movement"""
+        return bool(self._get_auto_face_candidates(unit, game_state, x, y))
+
+    def _get_viewer_player_id(self, game_state) -> int:
+        """Get viewer player id for fog-based visibility checks."""
+        if hasattr(game_state, 'fog_view_player'):
+            viewer_player = game_state.fog_view_player
+            if viewer_player is None:
+                raise ValueError("fog_view_player is None for visibility checks")
+            return viewer_player
+        if hasattr(game_state, 'current_player'):
+            return game_state.current_player
+        raise ValueError("game_state missing fog_view_player/current_player for visibility checks")
+
+    def _is_enemy_visible_for_autoface(self, unit, enemy, game_state, origin: Tuple[int, int]) -> bool:
+        """Check visibility for auto-face, including projected visibility from a target position."""
+        if not hasattr(game_state, 'fog_of_war'):
+            return True
+
+        viewer_player = self._get_viewer_player_id(game_state)
+        visibility = game_state.fog_of_war.get_visibility_state(viewer_player, enemy.x, enemy.y)
+
+        vis_value = visibility.value if hasattr(visibility, 'value') else visibility
+        if vis_value >= VisibilityState.PARTIAL.value:
+            return True
+
+        projected = game_state.fog_of_war.get_visibility_from_position(
+            game_state,
+            unit,
+            origin,
+            (enemy.x, enemy.y)
+        )
+        projected_value = projected.value if hasattr(projected, 'value') else projected
+        return projected_value >= VisibilityState.PARTIAL.value
+
+    def _get_auto_face_candidates(self, unit, game_state, x: int, y: int):
+        """Collect adjacent auto-face candidates that are visible to the unit."""
         hex_grid = HexGrid()
         unit_hex = hex_grid.offset_to_axial(x, y)
-        
-        # Check for adjacent enemies
+
+        candidates = []
         for enemy in game_state.knights:
             if enemy.player_id != unit.player_id:
                 enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
                 distance = unit_hex.distance_to(enemy_hex)
-                if distance <= 1:  # Strictly adjacent (ZOC)
-                    return True
-        return False
+                if distance <= 1 and self._is_enemy_visible_for_autoface(unit, enemy, game_state, (x, y)):
+                    candidates.append((enemy, distance))
+
+        return candidates
         
     def _auto_face_nearest_enemy(self, x: int, y: int, unit, game_state):
         """Automatically face the nearest enemy"""
         if not hasattr(unit, 'facing'):
             return
-            
-        hex_grid = HexGrid()
-        unit_hex = hex_grid.offset_to_axial(x, y)
-        
-        # Find nearest enemy
-        nearest_enemy = None
-        nearest_distance = float('inf')
-        
-        for enemy in game_state.knights:
-            if enemy.player_id != unit.player_id:
-                enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
-                distance = unit_hex.distance_to(enemy_hex)
-                if distance < nearest_distance:
-                    nearest_distance = distance
-                    nearest_enemy = enemy
-                    
-        if nearest_enemy:
-            # Update unit position first (for facing calculation)
+
+        target = self.get_auto_face_target(unit, game_state, x, y)
+        if target:
+            target_x, target_y = target
             unit.x = x
             unit.y = y
-            # Face towards the nearest enemy
-            unit.facing.face_towards(nearest_enemy.x, nearest_enemy.y, unit.x, unit.y)
+            unit.facing.face_towards(target_x, target_y, unit.x, unit.y)
             
     def _is_valid_rotation(self, current_facing: int, target_facing: int) -> bool:
         """Check if rotation is within 60 degrees (one hex face)"""
