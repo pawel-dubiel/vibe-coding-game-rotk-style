@@ -142,6 +142,11 @@ class AttackBehavior(Behavior):
             unit.engaged_with = target
             target.is_engaged_in_combat = True
             target.engaged_with = unit
+            
+        # Auto-face target when attacking (unless routing)
+        if hasattr(unit, 'facing') and not unit.is_routing:
+            unit.facing.face_towards(target.x, target.y, unit.x, unit.y)
+            
         # Ranged attacks do not engage units in combat
         
         # Check attack angle for additional effects
