@@ -103,10 +103,11 @@ static PyObject* c_find_path(PyObject* self, PyObject* args) {
     int start_x, start_y;
     int end_x, end_y;
     PyObject *blockers_list_obj; // List of tuples (x,y)
+    double max_cost = -1.0;
     
-    if (!PyArg_ParseTuple(args, "iiOO(ii)(ii)O", 
+    if (!PyArg_ParseTuple(args, "iiOO(ii)(ii)Od", 
         &width, &height, &terrain_grid_obj, &cost_map_obj, 
-        &start_x, &start_y, &end_x, &end_y, &blockers_list_obj)) {
+        &start_x, &start_y, &end_x, &end_y, &blockers_list_obj, &max_cost)) {
         return NULL;
     }
     
@@ -216,61 +217,41 @@ static PyObject* c_find_path(PyObject* self, PyObject* args) {
                 
                 int terrain_id = grid[n_idx];
                 double move_cost = 1.0;
-                if (terrain_id >= 0 && terrain_id < 100) {
-                    move_cost = costs[terrain_id];
-                }
-                if (move_cost < 1.0) move_cost = 1.0; // Clamp
-                if (isinf(move_cost)) continue; // Impassable
+                if (terrain_id >= 0 && terrain_id < 100) move_cost = costs[terrain_id];
+                if (move_cost < 1.0) move_cost = 1.0; 
+                if (isinf(move_cost)) continue; 
                 
                 double tentative_g = g_scores[c_idx] + move_cost;
+                if (max_cost >= 0 && tentative_g > max_cost) continue;
                 
                 if (tentative_g < g_scores[n_idx]) {
                     parents[n_idx] = c_idx;
                     g_scores[n_idx] = tentative_g;
-                    
-                    HexCoord neighbor_hex = offset_to_axial(nx, ny);
-                    double f_score = tentative_g + (double)hex_distance(neighbor_hex, end_hex);
-                    
+                    double f_score = tentative_g + (double)hex_distance(offset_to_axial(nx, ny), end_hex);
                     heap_push(open_set, nx, ny, f_score);
                 }
             }
         }
-        
         destroy_heap(open_set);
-        
-        PyObject *result_path;
-        if (found) {
-            result_path = PyList_New(0);
-            int curr = end_idx;
-            while (curr != start_idx) {
-                int y = curr / width;
-                int x = curr % width;
-                PyObject *pos = Py_BuildValue("(ii)", x, y);
-                PyList_Insert(result_path, 0, pos);
-                Py_DECREF(pos);
-                curr = parents[curr];
-            }
-        } else {
-            result_path = Py_None;
-            Py_INCREF(result_path);
-        }
-        
-        free(grid);
-        free(blocked);
-        free(g_scores);
-        free(parents);
-        free(in_closed_set);
-        
-        return result_path;
     }
     
-    // Fallback if start is invalid
-    free(grid);
-    free(blocked);
-    free(g_scores);
-    free(parents);
-    free(in_closed_set);
-    Py_RETURN_NONE;
+    PyObject *result_path;
+    if (found) {
+        result_path = PyList_New(0);
+        int curr = end_idx;
+        while (curr != start_idx) {
+            PyObject *pos = Py_BuildValue("(ii)", curr % width, curr / width);
+            PyList_Insert(result_path, 0, pos);
+            Py_DECREF(pos);
+            curr = parents[curr];
+        }
+    } else {
+        result_path = Py_None;
+        Py_INCREF(result_path);
+    }
+    
+    free(grid); free(blocked); free(g_scores); free(parents); free(in_closed_set);
+    return result_path;
 }
 
 static PyMethodDef AlgorithmsMethods[] = {
