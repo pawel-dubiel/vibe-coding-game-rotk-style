@@ -340,6 +340,60 @@ class MovementBehavior(Behavior):
                 
         return moves
         
+    def get_auto_face_target(self, unit, game_state, x: int, y: int) -> Optional[Tuple[int, int]]:
+        """Get the coordinates of the enemy to face, if any"""
+        if self._should_auto_face_enemy(x, y, unit, game_state):
+            # Find nearest enemy
+            hex_grid = HexGrid()
+            unit_hex = hex_grid.offset_to_axial(x, y)
+            nearest_enemy = None
+            nearest_distance = float('inf')
+            
+            # Helper to check visibility
+            def is_visible(target):
+                if not hasattr(game_state, 'fog_of_war'):
+                    return True
+                # Use current player's visibility (unit's owner)
+                visibility = game_state.fog_of_war.get_visibility_state(unit.player_id, target.x, target.y)
+                
+                # Handle Enum comparison
+                vis_value = visibility.value if hasattr(visibility, 'value') else visibility
+                return vis_value == 2  # VisibilityState.VISIBLE (value 2)
+
+            candidates = []
+            
+            for enemy in game_state.knights:
+                if enemy.player_id != unit.player_id:
+                    # Check visibility
+                    if not is_visible(enemy):
+                        continue
+                        
+                    enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
+                    distance = unit_hex.distance_to(enemy_hex)
+                    
+                    if distance < nearest_distance:
+                        nearest_distance = distance
+                        candidates = [enemy]
+                    elif distance == nearest_distance:
+                        candidates.append(enemy)
+            
+            if candidates:
+                # Prioritize threats: Cavalry > Warrior > Mage > Archer
+                threat_priority = {
+                    KnightClass.CAVALRY: 4,
+                    KnightClass.WARRIOR: 3,
+                    KnightClass.MAGE: 2,
+                    KnightClass.ARCHER: 1
+                }
+                
+                # Sort candidates by threat level (highest first)
+                candidates.sort(key=lambda e: threat_priority.get(e.unit_class, 0), reverse=True)
+                nearest_enemy = candidates[0]
+            
+            if nearest_enemy:
+                return (nearest_enemy.x, nearest_enemy.y)
+        return None
+
     def _should_auto_face_enemy(self, x: int, y: int, unit, game_state) -> bool:
         """Check if unit should automatically face an enemy after movement"""
         hex_grid = HexGrid()
@@ -350,7 +404,7 @@ class MovementBehavior(Behavior):
             if enemy.player_id != unit.player_id:
                 enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
                 distance = unit_hex.distance_to(enemy_hex)
-                if distance <= 2:  # Adjacent or one hex away
+                if distance <= 1:  # Strictly adjacent (ZOC)
                     return True
         return False
         
