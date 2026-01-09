@@ -378,8 +378,16 @@ class AIPlayer:
     
     def choose_action(self, game_state):
         depth = {'easy': 1, 'medium': 2, 'hard': 3}.get(self.difficulty, 1)
+        import time
+        t0 = time.time()
+        
+        # Log start of thinking
+        print(f"AI Thinking... Depth: {depth}")
         
         _, best_move = self.minimax(game_state, depth, float('-inf'), float('inf'), True)
+        
+        dt = time.time() - t0
+        print(f"AI Action Chosen in {dt:.2f}s: {best_move[0] if best_move else 'None'}")
         
         if best_move:
             return best_move

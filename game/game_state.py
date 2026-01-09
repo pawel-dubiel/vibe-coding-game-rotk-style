@@ -521,7 +521,9 @@ class GameState(IGameState):
                 knight.is_engaged_in_combat = False
     
     def _execute_ai_turn(self):
+        print(f"AI Turn Start (Player {self.ai_player.player_id}, Difficulty: {self.ai_player.difficulty})")
         self.ai_player.execute_turn(self)
+        print("AI Turn End")
         self.end_turn()
     
     def select_knight(self, x, y):
