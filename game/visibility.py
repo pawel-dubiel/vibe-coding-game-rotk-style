@@ -304,6 +304,16 @@ class FogOfWar:
                     viewer_on_hills = origin_terrain and origin_terrain.type.value.lower() in ['hills', 'high hills', 'mountains']
                     if not is_elevated and not viewer_on_hills:
                         return False
+            
+            # Check castle blocking
+            if hasattr(game_state, 'castles'):
+                for castle in game_state.castles:
+                    if hasattr(castle, 'contains_position') and castle.contains_position(hex_x, hex_y):
+                        # Castles are tall, but unless viewer is elevated or on a mountain, they block LOS
+                        origin_terrain = game_state.terrain_map.get_terrain(origin[0], origin[1])
+                        viewer_on_mountain = origin_terrain and origin_terrain.type.value.lower() == 'mountains'
+                        if not is_elevated and not viewer_on_mountain:
+                            return False
                     
             # Check unit blocking
             blocking_unit = game_state.get_unit_at(hex_x, hex_y)

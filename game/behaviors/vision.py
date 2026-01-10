@@ -48,8 +48,10 @@ class VisionBehavior(Behavior):
         total_range = self.base_range
         
         # Apply terrain bonuses
-        if terrain and terrain.type.value.lower() == 'hills':
-            total_range += self.elevated_bonus
+        if terrain:
+            terrain_type = terrain.type.value.lower()
+            if terrain_type in ['hills', 'high hills', 'mountains']:
+                total_range += self.elevated_bonus
             
         # Apply general bonuses if unit has generals
         if hasattr(self.parent, 'generals') and self.parent.generals:
@@ -76,11 +78,14 @@ class VisionBehavior(Behavior):
         if not self.parent:
             return False
             
-        # Check if on hills
+        # Check if on hills/mountains
         if hasattr(self.parent, 'get_terrain'):
             terrain = self.parent.get_terrain()
-            if terrain and terrain.type.value.lower() == 'hills':
-                return True
+            if terrain:
+                terrain_type = terrain.type.value.lower()
+                # print(f"DEBUG: Unit {self.parent.name} on {terrain_type}")
+                if terrain_type in ['hills', 'high hills', 'mountains']:
+                    return True
                 
         # Cavalry units are naturally elevated
         if hasattr(self.parent, 'unit_class'):

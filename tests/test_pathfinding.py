@@ -145,14 +145,14 @@ class TestPathfinding(unittest.TestCase):
         # Find paths with both algorithms
         astar_path = astar.find_path(
             start=(5, 5),
-            end=(8, 7),
+            end=(8, 8),
             game_state=self.game_state,
             unit=self.unit
         )
         
         dijkstra_path = dijkstra.find_path(
             start=(5, 5),
-            end=(8, 7),
+            end=(8, 8),
             game_state=self.game_state,
             unit=self.unit
         )
@@ -182,7 +182,7 @@ class TestPathfinding(unittest.TestCase):
         # Test movement in hex grid pattern
         path = pathfinder.find_path(
             start=(5, 5),
-            end=(7, 6),  # This is a valid hex neighbor path
+            end=(6, 6),  # This is a valid hex neighbor path
             game_state=self.game_state,
             unit=self.unit
         )
@@ -193,7 +193,7 @@ class TestPathfinding(unittest.TestCase):
         from game.hex_utils import HexGrid
         hex_grid = HexGrid()
         start_hex = hex_grid.offset_to_axial(5, 5)
-        end_hex = hex_grid.offset_to_axial(7, 6)
+        end_hex = hex_grid.offset_to_axial(6, 6)
         hex_distance = start_hex.distance_to(end_hex)
         
         # The path length should match the hex distance

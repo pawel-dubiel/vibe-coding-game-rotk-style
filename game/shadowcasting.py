@@ -220,6 +220,16 @@ class HexShadowcaster:
         if terrain and terrain.type.value.lower() == 'mountains':
             return True
             
+        # Check for castle blocking
+        if hasattr(game_state, 'castles'):
+            for castle in game_state.castles:
+                if hasattr(castle, 'contains_position') and castle.contains_position(target[0], target[1]):
+                    # Castles block vision unless viewer is elevated or on a mountain
+                    origin_terrain = game_state.terrain_map.get_terrain(origin[0], origin[1])
+                    viewer_on_mountain = origin_terrain and origin_terrain.type.value.lower() == 'mountains'
+                    if viewer_elevation <= 0 and not viewer_on_mountain:
+                        return True
+            
         # Check for blocking units
         unit = game_state.get_unit_at(target[0], target[1])
         if unit and unit.player_id != game_state.current_player:
@@ -403,7 +413,17 @@ class SimpleShadowcaster:
             
             if not is_elevated and not viewer_on_hills:
                 return True
-                
+        
+        # Check for castle blocking
+        if hasattr(game_state, 'castles'):
+            for castle in game_state.castles:
+                if hasattr(castle, 'contains_position') and castle.contains_position(target[0], target[1]):
+                    # Castles block vision unless viewer is elevated or on a mountain
+                    origin_terrain = game_state.terrain_map.get_terrain(origin[0], origin[1])
+                    viewer_on_mountain = origin_terrain and origin_terrain.type.value.lower() == 'mountains'
+                    if not is_elevated and not viewer_on_mountain:
+                        # print(f"DEBUG: Castle at {target} blocks vision from {origin}")
+                        return True
         # Check units
         unit = game_state.get_unit_at(target[0], target[1])
         if unit:

@@ -76,6 +76,13 @@ class PathFinder(ABC):
             if not game_state.terrain_map.is_passable(x, y, unit):
                 return False
         
+        # Check for castles blocking
+        if hasattr(game_state, 'castles'):
+            for castle in game_state.castles:
+                if hasattr(castle, 'contains_position') and castle.contains_position(x, y):
+                    # print(f"DEBUG: Position ({x}, {y}) blocked by castle")
+                    return False
+        
         # Check for enemy units blocking (but allow own position)
         if unit:
             for other in game_state.knights:

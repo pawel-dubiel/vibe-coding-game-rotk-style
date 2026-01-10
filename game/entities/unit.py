@@ -47,6 +47,9 @@ class Unit:
         # Behaviors
         self.behaviors: Dict[str, Behavior] = {}
         
+        # Reference to game state
+        self.game_state = None
+        
         # State flags
         self.is_garrisoned = False
         self.is_disrupted = False
@@ -527,9 +530,10 @@ class Unit:
         
     def get_terrain(self, game_state=None):
         """Get the terrain this unit is currently on"""
-        # If we have a cached game_state reference, use it
-        if game_state and hasattr(game_state, 'terrain_map'):
-            return game_state.terrain_map.get_terrain(self.x, self.y)
+        # Use provided game_state or the one stored in the unit
+        gs = game_state or self.game_state
+        if gs and hasattr(gs, 'terrain_map'):
+            return gs.terrain_map.get_terrain(self.x, self.y)
         return None
         
     def can_break_away_from(self, enemy_unit) -> bool:

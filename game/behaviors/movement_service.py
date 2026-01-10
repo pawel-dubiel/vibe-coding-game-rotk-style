@@ -53,7 +53,7 @@ class MovementService:
         # Use the pathfinder to get the actual path
         path = movement_behavior.pathfinder.find_path(
             start=(unit.x, unit.y),
-            goal=(target_x, target_y),
+            end=(target_x, target_y),
             game_state=game_state,
             unit=unit
         )

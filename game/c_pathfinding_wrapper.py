@@ -71,6 +71,12 @@ class CPathFinder(PathFinder):
                 if knight.player_id != unit.player_id:
                      blockers.append((knight.x, knight.y))
         
+        # Add castles to blockers
+        if hasattr(game_state, 'castles'):
+            for castle in game_state.castles:
+                if hasattr(castle, 'occupied_tiles'):
+                    blockers.extend(castle.occupied_tiles)
+        
         # 4. Call C Extension
         try:
             # Use -1.0 to indicate no cost limit in C implementation
