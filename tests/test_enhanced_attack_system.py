@@ -325,8 +325,10 @@ class TestEnhancedAttackSystem:
         # First attack
         initial_ap = warrior.action_points
         initial_morale = warrior.morale
+        print(f"DEBUG: Initial AP: {initial_ap}")
         
         result1 = attack_behavior.execute(warrior, self.game_state, target)
+        print(f"DEBUG: AP after attack: {warrior.action_points}")
         assert result1['success'], "First attack should succeed"
         assert warrior.action_points == initial_ap - 6, "Should consume 6 AP (4 base + 2 forest)"
         assert warrior.morale <= initial_morale, "First attack should not increase morale"

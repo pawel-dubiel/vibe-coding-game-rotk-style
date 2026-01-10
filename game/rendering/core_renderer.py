@@ -77,45 +77,18 @@ class CoreRenderer:
     
     def world_to_screen(self, world_x: float, world_y: float, game_state) -> tuple:
         """Convert world coordinates to screen coordinates."""
-        if hasattr(game_state, 'camera_manager'):
-            return game_state.camera_manager.world_to_screen(world_x, world_y)
-        else:
-            # Legacy fallback
-            screen_x = (world_x - game_state.camera_x) * getattr(game_state, 'zoom_level', 1.0)
-            screen_y = (world_y - game_state.camera_y) * getattr(game_state, 'zoom_level', 1.0)
-            return screen_x, screen_y
+        if not hasattr(game_state, 'camera_manager'):
+            raise ValueError("game_state.camera_manager is required for rendering")
+        return game_state.camera_manager.world_to_screen(world_x, world_y)
     
     def screen_to_world(self, screen_x: float, screen_y: float, game_state) -> tuple:
         """Convert screen coordinates to world coordinates."""
-        if hasattr(game_state, 'camera_manager'):
-            return game_state.camera_manager.screen_to_world(screen_x, screen_y)
-        else:
-            # Legacy fallback
-            zoom = getattr(game_state, 'zoom_level', 1.0)
-            world_x = screen_x / zoom + game_state.camera_x
-            world_y = screen_y / zoom + game_state.camera_y
-            return world_x, world_y
+        if not hasattr(game_state, 'camera_manager'):
+            raise ValueError("game_state.camera_manager is required for rendering")
+        return game_state.camera_manager.screen_to_world(screen_x, screen_y)
     
     def get_hex_at_screen_position(self, screen_x: float, screen_y: float, game_state) -> tuple:
         """Get hex coordinates at screen position."""
         world_x, world_y = self.screen_to_world(screen_x, screen_y, game_state)
         return self.hex_layout.pixel_to_hex(world_x, world_y)
     
-    # Legacy compatibility methods
-    @property
-    def hex_grid(self):
-        """Legacy compatibility for hex_grid access."""
-        return self._hex_grid
-    
-    @hex_grid.setter
-    def hex_grid(self, value):
-        self._hex_grid = value
-    
-    @property
-    def hex_layout(self):
-        """Legacy compatibility for hex_layout access."""
-        return self._hex_layout
-    
-    @hex_layout.setter
-    def hex_layout(self, value):
-        self._hex_layout = value

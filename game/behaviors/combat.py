@@ -63,7 +63,6 @@ class AttackBehavior(Behavior):
                 if terrain_movement_cost > 1.0:  # Only apply penalty for difficult terrain
                     terrain_penalty = int((terrain_movement_cost - 1.0) * 2)
                     base_cost += terrain_penalty
-                    print(f"DEBUG: Terrain penalty {terrain_penalty} for cost {terrain_movement_cost}. Total: {base_cost}")
                 
         return base_cost
         

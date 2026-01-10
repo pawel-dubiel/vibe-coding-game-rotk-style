@@ -428,7 +428,11 @@ class AIPlayer:
         from game.animation import MoveAnimation, AttackAnimation
         actions_taken = []
         
-        for _ in range(5):
+        # Allow enough actions for all units to move/attack
+        # With 10+ units per side, 5 actions is way too few
+        max_actions = max(20, len(game_state.knights) * 2)
+        
+        for _ in range(max_actions):
             action = self.choose_action(game_state)
             if not action:
                 break

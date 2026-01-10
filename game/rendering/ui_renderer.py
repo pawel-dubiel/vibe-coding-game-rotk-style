@@ -41,11 +41,10 @@ class UIRenderer:
     
     def render_messages(self, game_state):
         """Render game messages with priority-based display."""
-        if hasattr(game_state, 'message_system'):
-            messages = game_state.message_system.get_recent_messages(5)
-        else:
-            # Legacy fallback
-            messages = [msg for msg, _, _ in getattr(game_state, 'messages', [])][:5]
+        if not hasattr(game_state, 'message_system'):
+            raise ValueError("game_state.message_system is required for UI rendering")
+
+        messages = game_state.message_system.get_recent_messages(5)
         
         if not messages:
             return

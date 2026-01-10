@@ -207,7 +207,6 @@ class CampaignState:
         terrain_mapping = {
             'plains': CampaignTerrainType.PLAINS,
             'forest': CampaignTerrainType.FOREST,
-            'forests': CampaignTerrainType.FOREST,  # Legacy support
             'deep_forest': CampaignTerrainType.DEEP_FOREST,
             'hills': CampaignTerrainType.HILLS,
             'mountains': CampaignTerrainType.MOUNTAINS,
@@ -221,7 +220,9 @@ class CampaignState:
         }
         
         for terrain_name, regions in terrain_data.items():
-            terrain_type = terrain_mapping.get(terrain_name, CampaignTerrainType.PLAINS)
+            if terrain_name not in terrain_mapping:
+                raise ValueError(f"Unknown campaign terrain type: {terrain_name}")
+            terrain_type = terrain_mapping[terrain_name]
             
             for region in regions:
                 # Each region is [min_x, max_x, min_y, max_y]

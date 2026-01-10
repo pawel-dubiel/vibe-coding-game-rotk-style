@@ -48,29 +48,24 @@ class TerrainRenderer:
     def render_terrain(self, game_state):
         """Render the hex grid terrain with fog of war."""
         # Calculate visible hex range using camera manager for zoom-aware coordinates
-        if hasattr(game_state, 'camera_manager'):
-            camera_x = game_state.camera_manager.camera_x
-            camera_y = game_state.camera_manager.camera_y
-            screen_width = game_state.camera_manager.screen_width
-            screen_height = game_state.camera_manager.screen_height
-            zoom_level = game_state.camera_manager.zoom_level
-            
-            # Calculate visible hex range
-            # The hex_layout dimensions are already scaled by zoom, and the camera coordinates
-            # are in the same scaled space, so we use them directly
-            hex_width = self.hex_layout.col_spacing
-            hex_height = self.hex_layout.row_spacing
-            
-            start_col = max(0, int(camera_x / hex_width) - 1)
-            end_col = min(game_state.board_width, int((camera_x + screen_width) / hex_width) + 2)
-            start_row = max(0, int(camera_y / hex_height) - 1)
-            end_row = min(game_state.board_height, int((camera_y + screen_height) / hex_height) + 2)
-        else:
-            # Legacy fallback
-            start_col = max(0, int(game_state.camera_x / self.hex_grid.hex_width) - 1)
-            end_col = min(game_state.board_width, int((game_state.camera_x + game_state.screen_width) / self.hex_grid.hex_width) + 2)
-            start_row = max(0, int(game_state.camera_y / self.hex_grid.hex_height) - 1)
-            end_row = min(game_state.board_height, int((game_state.camera_y + game_state.screen_height) / self.hex_grid.hex_height) + 2)
+        if not hasattr(game_state, 'camera_manager'):
+            raise ValueError("game_state.camera_manager is required for terrain rendering")
+
+        camera_x = game_state.camera_manager.camera_x
+        camera_y = game_state.camera_manager.camera_y
+        screen_width = game_state.camera_manager.screen_width
+        screen_height = game_state.camera_manager.screen_height
+
+        # Calculate visible hex range
+        # The hex_layout dimensions are already scaled by zoom, and the camera coordinates
+        # are in the same scaled space, so we use them directly
+        hex_width = self.hex_layout.col_spacing
+        hex_height = self.hex_layout.row_spacing
+
+        start_col = max(0, int(camera_x / hex_width) - 1)
+        end_col = min(game_state.board_width, int((camera_x + screen_width) / hex_width) + 2)
+        start_row = max(0, int(camera_y / hex_height) - 1)
+        end_row = min(game_state.board_height, int((camera_y + screen_height) / hex_height) + 2)
         
         for col in range(start_col, end_col):
             for row in range(start_row, end_row):

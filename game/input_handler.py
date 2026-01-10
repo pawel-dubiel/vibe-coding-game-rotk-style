@@ -199,32 +199,24 @@ class InputHandler:
     
     def zoom_in(self, game_state):
         """Zoom in the view"""
-        if hasattr(game_state, 'camera_manager'):
-            if game_state.camera_manager.zoom_in():
-                self.update_zoom(game_state)
-        else:
-            # Legacy fallback
-            old_zoom = self.zoom_level
-            self.zoom_level = min(self.max_zoom, self.zoom_level * 1.2)
-            if self.zoom_level != old_zoom:
-                self.update_zoom(game_state)
+        if not hasattr(game_state, 'camera_manager'):
+            raise ValueError("game_state.camera_manager is required for zooming")
+        if game_state.camera_manager.zoom_in():
+            self.update_zoom(game_state)
     
     def zoom_out(self, game_state):
         """Zoom out the view"""
-        if hasattr(game_state, 'camera_manager'):
-            if game_state.camera_manager.zoom_out():
-                self.update_zoom(game_state)
-        else:
-            # Legacy fallback
-            old_zoom = self.zoom_level
-            self.zoom_level = max(self.min_zoom, self.zoom_level / 1.2)
-            if self.zoom_level != old_zoom:
-                self.update_zoom(game_state)
+        if not hasattr(game_state, 'camera_manager'):
+            raise ValueError("game_state.camera_manager is required for zooming")
+        if game_state.camera_manager.zoom_out():
+            self.update_zoom(game_state)
     
     def update_zoom(self, game_state):
         """Update hex grid and layout with new zoom level (original working implementation)"""
         # Get zoom level from camera manager if available, otherwise use local zoom
-        zoom_level = getattr(game_state.camera_manager, 'zoom_level', self.zoom_level) if hasattr(game_state, 'camera_manager') else self.zoom_level
+        if not hasattr(game_state, 'camera_manager'):
+            raise ValueError("game_state.camera_manager is required for zoom updates")
+        zoom_level = game_state.camera_manager.zoom_level
         
         # Scale hex size based on zoom level
         new_hex_size = int(36 * zoom_level)

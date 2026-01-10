@@ -91,7 +91,7 @@ class PathFinder(ABC):
                     continue
                 # Block if enemy unit at this position
                 if other.player_id != unit.player_id and other.x == x and other.y == y:
-                    print(f"DEBUG: Position ({x}, {y}) blocked by enemy {other.name} (ID {other.player_id} vs {unit.player_id})")
+                    # print(f"DEBUG: Position ({x}, {y}) blocked by enemy {other.name} (ID {other.player_id} vs {unit.player_id})")
                     return False
         
         return True
@@ -306,6 +306,14 @@ class DijkstraPathFinder(PathFinder):
     
     def __init__(self):
         self._cached_hex_grid = None  # For performance optimization
+        self._c_pathfinder = None
+        
+        if USE_C_EXTENSIONS:
+            try:
+                from game.c_pathfinding_wrapper import CPathFinder
+                self._c_pathfinder = CPathFinder()
+            except ImportError:
+                pass
     
     def find_path(self, start: Tuple[int, int], end: Tuple[int, int], 
                   game_state, unit=None, max_cost: Optional[float] = None,
@@ -383,6 +391,12 @@ class DijkstraPathFinder(PathFinder):
         Returns:
             Dictionary mapping positions to their minimum cost from start
         """
+        # Try C implementation first
+        if self._c_pathfinder and cost_function is None:
+            reachable = self._c_pathfinder.find_all_reachable(start, game_state, unit, max_cost)
+            if reachable is not None:
+                return reachable
+
         # Use provided cost function or default
         get_cost = cost_function if cost_function else self._get_movement_cost
         

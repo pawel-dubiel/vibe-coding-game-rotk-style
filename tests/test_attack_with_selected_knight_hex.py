@@ -6,7 +6,10 @@ from game.game_state import GameState
 class TestAttackWithSelectedKnightHex(unittest.TestCase):
     def setUp(self):
         pygame.init()
-        self.game_state = GameState(vs_ai=False)
+        self.game_state = GameState(
+            battle_config={'board_size': (10, 10), 'knights': 0, 'castles': 0},
+            vs_ai=False,
+        )
         self.game_state.knights.clear()
         self.game_state.current_player = 1
         self.attacker = UnitFactory.create_warrior("Attacker", 4, 4)

@@ -96,3 +96,100 @@ class CPathFinder(PathFinder):
         except Exception as e:
             print(f"C Pathfinding error: {e}")
             return None # Fallback or fail
+
+    def find_all_reachable(self, start: Tuple[int, int], game_state, unit=None, 
+                          max_cost: float = None, cost_function=None) -> Dict[Tuple[int, int], float]:
+        """Find all reachable positions using C extension"""
+        
+        if not C_EXTENSION_AVAILABLE:
+            return None
+
+        width = game_state.board_width
+        height = game_state.board_height
+        
+        # 1. Get or Create Terrain Grid Cache
+        map_obj = game_state.terrain_map
+        map_id = id(map_obj)
+        
+        if map_id != self._last_map_id or map_id not in self._terrain_cache:
+            terrain_types = list(TerrainType)
+            type_to_id = {t: i for i, t in enumerate(terrain_types)}
+            
+            grid = []
+            for y in range(height):
+                for x in range(width):
+                    t = map_obj.get_terrain(x, y)
+                    if t:
+                        grid.append(type_to_id.get(t.type, -1))
+                    else:
+                        grid.append(-1)
+            
+            self._terrain_cache[map_id] = (grid, type_to_id, terrain_types)
+            self._last_map_id = map_id
+            
+        grid, type_to_id, terrain_types = self._terrain_cache[map_id]
+        
+        # 2. Build Cost Map for this Unit
+        cost_map = {}
+        for t in terrain_types:
+            temp_terrain = Terrain(t)
+            cost = temp_terrain.get_movement_cost_for_unit(unit)
+            cost_map[type_to_id[t]] = float(cost)
+            
+        # 3. Blockers
+        blockers = []
+        if unit:
+            for knight in game_state.knights:
+                if knight.player_id != unit.player_id:
+                     blockers.append((knight.x, knight.y))
+        
+        # Add castles to blockers
+        if hasattr(game_state, 'castles'):
+            for castle in game_state.castles:
+                if hasattr(castle, 'occupied_tiles'):
+                    blockers.extend(castle.occupied_tiles)
+                    
+        # 4. Build ZOC Map (if unit provided)
+        zoc_map = None
+        if unit:
+            zoc_map = []
+            from game.systems.engagement import EngagementSystem
+            
+            # Optimization: Pre-calculate ZOC sources
+            zoc_sources = []
+            for enemy in game_state.knights:
+                if enemy.player_id != unit.player_id and enemy.has_zone_of_control():
+                    zoc_sources.append(enemy)
+            
+            # Only build map if there are enemies with ZOC
+            if zoc_sources:
+                for y in range(height):
+                    for x in range(width):
+                        in_zoc = False
+                        for enemy in zoc_sources:
+                            dx = abs(x - enemy.x)
+                            dy = abs(y - enemy.y)
+                            if dx <= 1 and dy <= 1 and (dx + dy > 0):
+                                in_zoc = True
+                                break
+                        zoc_map.append(1 if in_zoc else 0)
+        
+        # 5. Call C Extension
+        try:
+            c_max_cost = float(max_cost) if max_cost is not None else 999.0
+            
+            reachable = c_algorithms.find_reachable(
+                width, height,
+                grid,
+                cost_map,
+                start,
+                blockers,
+                c_max_cost,
+                zoc_map
+            )
+            
+            return reachable
+            
+        except Exception as e:
+            print(f"C Reachable finding error: {e}")
+            return None

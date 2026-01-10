@@ -92,7 +92,7 @@ TERRAIN_PROPERTIES = {
     TerrainType.SNOW: TerrainProperties(2.0, 0, True, False, 2,
         [TerrainFeature.ROAD]),
         
-    # Legacy terrain types mapped to features
+    # Specialized terrain types
     TerrainType.BRIDGE: TerrainProperties(1.0, -5, True, False, 0,
         []),
     
@@ -105,16 +105,16 @@ class Terrain:
     """Represents a single terrain tile with base terrain and optional features"""
     
     def __init__(self, terrain_type: TerrainType, feature: TerrainFeature = TerrainFeature.NONE):
-        # Handle legacy terrain types
-        if terrain_type == TerrainType.BRIDGE:
-            self.type = TerrainType.WATER
-            self.feature = TerrainFeature.BRIDGE
-        elif terrain_type == TerrainType.ROAD:
-            self.type = TerrainType.PLAINS
-            self.feature = TerrainFeature.ROAD
-        else:
-            self.type = terrain_type
-            self.feature = feature
+        if terrain_type is None:
+            raise ValueError("terrain_type is required")
+        if feature is None:
+            raise ValueError("feature is required")
+
+        if terrain_type in {TerrainType.BRIDGE, TerrainType.ROAD} and feature != TerrainFeature.NONE:
+            raise ValueError("Bridge/Road terrain cannot combine with features")
+
+        self.type = terrain_type
+        self.feature = feature
             
         self._properties = TERRAIN_PROPERTIES.get(self.type, TERRAIN_PROPERTIES[TerrainType.PLAINS])
         
@@ -135,10 +135,6 @@ class Terrain:
             
         return base_cost
         
-    def _get_movement_cost(self):
-        """Legacy compatibility method"""
-        return self.movement_cost
-        
     @property
     def defense_bonus(self) -> int:
         """Get defense bonus considering features"""
@@ -156,10 +152,6 @@ class Terrain:
             
         return base_bonus
         
-    def _get_defense_bonus(self):
-        """Legacy compatibility method"""
-        return self.defense_bonus
-        
     @property
     def passable(self) -> bool:
         """Check if terrain is passable"""
@@ -168,10 +160,6 @@ class Terrain:
         if self.feature == TerrainFeature.RIVER and self.type != TerrainType.WATER:
             return False  # Rivers block unless bridged
         return self._properties.passable
-        
-    def _is_passable(self):
-        """Legacy compatibility method"""
-        return self.passable
         
     @property
     def blocks_vision(self) -> bool:
@@ -773,16 +761,12 @@ class TerrainGenerator:
 class TerrainMap:
     """Enhanced terrain map with layered terrain system"""
     
-    def __init__(self, width: int, height: int, seed: Optional[int] = None, 
-                 use_legacy_generation: bool = False):
+    def __init__(self, width: int, height: int, seed: Optional[int] = None):
         self.width = width
         self.height = height
         self.terrain_grid: List[List[Terrain]] = []
         
-        if use_legacy_generation:
-            self._generate_legacy_terrain()
-        else:
-            self._generate_terrain(seed)
+        self._generate_terrain(seed)
         
     def _generate_terrain(self, seed: Optional[int] = None):
         """Generate realistic battle terrain starting with plains base"""
@@ -813,84 +797,6 @@ class TerrainMap:
                 if pos[0] < self.width and pos[1] < self.height
             ]
             generator.generate_roads(self.terrain_grid, valid_positions[:2])
-            
-    def _generate_legacy_terrain(self):
-        """Legacy terrain generation for compatibility"""
-        # Initialize with plains
-        for y in range(self.height):
-            row = []
-            for x in range(self.width):
-                row.append(Terrain(TerrainType.PLAINS))
-            self.terrain_grid.append(row)
-        
-        # Add a river with bridges
-        self._add_river()
-        
-        # Add forests
-        self._add_terrain_patches(TerrainType.FOREST, 3, 2, 3)
-        
-        # Add hills
-        self._add_terrain_patches(TerrainType.HILLS, 2, 2, 2)
-        
-        # Add swamps near water
-        self._add_swamps()
-        
-        # Add roads connecting castles
-        self._add_roads()
-        
-    def _add_river(self):
-        """Legacy river generation"""
-        river_x = self.width // 2
-        bridge_positions = [3, 6, 9]
-        
-        for y in range(self.height):
-            x = river_x
-            if y % 3 == 0:
-                x += random.choice([-1, 0, 1])
-                x = max(river_x - 1, min(river_x + 1, x))
-            
-            if 0 <= x < self.width:
-                if y in bridge_positions:
-                    self.terrain_grid[y][x] = Terrain(TerrainType.WATER, TerrainFeature.BRIDGE)
-                else:
-                    self.terrain_grid[y][x] = Terrain(TerrainType.WATER)
-                    
-    def _add_terrain_patches(self, terrain_type, num_patches, min_size, max_size):
-        """Legacy terrain patch generation"""
-        for _ in range(num_patches):
-            center_x = random.randint(1, self.width - 2)
-            center_y = random.randint(1, self.height - 2)
-            size = random.randint(min_size, max_size)
-            
-            for dy in range(-size, size + 1):
-                for dx in range(-size, size + 1):
-                    if abs(dx) + abs(dy) <= size:
-                        x, y = center_x + dx, center_y + dy
-                        if 0 <= x < self.width and 0 <= y < self.height:
-                            if self.terrain_grid[y][x].type not in [TerrainType.WATER, TerrainType.BRIDGE]:
-                                self.terrain_grid[y][x] = Terrain(terrain_type)
-                                
-    def _add_swamps(self):
-        """Legacy swamp generation"""
-        for y in range(self.height):
-            for x in range(self.width):
-                if self.terrain_grid[y][x].type == TerrainType.WATER:
-                    for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-                        nx, ny = x + dx, y + dy
-                        if 0 <= nx < self.width and 0 <= ny < self.height:
-                            if self.terrain_grid[ny][nx].type == TerrainType.PLAINS:
-                                if random.random() < 0.3:
-                                    self.terrain_grid[ny][nx] = Terrain(TerrainType.SWAMP)
-                                    
-    def _add_roads(self):
-        """Legacy road generation"""
-        road_y_positions = [6]
-        for y in road_y_positions:
-            for x in range(self.width):
-                if self.terrain_grid[y][x].type == TerrainType.PLAINS:
-                    self.terrain_grid[y][x].feature = TerrainFeature.ROAD
-                elif self.terrain_grid[y][x].type == TerrainType.WATER:
-                    self.terrain_grid[y][x].feature = TerrainFeature.BRIDGE
             
     def get_terrain(self, x: int, y: int) -> Optional[Terrain]:
         """Get terrain at position"""
