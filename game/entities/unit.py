@@ -318,7 +318,8 @@ class Unit:
                 self.y = new_y
                 
                 # Consume some AP for the panic movement (but don't block future movement)
-                self.action_points = max(0, self.action_points - 1)
+                if not getattr(game_state, 'disable_auto_routing_ap_cost', False):
+                    self.action_points = max(0, self.action_points - 1)
                 
                 # Add message about routing movement
                 if hasattr(game_state, 'add_message'):

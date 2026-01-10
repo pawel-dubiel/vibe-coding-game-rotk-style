@@ -4,3 +4,8 @@
 - use fixtures for setup
 - use factories for data generation
 - after every feature, write tests and run all existing tests
+- run tests: `source .venv/bin/activate && SDL_VIDEODRIVER=dummy pytest`
+- architecture (high level):
+  - battle uses command/event flow with domain rules separated from presentation
+  - headless client/server direction with adapters at the boundary
+  - campaign rules are a separate domain

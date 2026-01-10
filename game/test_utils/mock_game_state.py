@@ -15,6 +15,13 @@ class MockGameState(IGameState):
         self._castles = []
         self._terrain_map = TerrainMap(board_width, board_height) if create_terrain else None
         self._current_player = 1
+        self.disable_auto_routing_ap_cost = True
+
+        if self._terrain_map is not None:
+            from game.terrain import TerrainType
+            for y in range(self._board_height):
+                for x in range(self._board_width):
+                    self._terrain_map.set_terrain(x, y, TerrainType.PLAINS)
         
         # Additional test-specific attributes
         self.pending_positions = {}  # For tracking movement animations

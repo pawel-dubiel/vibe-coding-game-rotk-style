@@ -8,6 +8,7 @@ class BattleContext(Protocol):
     board_width: int
     board_height: int
     knights: list
+    castles: list
     terrain_map: object
     fog_of_war: object
     current_player: int
@@ -16,4 +17,7 @@ class BattleContext(Protocol):
         raise NotImplementedError
 
     def get_unit_at(self, x: int, y: int):
+        raise NotImplementedError
+
+    def get_knight_at(self, x: int, y: int):
         raise NotImplementedError

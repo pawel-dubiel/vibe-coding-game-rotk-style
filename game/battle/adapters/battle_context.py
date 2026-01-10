@@ -22,6 +22,10 @@ class BattleContextAdapter:
         return self._battle_state.knights
 
     @property
+    def castles(self):
+        return self._battle_state.castles
+
+    @property
     def terrain_map(self):
         return self._battle_state.terrain_map
 
@@ -41,3 +45,6 @@ class BattleContextAdapter:
 
     def get_unit_at(self, x: int, y: int):
         return self._battle_state.get_unit_at(x, y)
+
+    def get_knight_at(self, x: int, y: int):
+        return self._battle_state.get_knight_at(x, y)

@@ -10,7 +10,10 @@ Medieval Hex Strategy Game is a comprehensive turn-based strategy game featuring
 - **Testing:** Pytest 8.3.5
 
 ## Architecture
-The project follows a component-based architecture to manage complexity and ensure flexibility.
+High-level direction:
+- Battle uses a command/event flow with domain rules separated from presentation.
+- Adapters sit at the boundary to enable headless client/server execution.
+- Campaign rules are a separate domain from battle.
 
 ### Key Directories & Modules
 - **`game/`**: Contains the core source code.
@@ -65,7 +68,7 @@ python main.py
 ### Testing
 Run the full test suite to ensure system integrity:
 ```bash
-python -m pytest
+source .venv/bin/activate && SDL_VIDEODRIVER=dummy pytest
 ```
 *Note: Tests cover various aspects from unit behaviors to complex campaign integration.*
 

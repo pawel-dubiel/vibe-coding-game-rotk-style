@@ -5,9 +5,9 @@ from typing import Optional
 
 from game.ai.ai_player import AIPlayer
 from game.battle.adapters.battle_context import BattleContextAdapter
-from game.battle.application.commands import MoveUnitCommand
-from game.battle.application.handlers import MoveUnitHandler
-from game.battle.domain.events import UnitMoved
+from game.battle.application.commands import AttackUnitCommand, ChargeUnitCommand, MoveUnitCommand
+from game.battle.application.handlers import AttackUnitHandler, ChargeUnitHandler, MoveUnitHandler
+from game.battle.domain.events import AttackResolved, ChargeResolved, UnitMoved
 from game.behaviors.movement_service import MovementService
 from game.entities.knight import KnightClass
 from game.hex_layout import HexLayout
@@ -99,6 +99,12 @@ class PresentationState:
         if isinstance(event, UnitMoved):
             self._handle_unit_moved(event)
             return
+        if isinstance(event, AttackResolved):
+            self._handle_attack_resolved(event)
+            return
+        if isinstance(event, ChargeResolved):
+            self._handle_charge_resolved(event)
+            return
         raise ValueError(f"Unsupported event type: {type(event).__name__}")
 
     def _get_unit_by_id(self, unit_id: int):
@@ -142,6 +148,41 @@ class PresentationState:
         self.animation_coordinator.animation_manager.add_animation(anim)
         self.possible_moves = []
         self._fog_update_needed = True
+
+    def _handle_attack_resolved(self, event: AttackResolved) -> None:
+        attacker = self._get_unit_by_id(event.attacker_id)
+        target = self._get_unit_by_id(event.target_id)
+
+        anim = AttackAnimation(
+            attacker,
+            target,
+            event.damage,
+            event.counter_damage,
+            attack_angle=event.attack_angle,
+            extra_morale_penalty=event.extra_morale_penalty,
+            extra_cohesion_penalty=event.extra_cohesion_penalty,
+            should_check_routing=event.should_check_routing,
+            game_state=self._game_state,
+        )
+        self.animation_coordinator.animation_manager.add_animation(anim)
+        self.attack_targets = []
+
+    def _handle_charge_resolved(self, event: ChargeResolved) -> None:
+        attacker = self._get_unit_by_id(event.attacker_id)
+        if event.attacker_to:
+            anim = MoveAnimation(
+                attacker,
+                event.attacker_from[0],
+                event.attacker_from[1],
+                event.attacker_to[0],
+                event.attacker_to[1],
+                game_state=self._game_state,
+            )
+            self.animation_coordinator.animation_manager.add_animation(anim)
+            attacker.x = event.attacker_to[0]
+            attacker.y = event.attacker_to[1]
+
+        self.add_message(event.message, priority=2)
 
     @property
     def board_width(self) -> int:
@@ -376,252 +417,56 @@ class PresentationState:
         )
         return handler.handle(command)
 
+    def _execute_attack_command(self, tile_x: int, tile_y: int, enforce_visibility: bool) -> bool:
+        if not self.selected_knight:
+            return False
+
+        self._battle_context.fog_view_player = self.fog_view_player
+        handler = AttackUnitHandler(self._battle_context, self)
+        command = AttackUnitCommand(
+            attacker_id=id(self.selected_knight),
+            target_x=tile_x,
+            target_y=tile_y,
+            enforce_visibility=enforce_visibility,
+        )
+        return handler.handle(command)
+
+    def _execute_charge_command(self, tile_x: int, tile_y: int) -> bool:
+        if not self.selected_knight:
+            return False
+
+        self._battle_context.fog_view_player = self.fog_view_player
+        handler = ChargeUnitHandler(self._battle_context, self)
+        command = ChargeUnitCommand(
+            attacker_id=id(self.selected_knight),
+            target_x=tile_x,
+            target_y=tile_y,
+        )
+        return handler.handle(command)
+
     def attack_with_selected_knight_hex(self, tile_x, tile_y) -> bool:
         if not self.selected_knight or not self.selected_knight.can_attack():
             return False
-
-        hex_grid = HexGrid()
-        attacker_hex = hex_grid.offset_to_axial(
-            self.selected_knight.x,
-            self.selected_knight.y,
-        )
-        target_hex = hex_grid.offset_to_axial(tile_x, tile_y)
-        distance = attacker_hex.distance_to(target_hex)
-        attack_range = 1 if self.selected_knight.knight_class != KnightClass.ARCHER else 3
-
-        if distance <= attack_range:
-            target = self.battle_state.get_knight_at(tile_x, tile_y)
-            if not target or target.player_id == self.current_player:
-                return False
-
-            if hasattr(self.selected_knight, 'behaviors') and 'attack' in self.selected_knight.behaviors:
-                attack_behavior = self.selected_knight.behaviors['attack']
-                valid_targets = attack_behavior.get_valid_targets(
-                    self.selected_knight,
-                    self._require_game_state(),
-                )
-                if target not in valid_targets:
-                    return False
-                result = self.selected_knight.behaviors['attack'].execute(
-                    self.selected_knight,
-                    self._require_game_state(),
-                    target,
-                )
-                if result['success']:
-                    damage = result['damage']
-                    counter_damage = result.get('counter_damage', 0)
-                    attack_angle = result.get('attack_angle', None)
-                    extra_morale_penalty = result.get('extra_morale_penalty', 0)
-                    extra_cohesion_penalty = result.get('extra_cohesion_penalty', 0)
-                    should_check_routing = result.get('should_check_routing', False)
-
-                    anim = AttackAnimation(
-                        self.selected_knight,
-                        target,
-                        damage,
-                        counter_damage,
-                        attack_angle=attack_angle,
-                        extra_morale_penalty=extra_morale_penalty,
-                        extra_cohesion_penalty=extra_cohesion_penalty,
-                        should_check_routing=should_check_routing,
-                        game_state=self._game_state,
-                    )
-                    self.animation_coordinator.animation_manager.add_animation(anim)
-                else:
-                    return False
-            else:
-                self.selected_knight.has_attacked = True
-
-                damage = max(1, self.selected_knight.soldiers // 10)
-                target.take_casualties(damage, self._require_game_state())
-
-                ap_cost = 3
-                if hasattr(self.selected_knight, 'unit_class'):
-                    if self.selected_knight.unit_class == KnightClass.WARRIOR:
-                        ap_cost = 4
-                    elif self.selected_knight.unit_class == KnightClass.ARCHER:
-                        ap_cost = 2
-                    elif self.selected_knight.unit_class == KnightClass.CAVALRY:
-                        ap_cost = 3
-                    elif self.selected_knight.unit_class == KnightClass.MAGE:
-                        ap_cost = 2
-
-                if self.terrain_map:
-                    target_terrain = self.terrain_map.get_terrain(target.x, target.y)
-                    if target_terrain:
-                        terrain_movement_cost = target_terrain.movement_cost
-                        if terrain_movement_cost > 1.0:
-                            terrain_penalty = int((terrain_movement_cost - 1.0) * 2)
-                            ap_cost += terrain_penalty
-
-                self.selected_knight.action_points -= ap_cost
-
-                anim = AttackAnimation(
-                    self.selected_knight,
-                    target,
-                    damage,
-                    game_state=self._game_state,
-                )
-                self.animation_coordinator.animation_manager.add_animation(anim)
-
-            self.attack_targets = []
-            return True
-        return False
+        return self._execute_attack_command(tile_x, tile_y, enforce_visibility=True)
 
     def charge_with_selected_knight_hex(self, tile_x, tile_y) -> bool:
         if not self.selected_knight or self.selected_knight.knight_class != KnightClass.CAVALRY:
             return False
-
-        target = self.battle_state.get_knight_at(tile_x, tile_y)
-        if target and target.player_id != self.current_player:
-            start_x, start_y = self.selected_knight.x, self.selected_knight.y
-            target_start_x, target_start_y = target.x, target.y
-
-            success, message = self.selected_knight.execute_charge(
-                target,
-                self._require_game_state(),
-            )
-            if success:
-                if target.x != target_start_x or target.y != target_start_y:
-                    anim = MoveAnimation(
-                        self.selected_knight,
-                        start_x,
-                        start_y,
-                        target_start_x,
-                        target_start_y,
-                        game_state=self._game_state,
-                    )
-                    self.animation_coordinator.animation_manager.add_animation(anim)
-                    self.selected_knight.x = target_start_x
-                    self.selected_knight.y = target_start_y
-
-                self.add_message(message, priority=2)
-                return True
-
-        return False
+        return self._execute_charge_command(tile_x, tile_y)
 
     def attack_with_selected_knight(self, x, y) -> bool:
         if not self.selected_knight or not self.selected_knight.can_attack():
             return False
 
         tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
-
-        hex_grid = HexGrid()
-        attacker_hex = hex_grid.offset_to_axial(
-            self.selected_knight.x,
-            self.selected_knight.y,
-        )
-        target_hex = hex_grid.offset_to_axial(tile_x, tile_y)
-        distance = attacker_hex.distance_to(target_hex)
-        attack_range = 1 if self.selected_knight.knight_class != KnightClass.ARCHER else 3
-
-        if distance <= attack_range:
-            target = self.battle_state.get_knight_at(tile_x, tile_y)
-            if target and target.player_id != self.current_player:
-                attacker_terrain = self.terrain_map.get_terrain(
-                    self.selected_knight.x,
-                    self.selected_knight.y,
-                )
-                target_terrain = self.terrain_map.get_terrain(target.x, target.y)
-
-                if hasattr(self.selected_knight, 'behaviors') and 'attack' in self.selected_knight.behaviors:
-                    result = self.selected_knight.behaviors['attack'].execute(
-                        self.selected_knight,
-                        self._require_game_state(),
-                        target,
-                    )
-                    if result['success']:
-                        damage = result['damage']
-                        counter_damage = result.get('counter_damage', 0)
-                        attack_angle = result.get('attack_angle', None)
-                        extra_morale_penalty = result.get('extra_morale_penalty', 0)
-                        extra_cohesion_penalty = result.get('extra_cohesion_penalty', 0)
-                        should_check_routing = result.get('should_check_routing', False)
-
-                        anim = AttackAnimation(
-                            self.selected_knight,
-                            target,
-                            damage,
-                            counter_damage,
-                            attack_angle=attack_angle,
-                            extra_morale_penalty=extra_morale_penalty,
-                            extra_cohesion_penalty=extra_cohesion_penalty,
-                            should_check_routing=should_check_routing,
-                            game_state=self._game_state,
-                        )
-                        self.animation_coordinator.animation_manager.add_animation(anim)
-                else:
-                    damage = self.selected_knight.calculate_damage(
-                        target,
-                        attacker_terrain,
-                        target_terrain,
-                    )
-                    self.selected_knight.consume_attack_ap()
-
-                    counter_damage = 0
-                    if distance == 1:
-                        counter_damage = target.calculate_counter_damage(
-                            self.selected_knight,
-                            attacker_terrain,
-                            target_terrain,
-                        )
-
-                    anim = AttackAnimation(
-                        self.selected_knight,
-                        target,
-                        damage,
-                        counter_damage,
-                        game_state=self._game_state,
-                    )
-                    self.animation_coordinator.animation_manager.add_animation(anim)
-
-                if counter_damage > 0:
-                    self.add_message(
-                        f"{self.selected_knight.name} attacks {target.name} for "
-                        f"{damage} damage! Takes {counter_damage} in return!"
-                    )
-                else:
-                    self.add_message(
-                        f"{self.selected_knight.name} attacks {target.name} for {damage} damage!"
-                    )
-
-                return True
-
-        return False
+        return self._execute_attack_command(tile_x, tile_y, enforce_visibility=False)
 
     def charge_with_selected_knight(self, x, y) -> bool:
         if not self.selected_knight or self.selected_knight.knight_class != KnightClass.CAVALRY:
             return False
 
         tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
-
-        target = self.battle_state.get_knight_at(tile_x, tile_y)
-        if target and target.player_id != self.current_player:
-            start_x, start_y = self.selected_knight.x, self.selected_knight.y
-            target_start_x, target_start_y = target.x, target.y
-
-            success, message = self.selected_knight.execute_charge(
-                target,
-                self._require_game_state(),
-            )
-            if success:
-                if target.x != target_start_x or target.y != target_start_y:
-                    anim = MoveAnimation(
-                        self.selected_knight,
-                        start_x,
-                        start_y,
-                        target_start_x,
-                        target_start_y,
-                        game_state=self._game_state,
-                    )
-                    self.animation_coordinator.animation_manager.add_animation(anim)
-                    self.selected_knight.x = target_start_x
-                    self.selected_knight.y = target_start_y
-
-                self.add_message(message, priority=2)
-                return True
-
-        return False
+        return self._execute_charge_command(tile_x, tile_y)
 
     def set_action_mode(self, action) -> None:
         if action == 'move' and self.selected_knight and self.selected_knight.can_move():
