@@ -126,6 +126,8 @@ class AttackBehavior(Behavior):
             
         # Consume AP (including terrain penalty)
         ap_cost = self.get_ap_cost(unit, target, game_state)
+        if unit.action_points < ap_cost:
+            return {'success': False, 'reason': 'Not enough action points'}
         unit.action_points -= ap_cost
         # Mark unit as having acted this turn
         unit.has_acted = True

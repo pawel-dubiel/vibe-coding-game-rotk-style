@@ -433,6 +433,8 @@ class AIPlayer:
         max_actions = max(20, len(game_state.knights) * 2)
         
         for _ in range(max_actions):
+            if not self._has_actionable_units(game_state):
+                break
             action = self.choose_action(game_state)
             if not action:
                 break
@@ -465,22 +467,45 @@ class AIPlayer:
                         actions_taken.append(f"{knight.name} moved to ({target_x}, {target_y})")
             
             elif move_type == 'attack':
-                if knight.can_attack():
-                    target = action[2]
-                    # Get terrain for combat calculation
-                    attacker_terrain = None
-                    target_terrain = None
-                    if hasattr(game_state, 'terrain_map'):
-                        attacker_terrain = game_state.terrain_map.get_terrain(knight.x, knight.y)
-                        target_terrain = game_state.terrain_map.get_terrain(target.x, target.y)
-                    
-                    damage = knight.calculate_damage(target, attacker_terrain, target_terrain)
-                    knight.consume_attack_ap()
-                    
-                    # Add animation - animation will apply damage when projectile hits
-                    anim = AttackAnimation(knight, target, damage, game_state=game_state)
-                    game_state.animation_coordinator.animation_manager.add_animation(anim)
-                    
-                    actions_taken.append(f"{knight.name} attacked {target.name} for {damage} damage")
+                attack_behavior = knight.behaviors.get('attack')
+                if not attack_behavior:
+                    continue
+                if not attack_behavior.can_execute(knight, game_state):
+                    continue
+
+                target = action[2]
+                result = attack_behavior.execute(knight, game_state, target)
+                if not result.get('success'):
+                    continue
+
+                damage = result.get('damage', 0)
+                counter_damage = result.get('counter_damage', 0)
+                attack_angle = result.get('attack_angle', None)
+                extra_morale_penalty = result.get('extra_morale_penalty', 0)
+                extra_cohesion_penalty = result.get('extra_cohesion_penalty', 0)
+                should_check_routing = result.get('should_check_routing', False)
+
+                anim = AttackAnimation(
+                    knight,
+                    target,
+                    damage,
+                    counter_damage,
+                    attack_angle=attack_angle,
+                    extra_morale_penalty=extra_morale_penalty,
+                    extra_cohesion_penalty=extra_cohesion_penalty,
+                    should_check_routing=should_check_routing,
+                    game_state=game_state,
+                )
+                game_state.animation_coordinator.animation_manager.add_animation(anim)
+
+                actions_taken.append(f"{knight.name} attacked {target.name} for {damage} damage")
         
         return actions_taken
+
+    def _has_actionable_units(self, game_state) -> bool:
+        for knight in game_state.knights:
+            if knight.player_id != self.player_id:
+                continue
+            if knight.can_move() or knight.can_attack():
+                return True
+        return False
