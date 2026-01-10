@@ -22,19 +22,19 @@ class BattleSetupScreen:
         self.battle_configs = {
             BattleSize.SMALL: {
                 "description": "Small Battle",
-                "knights": 3,
+                "knights": 10,
                 "castles": 1,
                 "board_size": (15, 15)
             },
             BattleSize.MEDIUM: {
                 "description": "Medium Battle",
-                "knights": 5,
+                "knights": 15,
                 "castles": 2,
                 "board_size": (20, 20)
             },
             BattleSize.LARGE: {
                 "description": "Large Battle",
-                "knights": 8,
+                "knights": 20,
                 "castles": 3,
                 "board_size": (25, 25)
             }

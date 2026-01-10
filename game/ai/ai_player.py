@@ -73,12 +73,20 @@ class AIPlayer:
         bonus = 0
         
         center_x, center_y = game_state.board_width // 2, game_state.board_height // 2
-        distance_to_center = abs(knight.x - center_x) + abs(knight.y - center_y)
+        
+        # Use hex distance for position evaluation
+        hex_grid = HexGrid()
+        knight_hex = hex_grid.offset_to_axial(knight.x, knight.y)
+        center_hex = hex_grid.offset_to_axial(center_x, center_y)
+        distance_to_center = knight_hex.distance_to(center_hex)
         bonus += (10 - distance_to_center) * 2
         
         enemy_castle_idx = 0 if self.player_id == 2 else 1
         enemy_castle = game_state.castles[enemy_castle_idx]
-        distance_to_enemy_castle = abs(knight.x - enemy_castle.center_x) + abs(knight.y - enemy_castle.center_y)
+        
+        # Calculate distance to enemy castle
+        enemy_castle_hex = hex_grid.offset_to_axial(enemy_castle.center_x, enemy_castle.center_y)
+        distance_to_enemy_castle = knight_hex.distance_to(enemy_castle_hex)
         bonus += (15 - distance_to_enemy_castle) * 3
         
         # Terrain position bonus
@@ -105,6 +113,8 @@ class AIPlayer:
         
         # Get fog of war system
         fog_of_war = getattr(game_state, 'fog_of_war', None)
+        hex_grid = HexGrid()
+        knight_hex = hex_grid.offset_to_axial(knight.x, knight.y)
         
         # Check threats from different directions
         for enemy in game_state.knights:
@@ -117,10 +127,9 @@ class AIPlayer:
                 if visibility not in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]:
                     continue
                 
-            # Calculate distance
-            dx = abs(knight.x - enemy.x)
-            dy = abs(knight.y - enemy.y)
-            distance = max(dx, dy)
+            # Calculate distance using hex grid
+            enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
+            distance = knight_hex.distance_to(enemy_hex)
             
             # Only consider nearby threats (but not on same position)
             if 0 < distance <= 3:
@@ -177,6 +186,7 @@ class AIPlayer:
     
     def get_all_possible_moves(self, game_state):
         moves = []
+        hex_grid = HexGrid()
         
         for knight in game_state.knights:
             if knight.player_id != self.player_id:
@@ -205,6 +215,7 @@ class AIPlayer:
             
             if knight.can_attack():
                 attack_range = 1 if knight.knight_class != KnightClass.ARCHER else 3
+                knight_hex = hex_grid.offset_to_axial(knight.x, knight.y)
                 
                 # Get fog of war system
                 fog_of_war = getattr(game_state, 'fog_of_war', None)
@@ -219,7 +230,10 @@ class AIPlayer:
                         if visibility != VisibilityState.VISIBLE:
                             continue  # Need full visibility to attack
                     
-                    distance = abs(knight.x - enemy.x) + abs(knight.y - enemy.y)
+                    # Calculate proper hex distance
+                    enemy_hex = hex_grid.offset_to_axial(enemy.x, enemy.y)
+                    distance = knight_hex.distance_to(enemy_hex)
+                    
                     if distance <= attack_range:
                         # Calculate attack value considering facing
                         attack_value = self._evaluate_attack(knight, enemy)

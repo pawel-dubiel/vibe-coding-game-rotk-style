@@ -107,6 +107,7 @@ class TestEnhancedAttackSystem:
         warrior.cohesion = CombatConfig.COHESION_ATTACK_THRESHOLD + 10
         target = UnitFactory.create_unit("Target", KnightClass.WARRIOR, 5, 5)
         target.player_id = 2
+        target.stats.stats.attack_per_soldier = 0  # Prevent counter-damage morale loss
         
         self.game_state.add_knight(warrior)
         self.game_state.add_knight(target)

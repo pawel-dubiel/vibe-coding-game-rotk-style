@@ -43,11 +43,11 @@ class TestMovementPathfinding:
         self.unit.action_points = 10
         
         # Get path to specific location
-        path = movement.get_path_to(self.unit, self.game_state, 3, 2)
+        path = movement.get_path_to(self.unit, self.game_state, 0, 5)
         
         assert path is not None
         assert len(path) > 0
-        assert path[-1] == (3, 2)
+        assert path[-1] == (0, 5)
         
     def test_movement_respects_terrain_costs(self):
         """Test movement considers terrain costs with pathfinding"""

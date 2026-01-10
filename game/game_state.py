@@ -52,14 +52,14 @@ class GameState(IGameState):
             self.is_campaign_battle = battle_config.get('campaign_battle', False)
             self.attacker_army = battle_config.get('attacker_army')
             self.defender_army = battle_config.get('defender_army')
+            self.attacker_army = None
+            self.defender_army = None
         else:
             self.board_width = 16
             self.board_height = 12
             self.knights_per_player = 3
             self.castles_per_player = 1
             self.is_campaign_battle = False
-            self.attacker_army = None
-            self.defender_army = None
         
         self.tile_size = 64
         
