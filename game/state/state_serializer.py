@@ -234,6 +234,9 @@ class StateSerializer:
                 add_generals=False  # We'll restore generals separately
             )
             
+            # Set game state reference
+            unit.game_state = game_state
+            
             # Restore unit properties
             unit.player_id = unit_data['player_id']
             unit.has_moved = unit_data['has_moved']
