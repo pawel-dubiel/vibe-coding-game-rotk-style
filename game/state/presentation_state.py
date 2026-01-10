@@ -4,6 +4,10 @@ from __future__ import annotations
 from typing import Optional
 
 from game.ai.ai_player import AIPlayer
+from game.battle.adapters.battle_context import BattleContextAdapter
+from game.battle.application.commands import MoveUnitCommand
+from game.battle.application.handlers import MoveUnitHandler
+from game.battle.domain.events import UnitMoved
 from game.behaviors.movement_service import MovementService
 from game.entities.knight import KnightClass
 from game.hex_layout import HexLayout
@@ -30,6 +34,10 @@ class PresentationState:
         self._game_state = None
         self.battle_state = battle_state
         self.vs_ai = vs_ai
+        self._battle_context = BattleContextAdapter(
+            self.battle_state,
+            fog_view_player=self.fog_view_player,
+        )
 
         self.tile_size = 64
         self.screen_width = screen_width
@@ -86,6 +94,54 @@ class PresentationState:
         if self._game_state is None:
             raise ValueError("PresentationState is not bound to GameState")
         return self._game_state
+
+    def publish(self, event) -> None:
+        if isinstance(event, UnitMoved):
+            self._handle_unit_moved(event)
+            return
+        raise ValueError(f"Unsupported event type: {type(event).__name__}")
+
+    def _get_unit_by_id(self, unit_id: int):
+        for unit in self.battle_state.knights:
+            if id(unit) == unit_id:
+                return unit
+        raise ValueError(f"unit_id not found: {unit_id}")
+
+    def _handle_unit_moved(self, event: UnitMoved) -> None:
+        unit = self._get_unit_by_id(event.unit_id)
+        if event.use_path_animation and not event.path:
+            raise ValueError("UnitMoved requires path for path animation")
+        self.pending_positions[event.unit_id] = (event.to_x, event.to_y)
+
+        if event.path:
+            full_path = event.path
+            if full_path[0] != (event.from_x, event.from_y):
+                full_path = [(event.from_x, event.from_y)] + full_path
+        else:
+            full_path = [(event.from_x, event.from_y), (event.to_x, event.to_y)]
+
+        self.movement_history[event.unit_id] = full_path
+
+        if event.use_path_animation:
+            anim = PathMoveAnimation(
+                unit,
+                event.path,
+                step_duration=0.25,
+                game_state=self._game_state,
+                final_face_target=event.final_face_target,
+            )
+        else:
+            anim = MoveAnimation(
+                unit,
+                event.from_x,
+                event.from_y,
+                event.to_x,
+                event.to_y,
+                game_state=self._game_state,
+            )
+        self.animation_coordinator.animation_manager.add_animation(anim)
+        self.possible_moves = []
+        self._fog_update_needed = True
 
     @property
     def board_width(self) -> int:
@@ -297,158 +353,28 @@ class PresentationState:
             return False
 
         tile_x, tile_y = self.hex_layout.pixel_to_hex(x, y)
-
-        if (tile_x, tile_y) in self.possible_moves:
-            move_behavior = self.selected_knight.behaviors.get('move')
-            if move_behavior:
-                path = move_behavior.get_path_to(
-                    self.selected_knight,
-                    self._require_game_state(),
-                    tile_x,
-                    tile_y,
-                )
-
-                if path:
-                    total_ap_cost = 0
-                    current_pos = (self.selected_knight.x, self.selected_knight.y)
-                    for next_pos in path:
-                        step_cost = move_behavior.get_ap_cost(
-                            current_pos,
-                            next_pos,
-                            self.selected_knight,
-                            self._require_game_state(),
-                        )
-                        total_ap_cost += step_cost
-                        current_pos = next_pos
-
-                    self.selected_knight.action_points -= total_ap_cost
-                    self.selected_knight.has_moved = True
-
-                    self.pending_positions[id(self.selected_knight)] = (tile_x, tile_y)
-
-                    full_path = [(self.selected_knight.x, self.selected_knight.y)] + path
-                    self.movement_history[id(self.selected_knight)] = full_path
-
-                    final_face_target = move_behavior.get_auto_face_target(
-                        self.selected_knight,
-                        self._require_game_state(),
-                        tile_x,
-                        tile_y,
-                    )
-
-                    anim = PathMoveAnimation(
-                        self.selected_knight,
-                        path,
-                        step_duration=0.25,
-                        game_state=self._game_state,
-                        final_face_target=final_face_target,
-                    )
-                    self.animation_coordinator.animation_manager.add_animation(anim)
-
-                    self.possible_moves = []
-                    self._fog_update_needed = True
-                    return True
-            else:
-                self.selected_knight.consume_move_ap()
-                self.pending_positions[id(self.selected_knight)] = (tile_x, tile_y)
-                start_x, start_y = self.selected_knight.x, self.selected_knight.y
-
-                self.movement_history[id(self.selected_knight)] = [
-                    (start_x, start_y),
-                    (tile_x, tile_y),
-                ]
-
-                anim = MoveAnimation(
-                    self.selected_knight,
-                    start_x,
-                    start_y,
-                    tile_x,
-                    tile_y,
-                    game_state=self._game_state,
-                )
-                self.animation_coordinator.animation_manager.add_animation(anim)
-                self.possible_moves = []
-                self._fog_update_needed = True
-                return True
-        return False
+        return self._execute_move_command(tile_x, tile_y)
 
     def move_selected_knight_hex(self, tile_x, tile_y) -> bool:
         if not self.selected_knight:
             return False
 
-        if (tile_x, tile_y) in self.possible_moves:
-            move_behavior = self.selected_knight.behaviors.get('move')
-            if move_behavior:
-                path = move_behavior.get_path_to(
-                    self.selected_knight,
-                    self._require_game_state(),
-                    tile_x,
-                    tile_y,
-                )
+        return self._execute_move_command(tile_x, tile_y)
 
-                if path:
-                    total_ap_cost = 0
-                    current_pos = (self.selected_knight.x, self.selected_knight.y)
-                    for next_pos in path:
-                        step_cost = move_behavior.get_ap_cost(
-                            current_pos,
-                            next_pos,
-                            self.selected_knight,
-                            self._require_game_state(),
-                        )
-                        total_ap_cost += step_cost
-                        current_pos = next_pos
+    def _execute_move_command(self, tile_x: int, tile_y: int) -> bool:
+        if not self.selected_knight:
+            return False
+        if (tile_x, tile_y) not in self.possible_moves:
+            return False
 
-                    self.selected_knight.action_points -= total_ap_cost
-                    self.selected_knight.has_moved = True
-
-                    self.pending_positions[id(self.selected_knight)] = (tile_x, tile_y)
-
-                    full_path = [(self.selected_knight.x, self.selected_knight.y)] + path
-                    self.movement_history[id(self.selected_knight)] = full_path
-
-                    final_face_target = move_behavior.get_auto_face_target(
-                        self.selected_knight,
-                        self._require_game_state(),
-                        tile_x,
-                        tile_y,
-                    )
-
-                    anim = PathMoveAnimation(
-                        self.selected_knight,
-                        path,
-                        step_duration=0.25,
-                        game_state=self._game_state,
-                        final_face_target=final_face_target,
-                    )
-                    self.animation_coordinator.animation_manager.add_animation(anim)
-
-                    self.possible_moves = []
-                    self._fog_update_needed = True
-                    return True
-            else:
-                self.selected_knight.consume_move_ap()
-                self.pending_positions[id(self.selected_knight)] = (tile_x, tile_y)
-                start_x, start_y = self.selected_knight.x, self.selected_knight.y
-
-                self.movement_history[id(self.selected_knight)] = [
-                    (start_x, start_y),
-                    (tile_x, tile_y),
-                ]
-
-                anim = MoveAnimation(
-                    self.selected_knight,
-                    start_x,
-                    start_y,
-                    tile_x,
-                    tile_y,
-                    game_state=self._game_state,
-                )
-                self.animation_coordinator.animation_manager.add_animation(anim)
-                self.possible_moves = []
-                self._fog_update_needed = True
-                return True
-        return False
+        self._battle_context.fog_view_player = self.fog_view_player
+        handler = MoveUnitHandler(self._battle_context, self)
+        command = MoveUnitCommand(
+            unit_id=id(self.selected_knight),
+            to_x=tile_x,
+            to_y=tile_y,
+        )
+        return handler.handle(command)
 
     def attack_with_selected_knight_hex(self, tile_x, tile_y) -> bool:
         if not self.selected_knight or not self.selected_knight.can_attack():

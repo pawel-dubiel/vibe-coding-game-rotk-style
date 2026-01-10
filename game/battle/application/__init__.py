@@ -1,0 +1,1 @@
+"""Battle application layer."""
