@@ -1,6 +1,7 @@
 import random
 from game.entities.knight import KnightClass
-from game.hex_utils import HexGrid
+from game.hex_utils import HexCoord, HexGrid
+from game.components.facing import FacingDirection
 from game.visibility import VisibilityState
 
 class AIPlayer:
@@ -8,7 +9,8 @@ class AIPlayer:
         self.player_id = player_id
         self.difficulty = difficulty
         self.thinking_time = 0.5
-        
+        self._hex_grid = HexGrid()
+
     def evaluate_position(self, game_state):
         score = 0
         
@@ -26,9 +28,11 @@ class AIPlayer:
             position_bonus = self._get_position_bonus(knight, game_state)
             
             if knight.player_id == self.player_id:
-                score += knight_value + position_bonus
+                line_bonus = self._get_line_bonus(knight, game_state)
+                score += knight_value + position_bonus + line_bonus
             else:
-                score -= knight_value + position_bonus
+                line_bonus = self._get_line_bonus(knight, game_state)
+                score -= knight_value + position_bonus + line_bonus
         
         for i, castle in enumerate(game_state.castles):
             castle_value = (castle.health / castle.max_health) * 1000
@@ -106,6 +110,84 @@ class AIPlayer:
             bonus += facing_bonus
         
         return bonus
+
+    def _get_line_bonus(self, knight, game_state):
+        """Reward formations that form a line facing visible enemies."""
+        if not hasattr(knight, 'facing'):
+            return 0
+        if getattr(knight, 'is_garrisoned', False):
+            return 0
+
+        fog_of_war = getattr(game_state, 'fog_of_war', None)
+        enemies = []
+        for enemy in game_state.knights:
+            if enemy.player_id == knight.player_id:
+                continue
+            if fog_of_war:
+                visibility = fog_of_war.get_visibility_state(self.player_id, enemy.x, enemy.y)
+                if visibility not in [VisibilityState.VISIBLE, VisibilityState.PARTIAL]:
+                    continue
+            enemies.append(enemy)
+
+        if not enemies:
+            return 0
+
+        knight_hex = self._hex_grid.offset_to_axial(knight.x, knight.y)
+        nearest_enemy = min(
+            enemies,
+            key=lambda e: knight_hex.distance_to(self._hex_grid.offset_to_axial(e.x, e.y)),
+        )
+
+        attack_angle = knight.facing.get_attack_angle(
+            nearest_enemy.x,
+            nearest_enemy.y,
+            knight.x,
+            knight.y,
+        )
+        if not attack_angle.is_frontal:
+            return 0
+
+        left_dir, right_dir = knight.facing.facing.get_adjacent_directions()
+        left_count = self._count_line_units(knight, game_state, left_dir)
+        right_count = self._count_line_units(knight, game_state, right_dir)
+
+        if left_count == 0 or right_count == 0:
+            return 0
+
+        line_length = 1 + left_count + right_count
+        return 8 + (line_length - 2) * 4
+
+    def _count_line_units(self, knight, game_state, facing_direction):
+        direction = self._facing_to_axial_delta(facing_direction)
+        if direction is None:
+            return 0
+
+        count = 0
+        origin = self._hex_grid.offset_to_axial(knight.x, knight.y)
+        for step in range(1, 4):
+            target = type(origin)(origin.q + direction.q * step, origin.r + direction.r * step)
+            target_x, target_y = self._hex_grid.axial_to_offset(target)
+            if not (0 <= target_x < game_state.board_width and 0 <= target_y < game_state.board_height):
+                break
+            unit = game_state.get_knight_at(target_x, target_y)
+            if unit is None or unit.player_id != knight.player_id:
+                break
+            if getattr(unit, 'is_garrisoned', False):
+                break
+            count += 1
+        return count
+
+    @staticmethod
+    def _facing_to_axial_delta(facing_direction):
+        mapping = {
+            FacingDirection.EAST: HexCoord(1, 0),
+            FacingDirection.SOUTH_EAST: HexCoord(0, 1),
+            FacingDirection.SOUTH_WEST: HexCoord(-1, 1),
+            FacingDirection.WEST: HexCoord(-1, 0),
+            FacingDirection.NORTH_WEST: HexCoord(0, -1),
+            FacingDirection.NORTH_EAST: HexCoord(1, -1),
+        }
+        return mapping.get(facing_direction)
     
     def _evaluate_facing_position(self, knight, game_state):
         """Evaluate how well positioned unit is based on facing"""
