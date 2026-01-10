@@ -125,6 +125,24 @@ class TestUnitBehaviors(unittest.TestCase):
         self.game_state.knights = [attacker, defender]
 
         self.assertFalse(attacker.can_execute_behavior('attack', self.game_state))
+
+    def test_routing_units_cannot_move(self):
+        """Test routing units cannot move"""
+        mover = UnitFactory.create_warrior("Mover", 5, 5)
+        mover.player_id = 1
+        mover.is_routing = True
+        next_tile = (6, 5)
+
+        self.game_state.knights = [mover]
+
+        possible_moves = mover.get_possible_moves(
+            self.game_state.board_width,
+            self.game_state.board_height,
+            self.game_state.terrain_map,
+            self.game_state,
+        )
+        self.assertNotIn(next_tile, possible_moves)
+        self.assertFalse(mover.can_move())
         
     def test_cavalry_charge(self):
         """Test cavalry charge behavior"""

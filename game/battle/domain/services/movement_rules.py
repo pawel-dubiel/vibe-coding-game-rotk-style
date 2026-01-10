@@ -11,6 +11,8 @@ class MovementRules:
             raise ValueError("unit is required for movement resolution")
         if game_state is None:
             raise ValueError("game_state is required for movement resolution")
+        if unit.is_routing:
+            return None
 
         move_behavior = unit.behaviors.get('move') if hasattr(unit, 'behaviors') else None
         if move_behavior:

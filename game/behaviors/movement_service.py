@@ -126,6 +126,9 @@ class MovementService:
         """Check basic movement prerequisites for a unit."""
         if not unit:
             return False
+
+        if unit.is_routing:
+            return False
         
         # Unit must have action points
         if unit.action_points <= 0:

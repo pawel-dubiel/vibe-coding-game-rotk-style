@@ -14,8 +14,9 @@ class AIPlayer:
     def evaluate_position(self, game_state):
         score = 0
         
-        # Get fog of war system
-        fog_of_war = getattr(game_state, 'fog_of_war', None)
+        if not hasattr(game_state, 'fog_of_war'):
+            raise AttributeError("game_state.fog_of_war is required for AI evaluation")
+        fog_of_war = game_state.fog_of_war
         
         for knight in game_state.knights:
             # Only evaluate units we can see
@@ -114,11 +115,15 @@ class AIPlayer:
     def _get_line_bonus(self, knight, game_state):
         """Reward formations that form a line facing visible enemies."""
         if not hasattr(knight, 'facing'):
-            return 0
-        if getattr(knight, 'is_garrisoned', False):
+            raise AttributeError("Knight missing facing component for line bonus evaluation")
+        if not hasattr(knight, 'is_garrisoned'):
+            raise AttributeError("Knight missing is_garrisoned flag for line bonus evaluation")
+        if knight.is_garrisoned:
             return 0
 
-        fog_of_war = getattr(game_state, 'fog_of_war', None)
+        if not hasattr(game_state, 'fog_of_war'):
+            raise AttributeError("game_state.fog_of_war is required for line bonus evaluation")
+        fog_of_war = game_state.fog_of_war
         enemies = []
         for enemy in game_state.knights:
             if enemy.player_id == knight.player_id:
@@ -159,8 +164,6 @@ class AIPlayer:
 
     def _count_line_units(self, knight, game_state, facing_direction):
         direction = self._facing_to_axial_delta(facing_direction)
-        if direction is None:
-            return 0
 
         count = 0
         origin = self._hex_grid.offset_to_axial(knight.x, knight.y)
@@ -172,7 +175,9 @@ class AIPlayer:
             unit = game_state.get_knight_at(target_x, target_y)
             if unit is None or unit.player_id != knight.player_id:
                 break
-            if getattr(unit, 'is_garrisoned', False):
+            if not hasattr(unit, 'is_garrisoned'):
+                raise AttributeError("Unit missing is_garrisoned flag for line bonus evaluation")
+            if unit.is_garrisoned:
                 break
             count += 1
         return count
@@ -187,14 +192,17 @@ class AIPlayer:
             FacingDirection.NORTH_WEST: HexCoord(0, -1),
             FacingDirection.NORTH_EAST: HexCoord(1, -1),
         }
-        return mapping.get(facing_direction)
+        if facing_direction not in mapping:
+            raise ValueError(f"Unsupported facing direction: {facing_direction}")
+        return mapping[facing_direction]
     
     def _evaluate_facing_position(self, knight, game_state):
         """Evaluate how well positioned unit is based on facing"""
         bonus = 0
         
-        # Get fog of war system
-        fog_of_war = getattr(game_state, 'fog_of_war', None)
+        if not hasattr(game_state, 'fog_of_war'):
+            raise AttributeError("game_state.fog_of_war is required for facing evaluation")
+        fog_of_war = game_state.fog_of_war
         hex_grid = HexGrid()
         knight_hex = hex_grid.offset_to_axial(knight.x, knight.y)
         
@@ -299,8 +307,9 @@ class AIPlayer:
                 attack_range = 1 if knight.knight_class != KnightClass.ARCHER else 3
                 knight_hex = hex_grid.offset_to_axial(knight.x, knight.y)
                 
-                # Get fog of war system
-                fog_of_war = getattr(game_state, 'fog_of_war', None)
+                if not hasattr(game_state, 'fog_of_war'):
+                    raise AttributeError("game_state.fog_of_war is required for attack evaluation")
+                fog_of_war = game_state.fog_of_war
                 
                 for enemy in game_state.knights:
                     if enemy.player_id == self.player_id:
@@ -391,6 +400,7 @@ class AIPlayer:
                 self._board_height = 0
                 self._current_player = 1
                 self._terrain_map = None
+                self._fog_of_war = None
                 
             @property
             def board_width(self):
@@ -415,6 +425,10 @@ class AIPlayer:
             @property
             def current_player(self):
                 return self._current_player
+
+            @property
+            def fog_of_war(self):
+                return self._fog_of_war
                 
             def get_knight_at(self, tile_x, tile_y):
                 for knight in self.knights:
@@ -435,6 +449,10 @@ class AIPlayer:
         # Copy terrain_map reference (static)
         if hasattr(game_state, 'terrain_map'):
             state_copy._terrain_map = game_state.terrain_map
+        if hasattr(game_state, 'fog_of_war'):
+            state_copy._fog_of_war = game_state.fog_of_war
+        else:
+            raise AttributeError("game_state.fog_of_war is required for AI simulation")
         
         move_type = move[0]
         knight = None

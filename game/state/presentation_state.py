@@ -350,6 +350,10 @@ class PresentationState:
                 and knight.y == tile_y
                 and knight.player_id == self.current_player
             ):
+                if knight.is_routing:
+                    self.add_message(f"{knight.name} is routing and cannot be controlled.", priority=1)
+                    self.deselect_knight()
+                    return False
                 self.selected_knight = knight
                 knight.selected = True
                 if knight.can_move():

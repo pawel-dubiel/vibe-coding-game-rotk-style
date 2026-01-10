@@ -141,23 +141,23 @@ class TestAutoFacing(unittest.TestCase):
         self.assertEqual(player.facing.facing, FacingDirection.WEST)
 
     def test_no_autoface_if_routing(self):
-        """Test routing units do NOT auto-face enemies (they flee)"""
+        """Test routing units cannot be controlled to move"""
         enemy = self._add_unit(KnightClass.WARRIOR, 5, 5, 2, "Enemy")
         player = self._add_unit(KnightClass.WARRIOR, 3, 5, 1, "Player")
         player.is_routing = True
         player.facing.facing = FacingDirection.EAST # Start facing East
         
-        # Move AWAY (Routing units can only move away)
-        # (3, 5) -> (2, 5) is West. Enemy is East.
+        # Attempt to move while routing
         target_x, target_y = 2, 5
         self._prepare_move(player, target_x, target_y)
     
         px, py = self._get_screen_pos(target_x, target_y)
-        self.game_state.move_selected_knight(px, py)
+        result = self.game_state.move_selected_knight(px, py)
         self._flush_animations()
     
-        # Should face movement direction (WEST) because routing disables auto-face (which would face EAST/Enemy)
-        self.assertEqual(player.facing.facing, FacingDirection.WEST)
+        self.assertFalse(result)
+        self.assertEqual((player.x, player.y), (3, 5))
+        self.assertEqual(player.facing.facing, FacingDirection.EAST)
 
     def test_archer_ranged_autoface(self):
         """Test archer faces target when attacking from range"""

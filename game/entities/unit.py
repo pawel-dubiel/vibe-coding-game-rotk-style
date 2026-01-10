@@ -487,6 +487,8 @@ class Unit:
         
     def can_move(self) -> bool:
         """Check if unit can move - for compatibility"""
+        if self.is_routing:
+            return False
         return 'move' in self.behaviors and self.behaviors['move'].can_execute(self, None)
         
     def can_attack(self) -> bool:

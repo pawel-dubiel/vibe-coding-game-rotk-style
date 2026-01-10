@@ -20,10 +20,9 @@ class MovementBehavior(Behavior):
         """Check if unit can move"""
         if unit.action_points < 1 or unit.has_moved:  # Need at least 1 AP to move
             return False
-            
-        # Routing units always try to move
+        
         if unit.is_routing:
-            return True
+            return False
             
         # Units can always move - ZOC restrictions are handled in get_possible_moves
         # This allows units to enter ZOC to engage enemies
