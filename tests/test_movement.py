@@ -324,7 +324,7 @@ class TestMovement(unittest.TestCase):
         
         # Set warrior as in enemy ZOC with low morale (so can't disengage)
         self.warrior.in_enemy_zoc = True
-        self.warrior.engaged_with = self.archer
+        self.warrior.zoc_enemy = self.archer
         self.warrior.stats.stats.morale = 50  # Low morale, can't disengage
         
         moves = move_behavior.get_possible_moves(self.warrior, self.game_state)

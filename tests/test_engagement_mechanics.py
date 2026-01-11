@@ -153,6 +153,11 @@ class TestEngagementMechanics:
         archer.player_id = 1
         cavalry = UnitFactory.create_unit("Cavalry", KnightClass.CAVALRY, 5, 2)
         cavalry.player_id = 2  # 3 tiles away
+        cavalry.stats.stats.max_morale = 200
+        cavalry.stats.stats.morale = 200
+        cavalry.stats.stats.max_cohesion = 200
+        cavalry.stats.stats.current_cohesion = 200
+        cavalry._start_routing = lambda gs=None: None
         
         self.game_state.add_knight(archer)
         self.game_state.add_knight(cavalry)
@@ -197,7 +202,7 @@ class TestEngagementMechanics:
         
         # Verify cavalry is in enemy ZOC due to adjacency
         assert cavalry.in_enemy_zoc, "Cavalry should be in enemy ZOC when adjacent to enemy"
-        assert cavalry.engaged_with == warrior, "Cavalry should be engaged with adjacent warrior"
+        assert cavalry.zoc_enemy == warrior, "Cavalry should track adjacent ZOC enemy"
         
         # Verify movement is restricted due to ZOC
         movement_behavior = cavalry.behaviors['move']

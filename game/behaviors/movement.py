@@ -142,8 +142,9 @@ class MovementBehavior(Behavior):
         # Special handling for units in ZOC
         if unit.in_enemy_zoc and not self._can_disengage_from_zoc(unit):
             # Can only move to attack the engaging enemy
-            if unit.engaged_with:
-                return [(unit.engaged_with.x, unit.engaged_with.y)]
+            enemy = unit.engaged_with or unit.zoc_enemy
+            if enemy:
+                return [(enemy.x, enemy.y)]
             return []
             
         # Routing units move differently
@@ -230,20 +231,17 @@ class MovementBehavior(Behavior):
                 if unit.morale >= 75:
                     return True
         
-        # Check if unit is heavy and engaged with another heavy unit
+        engaged_enemy = unit.engaged_with or unit.zoc_enemy
         if hasattr(unit, 'is_heavy_unit') and unit.is_heavy_unit():
-            # Check if engaged with a heavy enemy
-            if hasattr(unit, 'engaged_with') and unit.engaged_with:
-                enemy = unit.engaged_with
-                if hasattr(enemy, 'is_heavy_unit') and enemy.is_heavy_unit():
-                    # Heavy units cannot disengage from other heavy units unless routing
-                    return False
+            if engaged_enemy and hasattr(engaged_enemy, 'is_heavy_unit') and engaged_enemy.is_heavy_unit():
+                # Heavy units cannot disengage from other heavy units unless routing
+                return False
         
         # If engaged with an enemy, check breakaway rules
-        if hasattr(unit, 'engaged_with') and unit.engaged_with:
+        if engaged_enemy:
             # Check if unit can break away based on unit types
             if hasattr(unit, 'can_break_away_from'):
-                return unit.can_break_away_from(unit.engaged_with)
+                return unit.can_break_away_from(engaged_enemy)
                 
         # Other units can attempt to disengage (will use breakaway behavior)
         return True

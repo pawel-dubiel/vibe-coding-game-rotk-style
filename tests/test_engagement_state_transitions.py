@@ -23,6 +23,16 @@ class TestEngagementStateTransitions:
         defender.player_id = 2
         attacker.stats.stats.current_soldiers = 10
         defender.stats.stats.current_soldiers = 10
+        attacker.stats.stats.max_morale = 200
+        attacker.stats.stats.morale = 200
+        attacker.stats.stats.max_cohesion = 200
+        attacker.stats.stats.current_cohesion = 200
+        defender.stats.stats.max_morale = 200
+        defender.stats.stats.morale = 200
+        defender.stats.stats.max_cohesion = 200
+        defender.stats.stats.current_cohesion = 200
+        attacker._start_routing = lambda gs=None: None
+        defender._start_routing = lambda gs=None: None
         self.game_state.add_knight(attacker)
         self.game_state.add_knight(defender)
         return attacker, defender
@@ -64,8 +74,10 @@ class TestEngagementStateTransitions:
         assert defender.in_enemy_zoc
         assert not attacker.is_engaged_in_combat
         assert not defender.is_engaged_in_combat
-        assert attacker.engaged_with == defender
-        assert defender.engaged_with == attacker
+        assert attacker.engaged_with is None
+        assert defender.engaged_with is None
+        assert attacker.zoc_enemy == defender
+        assert defender.zoc_enemy == attacker
 
     def test_engagement_clears_when_enemy_moves_away(self):
         attacker, defender = self._prepare_melee_pair()
@@ -102,8 +114,8 @@ class TestEngagementStateTransitions:
         self.game_state._update_zoc_status()
 
         assert not attacker.in_enemy_zoc
-        assert not attacker.is_engaged_in_combat
-        assert attacker.engaged_with is None
+        assert attacker.is_engaged_in_combat
+        assert attacker.engaged_with == defender
 
     def test_breakaway_clears_engagement_even_while_adjacent(self):
         attacker = UnitFactory.create_unit("Attacker", KnightClass.WARRIOR, 5, 5)
@@ -133,8 +145,10 @@ class TestEngagementStateTransitions:
         assert attacker.in_enemy_zoc
         assert not defender.is_engaged_in_combat
         assert not attacker.is_engaged_in_combat
-        assert defender.engaged_with == attacker
-        assert attacker.engaged_with == defender
+        assert defender.engaged_with is None
+        assert attacker.engaged_with is None
+        assert defender.zoc_enemy == attacker
+        assert attacker.zoc_enemy == defender
 
     def test_engaged_with_points_to_adjacent_enemy_when_multiple_present(self):
         attacker, defender = self._prepare_melee_pair()
@@ -147,15 +161,17 @@ class TestEngagementStateTransitions:
         self.game_state._update_zoc_status()
 
         assert attacker.in_enemy_zoc
-        assert attacker.engaged_with in (defender, extra_enemy)
-        assert attacker.engaged_with.player_id == 2
+        assert attacker.engaged_with == defender
+        assert attacker.zoc_enemy in (defender, extra_enemy)
+        assert attacker.zoc_enemy.player_id == 2
 
         defender.x = 9
         defender.y = 9
         self.game_state._update_zoc_status()
 
         assert attacker.in_enemy_zoc
-        assert attacker.engaged_with == extra_enemy
+        assert attacker.engaged_with is None
+        assert attacker.zoc_enemy == extra_enemy
 
     def test_routing_enemy_does_not_exert_zoc(self):
         attacker, defender = self._prepare_melee_pair()

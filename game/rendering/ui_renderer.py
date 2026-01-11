@@ -116,8 +116,10 @@ class UIRenderer:
             status_str = " - ROUTING!"
         elif getattr(unit, 'is_disrupted', False):
             status_str = " - DISRUPTED"
-        elif getattr(unit, 'in_enemy_zoc', False):
+        elif getattr(unit, 'is_engaged_in_combat', False):
             status_str = " - ENGAGED"
+        elif getattr(unit, 'in_enemy_zoc', False):
+            status_str = " - IN ZOC"
         
         # Main unit info
         info_text = self.font.render(

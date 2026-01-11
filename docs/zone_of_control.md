@@ -37,17 +37,13 @@ class Unit:
 
 (See `game/entities/unit.py` lines 346-356.)
 
-The `GameState` method `_update_zoc_status` calls `is_in_enemy_zoc` for every unit each frame, storing the result and clearing engagement if none is found:
+The `GameState` method `_update_zoc_status` calls `is_in_enemy_zoc` for every unit each frame, storing the result and clearing engagement if the engaged enemy is no longer adjacent:
 
 ```python
 for knight in self.knights:
     in_zoc, enemy = knight.is_in_enemy_zoc(self)
     knight.in_enemy_zoc = in_zoc
-    knight.engaged_with = enemy if in_zoc else None
-
-    # Clear engagement status if no longer in enemy ZOC
-    if not in_zoc:
-        knight.is_engaged_in_combat = False
+    knight.zoc_enemy = enemy if in_zoc else None
 ```
 
 (See `game/game_state.py` lines 356-362.)
@@ -69,14 +65,14 @@ if unit.in_enemy_zoc:
 
 ### Limiting Possible Moves
 
-When a unit is inside enemy ZOC and cannot disengage, its only legal move is into the hex occupied by the engaged enemy (to attack). If no enemy is set, no movement is allowed:
+When a unit is inside enemy ZOC and cannot disengage, its only legal move is into the hex occupied by the enemy exerting control (to attack). If no enemy is set, no movement is allowed:
 
 ```python
 # Special handling for units in ZOC
 if unit.in_enemy_zoc and not self._can_disengage_from_zoc(unit):
     # Can only move to attack the engaging enemy
-    if unit.engaged_with:
-        return [(unit.engaged_with.x, unit.engaged_with.y)]
+    if unit.zoc_enemy:
+        return [(unit.zoc_enemy.x, unit.zoc_enemy.y)]
     return []
 ```
 
@@ -101,7 +97,7 @@ def _zoc_transition_blocked(self, from_pos, to_pos, unit, game_state):
 
 ### Disengagement Checks
 
-The `_can_disengage_from_zoc` helper determines whether the unit may leave enemy ZOC. Routing units and high-morale cavalry can always attempt to disengage. Heavy units engaged with other heavy units generally cannot. Custom `can_break_away_from` logic is used if available:
+The `_can_disengage_from_zoc` helper determines whether the unit may leave enemy ZOC. Routing units and high-morale cavalry can always attempt to disengage. Heavy units facing other heavy units generally cannot. Custom `can_break_away_from` logic is used if available:
 
 ```python
 def _can_disengage_from_zoc(self, unit) -> bool:
@@ -113,13 +109,15 @@ def _can_disengage_from_zoc(self, unit) -> bool:
     if unit.unit_class == KnightClass.CAVALRY and unit.morale >= 75:
         return True
 
+    engaged_enemy = unit.engaged_with or unit.zoc_enemy
+
     # Heavy units cannot disengage from heavy enemies
-    if unit.is_heavy_unit() and unit.engaged_with and unit.engaged_with.is_heavy_unit():
+    if unit.is_heavy_unit() and engaged_enemy and engaged_enemy.is_heavy_unit():
         return False
 
     # Otherwise defer to unit-specific breakaway rules
-    if unit.engaged_with and hasattr(unit, 'can_break_away_from'):
-        return unit.can_break_away_from(unit.engaged_with)
+    if engaged_enemy and hasattr(unit, 'can_break_away_from'):
+        return unit.can_break_away_from(engaged_enemy)
 
     return True
 ```
@@ -141,4 +139,3 @@ During rendering, units with ZOC have the neighboring hexes highlighted so playe
 
 Zone of Control is applied automatically each update. A unit with at least 25 morale that is not routing controls all adjacent tiles. Entering these tiles is allowed, but leaving them without a valid disengagement option costs extra AP and may only allow attacking the enemy exerting the control.
 Approaching an enemy will therefore halt the unit on the first tile within that enemy's ZOC unless the path ends on the enemy's position.
-

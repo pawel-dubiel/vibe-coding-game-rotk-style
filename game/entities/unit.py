@@ -61,6 +61,7 @@ class Unit:
         self.is_routing = False
         self.engaged_with = None
         self.is_engaged_in_combat = False
+        self.zoc_enemy = None
         
         # Combat modifiers from abilities
         self.temp_damage_multiplier = 1.0
@@ -1064,6 +1065,8 @@ class Unit:
         clone.unit_class = self.unit_class
         clone.position = UnitPosition(self.x, self.y)
         clone.player_id = self.player_id
+        clone.quality = self.quality
+        clone.times_routed = self.times_routed
         clone.action_points = self.action_points
         clone.max_action_points = self.max_action_points
         
@@ -1082,6 +1085,7 @@ class Unit:
         # Copy ZOC and engagement state
         clone.in_enemy_zoc = self.in_enemy_zoc
         clone.engaged_with = self.engaged_with # Reference to original unit (acceptable for simulation checks)
+        clone.zoc_enemy = self.zoc_enemy
         clone.garrison_location = self.garrison_location
         
         # Copy temporary modifiers

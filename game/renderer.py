@@ -1,1 +1,1 @@
-from .renderer_old import Renderer
+from .rendering.core_renderer import CoreRenderer as Renderer
