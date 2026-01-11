@@ -23,6 +23,14 @@ class TestEngagementMechanics:
         archer.player_id = 1
         cavalry = UnitFactory.create_unit("Cavalry", KnightClass.CAVALRY, 8, 5)
         cavalry.player_id = 2  # 3 tiles away
+        # Boost stats to prevent routing from single attack
+        cavalry.stats.stats.max_morale = 200
+        cavalry.stats.stats.morale = 200
+        cavalry.stats.stats.max_cohesion = 200
+        cavalry.stats.stats.current_cohesion = 200
+        
+        # Prevent routing absolutely
+        cavalry._start_routing = lambda gs=None: None
         
         self.game_state.add_knight(archer)
         self.game_state.add_knight(cavalry)

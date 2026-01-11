@@ -6,6 +6,7 @@ from game.components.base import Behavior
 from game.components.generals import GeneralRoster
 from game.components.facing import FacingComponent, FacingDirection
 from game.entities.knight import KnightClass
+from game.entities.quality import UnitQuality
 from game.combat_config import CombatConfig
 from game.hex_utils import HexGrid
 from game.behaviors.movement_service import MovementService
@@ -18,9 +19,11 @@ class UnitPosition:
 class Unit:
     """Base unit class using component architecture"""
     
-    def __init__(self, name: str, unit_class: KnightClass, x: int, y: int):
+    def __init__(self, name: str, unit_class: KnightClass, x: int, y: int, quality: UnitQuality = UnitQuality.REGULAR):
         self.name = name
         self.unit_class = unit_class
+        self.quality = quality
+        self.times_routed = 0
         self.position = UnitPosition(x, y)
         
         # Core properties
@@ -267,6 +270,9 @@ class Unit:
         was_routing = self.is_routing
         self.is_routing = True
         
+        if not was_routing:
+            self.times_routed += 1
+        
         # If game state is available and unit just started routing, try to auto-flee
         if not was_routing and game_state is not None:
             self._attempt_auto_routing_movement(game_state)
@@ -370,7 +376,11 @@ class Unit:
         
         # Check if routing unit recovers enough morale to stop routing
         self.has_rallied_this_turn = False
-        if (self.is_routing and
+        
+        # Check if unit has rallies remaining (Militia=0, Regular=1, Elite=3)
+        can_rally = self.times_routed <= self.quality.max_rallies
+        
+        if (self.is_routing and can_rally and
                 self.stats.stats.morale >= CombatConfig.RALLY_MORALE_THRESHOLD and
                 self.stats.stats.current_cohesion >= CombatConfig.RALLY_COHESION_THRESHOLD):
             # Additional rally conditions for realism
@@ -467,7 +477,16 @@ class Unit:
                 current_cohesion=75.0
             )
         }
-        return stats_by_class.get(self.unit_class, UnitStats(100, 100, 1.0, 25, 30, 90.0, 90.0))
+        stats = stats_by_class.get(self.unit_class, UnitStats(100, 100, 1.0, 25, 30, 90.0, 90.0))
+        
+        # Apply Quality Modifiers
+        stats.max_morale = max(10, stats.max_morale + self.quality.morale_modifier)
+        stats.morale = stats.max_morale
+        
+        stats.max_cohesion = max(10, stats.max_cohesion + self.quality.cohesion_modifier)
+        stats.current_cohesion = stats.max_cohesion
+        
+        return stats
         
     # Compatibility methods for existing code
     @property
