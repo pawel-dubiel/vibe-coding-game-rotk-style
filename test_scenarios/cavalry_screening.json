@@ -1,0 +1,20 @@
+{
+  "name": "Cavalry Screening Test",
+  "description": "Scenario to test the upcoming cavalry screening mechanic",
+  "board_size": [20, 15],
+  "terrain": {
+    "base": "plains",
+    "tiles": []
+  },
+  "units": [
+    {"name": "Screening Cavalry", "type": "cavalry", "x": 7, "y": 8, "player": 1, "facing": "EAST"},
+    {"name": "Protected Archer", "type": "archer", "x": 6, "y": 8, "player": 1, "facing": "EAST"},
+    {"name": "Enemy Warrior", "type": "warrior", "x": 10, "y": 8, "player": 2, "facing": "WEST"},
+    {"name": "Enemy Archer", "type": "archer", "x": 12, "y": 8, "player": 2, "facing": "WEST"}
+  ],
+  "castles": [],
+  "victory_conditions": {
+    "type": "custom",
+    "description": "Move the cavalry to screen the archer from enemy attacks. Use this to experiment with screening once implemented."
+  }
+}
