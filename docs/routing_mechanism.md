@@ -279,6 +279,31 @@ def attempt_rally(self) -> bool:
     return False
 ```
 
+### Unit Quality Effects
+
+Units now have a `quality` attribute (Elite, Veteran, Regular, Militia) that significantly impacts routing and rallying:
+
+**Rally Limits**:
+- **Elite**: Can rally up to 3 times.
+- **Veteran**: Can rally up to 2 times.
+- **Regular**: Can rally 1 time.
+- **Militia**: **Cannot rally** (once they rout, they are gone).
+
+**Stat Modifiers**:
+- **Elite**: +10 Max Morale, +10 Max Cohesion, +30% Rally Bonus.
+- **Veteran**: +5 Max Morale, +5 Max Cohesion, +15% Rally Bonus.
+- **Regular**: Baseline stats.
+- **Militia**: -10 Max Morale, -10 Max Cohesion.
+
+**Rally Check Logic** (`game/entities/unit.py`):
+```python
+# Check if unit has rallies remaining
+can_rally = self.times_routed <= self.quality.max_rallies
+
+if (self.is_routing and can_rally and ...):
+    # Proceed with rally attempt
+```
+
 ### Manual Rally (General Abilities)
 
 **Rally Ability** (`game/components/generals.py:126-148`):
