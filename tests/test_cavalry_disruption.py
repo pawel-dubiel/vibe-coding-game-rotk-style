@@ -1,13 +1,9 @@
 """Comprehensive tests for cavalry auto-disruption feature"""
-import pygame
 from game.test_utils.mock_game_state import MockGameState
 from game.entities.unit_factory import UnitFactory
 from game.entities.knight import KnightClass
 from game.terrain import TerrainType
 from game.behaviors.movement import MovementBehavior
-
-# Initialize pygame for tests
-pygame.init()
 
 
 class TestCavalryAutoDisruption:

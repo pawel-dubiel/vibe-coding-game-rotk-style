@@ -138,69 +138,85 @@ class CampaignState:
     
     def _load_campaign_data(self):
         """Load campaign data from JSON file"""
-        try:
-            # Use specified map file or default
-            if self.map_file:
-                data_path = self.map_file
-            else:
-                # Try new data directory first, then fallback to old location
-                data_dir_path = os.path.join(os.path.dirname(__file__), 'data', 'medieval_europe.json')
-                old_path = os.path.join(os.path.dirname(__file__), 'medieval_europe.json')
-                
-                if os.path.exists(data_dir_path):
-                    data_path = data_dir_path
-                else:
-                    data_path = old_path
-            
-            with open(data_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                
-            # Load map configuration
-            self.map_data = data['map']
-            self.map_width = self.map_data['width']
-            self.map_height = self.map_data['height']
-            self.hex_size_km = self.map_data.get('hex_size_km', 30)  # Default to 30km if not specified
-            
-            # Load terrain
-            self._load_terrain_from_data(self.map_data['terrain'])
-            
-            # Load countries
-            for country_id, country_info in data['countries'].items():
-                self.countries[country_id] = Country(
-                    id=country_id,
-                    name=country_info['name'],
-                    color=tuple(country_info['color']),
-                    capital=country_info['capital'],
-                    description=country_info['description'],
-                    starting_resources=country_info['starting_resources'],
-                    bonuses=country_info.get('bonuses', {})
-                )
-                
-            # Load cities
-            for city_id, city_info in data['cities'].items():
-                self.cities[city_id] = City(
-                    name=city_info['name'],
-                    country=city_info['country'],
-                    position=HexCoord(*city_info['position']),
-                    city_type=city_info['type'],
-                    income=city_info['income'],
-                    castle_level=city_info['castle_level'],
-                    population=city_info['population'],
-                    specialization=city_info['specialization'],
-                    description=city_info['description']
-                )
-                
-            # Load neutral regions
-            self.neutral_regions = data.get('neutral_regions', [])
-            
-            # If no cities loaded, create minimal data
-            if not self.cities:
-                print("Warning: No cities found in campaign data, creating minimal city data")
-                self._create_minimal_cities()
-            
-        except FileNotFoundError:
-            print("Warning: medieval_europe.json not found, using minimal data")
-            self._create_minimal_data()
+        if self.map_file:
+            data_path = self.map_file
+        else:
+            data_path = os.path.join(os.path.dirname(__file__), 'data', 'medieval_europe.json')
+
+        if not os.path.exists(data_path):
+            raise FileNotFoundError(f"Campaign map file not found: {data_path}")
+
+        with open(data_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        required_top_level = ['map', 'countries', 'cities', 'neutral_regions']
+        missing_top_level = [key for key in required_top_level if key not in data]
+        if missing_top_level:
+            raise ValueError(f"Campaign data missing required keys: {', '.join(missing_top_level)}")
+
+        required_map_fields = ['width', 'height', 'hex_size_km', 'terrain']
+        missing_map_fields = [key for key in required_map_fields if key not in data['map']]
+        if missing_map_fields:
+            raise ValueError(f"Campaign map data missing required keys: {', '.join(missing_map_fields)}")
+
+        # Load map configuration
+        self.map_data = data['map']
+        self.map_width = self.map_data['width']
+        self.map_height = self.map_data['height']
+        self.hex_size_km = self.map_data['hex_size_km']
+
+        # Load terrain
+        self._load_terrain_from_data(self.map_data['terrain'])
+
+        # Load countries
+        for country_id, country_info in data['countries'].items():
+            for required in ('name', 'color', 'capital', 'description', 'starting_resources', 'bonuses'):
+                if required not in country_info:
+                    raise ValueError(f"Country '{country_id}' missing required field: {required}")
+
+            self.countries[country_id] = Country(
+                id=country_id,
+                name=country_info['name'],
+                color=tuple(country_info['color']),
+                capital=country_info['capital'],
+                description=country_info['description'],
+                starting_resources=country_info['starting_resources'],
+                bonuses=country_info['bonuses']
+            )
+
+        # Load cities
+        for city_id, city_info in data['cities'].items():
+            for required in (
+                'name',
+                'country',
+                'position',
+                'type',
+                'income',
+                'castle_level',
+                'population',
+                'specialization',
+                'description',
+            ):
+                if required not in city_info:
+                    raise ValueError(f"City '{city_id}' missing required field: {required}")
+
+            self.cities[city_id] = City(
+                name=city_info['name'],
+                country=city_info['country'],
+                position=HexCoord(*city_info['position']),
+                city_type=city_info['type'],
+                income=city_info['income'],
+                castle_level=city_info['castle_level'],
+                population=city_info['population'],
+                specialization=city_info['specialization'],
+                description=city_info['description']
+            )
+
+        # Load neutral regions
+        self.neutral_regions = data['neutral_regions']
+
+        if not self.cities:
+            raise ValueError("Campaign data must contain at least one city")
             
     def _load_terrain_from_data(self, terrain_data: Dict):
         """Load terrain from JSON data"""

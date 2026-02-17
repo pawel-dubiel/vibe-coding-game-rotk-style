@@ -20,6 +20,14 @@ class Unit:
     """Base unit class using component architecture"""
     
     def __init__(self, name: str, unit_class: KnightClass, x: int, y: int, quality: UnitQuality = UnitQuality.REGULAR):
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("name must be a non-empty string")
+        if not isinstance(unit_class, KnightClass):
+            raise ValueError(f"unit_class must be KnightClass, got {type(unit_class).__name__}")
+        if not isinstance(x, int) or not isinstance(y, int):
+            raise ValueError("x and y must be integers")
+        if not isinstance(quality, UnitQuality):
+            raise ValueError(f"quality must be UnitQuality, got {type(quality).__name__}")
         self.name = name
         self.unit_class = unit_class
         self.quality = quality
@@ -436,7 +444,7 @@ class Unit:
             KnightClass.CAVALRY: 10,  # Highest AP for mobile units
             KnightClass.MAGE: 6       # Moderate AP for spellcasters
         }
-        return ap_by_class.get(self.unit_class, 7)
+        return ap_by_class[self.unit_class]
         
     def _create_unit_stats(self) -> UnitStats:
         """Create stats based on unit class"""
@@ -478,7 +486,7 @@ class Unit:
                 current_cohesion=75.0
             )
         }
-        stats = stats_by_class.get(self.unit_class, UnitStats(100, 100, 1.0, 25, 30, 90.0, 90.0))
+        stats = stats_by_class[self.unit_class]
         
         # Apply Quality Modifiers
         stats.max_morale = max(10, stats.max_morale + self.quality.morale_modifier)

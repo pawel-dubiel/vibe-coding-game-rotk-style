@@ -109,6 +109,10 @@ class Terrain:
             raise ValueError("terrain_type is required")
         if feature is None:
             raise ValueError("feature is required")
+        if not isinstance(terrain_type, TerrainType):
+            raise ValueError(f"terrain_type must be TerrainType, got {type(terrain_type).__name__}")
+        if not isinstance(feature, TerrainFeature):
+            raise ValueError(f"feature must be TerrainFeature, got {type(feature).__name__}")
 
         if terrain_type in {TerrainType.BRIDGE, TerrainType.ROAD} and feature != TerrainFeature.NONE:
             raise ValueError("Bridge/Road terrain cannot combine with features")
@@ -116,7 +120,7 @@ class Terrain:
         self.type = terrain_type
         self.feature = feature
             
-        self._properties = TERRAIN_PROPERTIES.get(self.type, TERRAIN_PROPERTIES[TerrainType.PLAINS])
+        self._properties = TERRAIN_PROPERTIES[self.type]
         
     @property
     def movement_cost(self) -> float:
@@ -202,6 +206,12 @@ class TerrainGenerator:
     """Generates realistic terrain using various algorithms"""
     
     def __init__(self, width: int, height: int, seed: Optional[int] = None):
+        if not isinstance(width, int) or not isinstance(height, int):
+            raise ValueError("width and height must be integers")
+        if width < 7 or height < 7:
+            raise ValueError(
+                f"TerrainGenerator requires width and height >= 7 for controlled feature generation, got {width}x{height}"
+            )
         self.width = width
         self.height = height
         self.seed = seed or random.randint(0, 1000000)
@@ -762,8 +772,15 @@ class TerrainMap:
     """Enhanced terrain map with layered terrain system"""
     
     def __init__(self, width: int, height: int, seed: Optional[int] = None):
+        if not isinstance(width, int) or not isinstance(height, int):
+            raise ValueError("width and height must be integers")
+        if width < 7 or height < 7:
+            raise ValueError(
+                f"TerrainMap requires width and height >= 7 for controlled feature generation, got {width}x{height}"
+            )
         self.width = width
         self.height = height
+        self._revision = 0
         self.terrain_grid: List[List[Terrain]] = []
         
         self._generate_terrain(seed)
@@ -797,6 +814,11 @@ class TerrainMap:
                 if pos[0] < self.width and pos[1] < self.height
             ]
             generator.generate_roads(self.terrain_grid, valid_positions[:2])
+        self._revision += 1
+
+    @property
+    def revision(self) -> int:
+        return self._revision
             
     def get_terrain(self, x: int, y: int) -> Optional[Terrain]:
         """Get terrain at position"""
@@ -807,8 +829,12 @@ class TerrainMap:
     def set_terrain(self, x: int, y: int, terrain_type: TerrainType, 
                    feature: TerrainFeature = TerrainFeature.NONE):
         """Set terrain at specific location"""
-        if 0 <= x < self.width and 0 <= y < self.height:
-            self.terrain_grid[y][x] = Terrain(terrain_type, feature)
+        if not isinstance(x, int) or not isinstance(y, int):
+            raise ValueError("x and y must be integers")
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            raise ValueError(f"Terrain coordinates out of bounds: ({x}, {y}) for map {self.width}x{self.height}")
+        self.terrain_grid[y][x] = Terrain(terrain_type, feature)
+        self._revision += 1
             
     def is_passable(self, x: int, y: int, unit=None) -> bool:
         """Check if position is passable"""

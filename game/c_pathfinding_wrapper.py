@@ -12,8 +12,36 @@ class CPathFinder(PathFinder):
     """PathFinder implementation using optimized C extension"""
     
     def __init__(self):
-        self._terrain_cache = {} # (map_id, width, height) -> (grid_list, type_mapping)
-        self._last_map_id = None
+        self._terrain_cache = {}  # (map_id, revision, width, height) -> (grid, type_to_id, terrain_types)
+
+    def _get_or_build_terrain_cache(self, game_state):
+        width = game_state.board_width
+        height = game_state.board_height
+        map_obj = game_state.terrain_map
+        map_id = id(map_obj)
+        map_revision = getattr(map_obj, "revision", None)
+        cache_key = (map_id, map_revision, width, height)
+
+        if cache_key not in self._terrain_cache:
+            terrain_types = list(TerrainType)
+            type_to_id = {t: i for i, t in enumerate(terrain_types)}
+
+            grid = []
+            for y in range(height):
+                for x in range(width):
+                    terrain = map_obj.get_terrain(x, y)
+                    if terrain:
+                        grid.append(type_to_id[terrain.type])
+                    else:
+                        grid.append(-1)
+
+            stale_keys = [key for key in self._terrain_cache if key[0] == map_id and key != cache_key]
+            for stale_key in stale_keys:
+                del self._terrain_cache[stale_key]
+
+            self._terrain_cache[cache_key] = (grid, type_to_id, terrain_types)
+
+        return self._terrain_cache[cache_key]
         
     def find_path(self, start: Tuple[int, int], end: Tuple[int, int], 
                   game_state, unit=None, max_cost: Optional[float] = None,
@@ -26,31 +54,7 @@ class CPathFinder(PathFinder):
 
         width = game_state.board_width
         height = game_state.board_height
-        
-        # 1. Get or Create Terrain Grid Cache
-        # We assume game_state.terrain_map object identity changes if map changes
-        # or we can use a version counter if available.
-        map_obj = game_state.terrain_map
-        map_id = id(map_obj)
-        
-        if map_id != self._last_map_id or map_id not in self._terrain_cache:
-            # Build cache
-            terrain_types = list(TerrainType)
-            type_to_id = {t: i for i, t in enumerate(terrain_types)}
-            
-            grid = []
-            for y in range(height):
-                for x in range(width):
-                    t = map_obj.get_terrain(x, y)
-                    if t:
-                        grid.append(type_to_id.get(t.type, -1))
-                    else:
-                        grid.append(-1)
-            
-            self._terrain_cache[map_id] = (grid, type_to_id, terrain_types)
-            self._last_map_id = map_id
-            
-        grid, type_to_id, terrain_types = self._terrain_cache[map_id]
+        grid, type_to_id, terrain_types = self._get_or_build_terrain_cache(game_state)
         
         # 2. Build Cost Map for this Unit
         # We can cache this per unit_class too, but unit behavior might change (items, buffs)
@@ -106,28 +110,7 @@ class CPathFinder(PathFinder):
 
         width = game_state.board_width
         height = game_state.board_height
-        
-        # 1. Get or Create Terrain Grid Cache
-        map_obj = game_state.terrain_map
-        map_id = id(map_obj)
-        
-        if map_id != self._last_map_id or map_id not in self._terrain_cache:
-            terrain_types = list(TerrainType)
-            type_to_id = {t: i for i, t in enumerate(terrain_types)}
-            
-            grid = []
-            for y in range(height):
-                for x in range(width):
-                    t = map_obj.get_terrain(x, y)
-                    if t:
-                        grid.append(type_to_id.get(t.type, -1))
-                    else:
-                        grid.append(-1)
-            
-            self._terrain_cache[map_id] = (grid, type_to_id, terrain_types)
-            self._last_map_id = map_id
-            
-        grid, type_to_id, terrain_types = self._terrain_cache[map_id]
+        grid, type_to_id, terrain_types = self._get_or_build_terrain_cache(game_state)
         
         # 2. Build Cost Map for this Unit
         cost_map = {}

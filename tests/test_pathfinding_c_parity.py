@@ -99,3 +99,24 @@ def test_c_and_python_respect_max_cost_limit():
 
     assert py_path is None
     assert c_path is None
+
+
+def test_c_pathfinder_cache_invalidates_when_terrain_changes():
+    _require_c_extension()
+    width, height = 7, 7
+    game_state = MockGameState(board_width=width, board_height=height)
+
+    unit = UnitFactory.create_unit("Unit", KnightClass.WARRIOR, 0, 3)
+    unit.player_id = 1
+    game_state.add_knight(unit)
+
+    c_pathfinder = CPathFinder()
+    initial_path = c_pathfinder.find_path((0, 3), (6, 3), game_state, unit=unit)
+    assert initial_path is not None
+
+    # Block the board with an impassable vertical wall.
+    for y in range(height):
+        game_state.terrain_map.set_terrain(3, y, TerrainType.MOUNTAINS)
+
+    blocked_path = c_pathfinder.find_path((0, 3), (6, 3), game_state, unit=unit)
+    assert blocked_path is None

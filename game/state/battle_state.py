@@ -43,6 +43,10 @@ class BattleState(IGameState):
             or not all(isinstance(value, int) for value in board_size)
         ):
             raise ValueError("battle_config['board_size'] must be a tuple/list of two ints")
+        if board_size[0] < 7 or board_size[1] < 7:
+            raise ValueError(
+                "battle_config['board_size'] must be at least 7x7 to support terrain generation"
+            )
 
         self.board_width = board_size[0]
         self.board_height = board_size[1]

@@ -65,6 +65,52 @@ class TestScenarioLoader:
         'WEST': FacingDirection.WEST,
         'NORTH_WEST': FacingDirection.NORTH_WEST
     }
+
+    @staticmethod
+    def _require_keys(data: Dict, required_keys: List[str], context: str) -> None:
+        missing = [key for key in required_keys if key not in data]
+        if missing:
+            raise ValueError(f"Missing required {context} keys: {', '.join(missing)}")
+
+    @classmethod
+    def _validate_terrain_definition(cls, terrain_data: Dict) -> None:
+        cls._require_keys(terrain_data, ['base', 'tiles'], "terrain")
+        base_type = terrain_data['base']
+        if base_type not in cls.TERRAIN_MAPPING:
+            raise ValueError(f"Unknown base terrain type: {base_type}")
+        if not isinstance(terrain_data['tiles'], list):
+            raise ValueError("terrain.tiles must be a list")
+
+        for index, tile in enumerate(terrain_data['tiles']):
+            if not isinstance(tile, dict):
+                raise ValueError(f"terrain tile at index {index} must be an object")
+            cls._require_keys(tile, ['x', 'y', 'type'], f"terrain tile {index}")
+            if tile['type'] not in cls.TERRAIN_MAPPING:
+                raise ValueError(f"Unknown terrain tile type at index {index}: {tile['type']}")
+
+    @classmethod
+    def _validate_unit_definitions(cls, units: List[Dict]) -> None:
+        if not isinstance(units, list):
+            raise ValueError("units must be a list")
+        for index, unit in enumerate(units):
+            if not isinstance(unit, dict):
+                raise ValueError(f"unit at index {index} must be an object")
+            cls._require_keys(unit, ['name', 'type', 'x', 'y', 'player'], f"unit {index}")
+            if unit['type'] not in cls.UNIT_TYPE_MAPPING:
+                raise ValueError(f"Unknown unit type at index {index}: {unit['type']}")
+            if 'facing' in unit and unit['facing'] not in cls.FACING_MAPPING:
+                raise ValueError(f"Unknown facing direction at index {index}: {unit['facing']}")
+
+    @staticmethod
+    def _validate_castle_definitions(castles: List[Dict]) -> None:
+        if not isinstance(castles, list):
+            raise ValueError("castles must be a list")
+        for index, castle in enumerate(castles):
+            if not isinstance(castle, dict):
+                raise ValueError(f"castle at index {index} must be an object")
+            missing = [key for key in ['x', 'y', 'player'] if key not in castle]
+            if missing:
+                raise ValueError(f"Missing required castle {index} keys: {', '.join(missing)}")
     
     @classmethod
     def load_scenario(cls, filename: str) -> ScenarioDefinition:
@@ -81,18 +127,40 @@ class TestScenarioLoader:
             if not filepath.endswith('.json'):
                 filepath += '.json'
         
-        with open(filepath, 'r') as f:
+        with open(filepath, 'r', encoding='utf-8') as f:
             data = json.load(f)
+
+        cls._require_keys(
+            data,
+            ['name', 'description', 'board_size', 'terrain', 'units', 'castles', 'victory_conditions'],
+            "scenario",
+        )
+        board_size = data['board_size']
+        if (
+            not isinstance(board_size, (list, tuple))
+            or len(board_size) != 2
+            or not all(isinstance(value, int) for value in board_size)
+        ):
+            raise ValueError("board_size must be a list/tuple of two integers")
+
+        terrain_data = data['terrain']
+        if not isinstance(terrain_data, dict):
+            raise ValueError("terrain must be an object")
+        cls._validate_terrain_definition(terrain_data)
+        cls._validate_unit_definitions(data['units'])
+        cls._validate_castle_definitions(data['castles'])
+        if not isinstance(data['victory_conditions'], dict):
+            raise ValueError("victory_conditions must be an object")
         
         return ScenarioDefinition(
             name=data['name'],
             description=data['description'],
-            board_size=tuple(data['board_size']),
-            terrain_base=data.get('terrain', {}).get('base', 'plains'),
-            terrain_tiles=data.get('terrain', {}).get('tiles', []),
-            units=data.get('units', []),
-            castles=data.get('castles', []),
-            victory_conditions=data.get('victory_conditions', {})
+            board_size=tuple(board_size),
+            terrain_base=terrain_data['base'],
+            terrain_tiles=terrain_data['tiles'],
+            units=data['units'],
+            castles=data['castles'],
+            victory_conditions=data['victory_conditions']
         )
     
     @classmethod
@@ -114,26 +182,33 @@ class TestScenarioLoader:
     @classmethod
     def apply_to_game_state(cls, scenario: ScenarioDefinition, game_state):
         """Apply a scenario definition to a game state"""
+        if scenario is None:
+            raise ValueError("scenario is required")
+        if game_state is None:
+            raise ValueError("game_state is required")
+        if not hasattr(game_state, 'terrain_map') or game_state.terrain_map is None:
+            raise ValueError("game_state.terrain_map is required to apply scenario")
+        if not hasattr(game_state, 'board_width') or not hasattr(game_state, 'board_height'):
+            raise ValueError("game_state board dimensions are required to apply scenario")
+
         # Clear existing units and castles
         game_state.knights.clear()
         game_state.castles.clear()
         
         # Set up terrain
-        if hasattr(game_state, 'terrain_map') and game_state.terrain_map:
-            # Set base terrain
-            base_terrain = cls.TERRAIN_MAPPING.get(scenario.terrain_base, TerrainType.PLAINS)
-            for x in range(game_state.board_width):
-                for y in range(game_state.board_height):
-                    game_state.terrain_map.set_terrain(x, y, base_terrain)
-            
-            # Apply specific terrain tiles
-            for tile in scenario.terrain_tiles:
-                terrain_type = cls.TERRAIN_MAPPING.get(tile['type'], TerrainType.PLAINS)
-                game_state.terrain_map.set_terrain(tile['x'], tile['y'], terrain_type)
+        base_terrain = cls.TERRAIN_MAPPING[scenario.terrain_base]
+        for x in range(game_state.board_width):
+            for y in range(game_state.board_height):
+                game_state.terrain_map.set_terrain(x, y, base_terrain)
+        
+        # Apply specific terrain tiles
+        for tile in scenario.terrain_tiles:
+            terrain_type = cls.TERRAIN_MAPPING[tile['type']]
+            game_state.terrain_map.set_terrain(tile['x'], tile['y'], terrain_type)
         
         # Create units
         for unit_def in scenario.units:
-            unit_type = cls.UNIT_TYPE_MAPPING.get(unit_def['type'], KnightClass.WARRIOR)
+            unit_type = cls.UNIT_TYPE_MAPPING[unit_def['type']]
             unit = UnitFactory.create_unit(
                 name=unit_def['name'],
                 unit_class=unit_type,
@@ -144,7 +219,7 @@ class TestScenarioLoader:
             
             # Set optional attributes
             if 'facing' in unit_def:
-                facing_dir = cls.FACING_MAPPING.get(unit_def['facing'], FacingDirection.EAST)
+                facing_dir = cls.FACING_MAPPING[unit_def['facing']]
                 unit.facing.facing = facing_dir
             
             if 'health' in unit_def:

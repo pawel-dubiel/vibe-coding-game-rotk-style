@@ -78,7 +78,7 @@ class CampaignMapSelectScreen:
         if not self.available_maps:
             default_path = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-                'game', 'campaign', 'medieval_europe.json'
+                'game', 'campaign', 'data', 'medieval_europe.json'
             )
             if os.path.exists(default_path):
                 try:
